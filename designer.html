@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>超级打印 · 模板设计器</title>
+  <link rel="stylesheet" href="./css/theme.css">
+  <link rel="stylesheet" href="./css/designer.css">
+  <link rel="stylesheet" href="./css/print.css" media="print">
+</head>
+<body class="aurora-app designer-body">
+  <div class="aurora-layer" aria-hidden="true"></div>
+  <header class="designer-top glass">
+    <div class="designer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器</small></div></div>
+    <input id="templateName" class="template-name" value="未命名模板">
+    <div class="top-tools">
+      <button id="undoBtn" title="撤销">↶</button><button id="redoBtn" title="重做">↷</button>
+      <button id="newBtn">新建</button><button id="saveBtn">保存</button><button id="previewBtn">实际预览</button>
+      <button id="fullBtn">⛶ 全屏</button><button id="printBtn" class="primary">测试打印</button>
+    </div>
+  </header>
+
+  <main class="designer-grid">
+    <aside class="designer-left glass">
+      <div class="tabs"><button class="tab active" data-tab="components">组件</button><button class="tab" data-tab="fields">数据</button></div>
+      <section id="componentsTab" class="tab-body">
+        <h3><span class="mini-bars"><i></i><i></i><i></i></span>基础组件</h3>
+        <div class="component-palette">
+          <button draggable="true" data-type="text"><b>T</b><span>文本</span></button>
+          <button draggable="true" data-type="field"><b>{ }</b><span>数据字段</span></button>
+          <button draggable="true" data-type="image"><b>▧</b><span>图片</span></button>
+          <button draggable="true" data-type="table"><b>▦</b><span>明细表格</span></button>
+          <button draggable="true" data-type="barcode"><b>|||</b><span>条码</span></button>
+          <button draggable="true" data-type="qrcode"><b>▦</b><span>二维码</span></button>
+          <button draggable="true" data-type="line"><b>—</b><span>分隔线</span></button>
+          <button draggable="true" data-type="container"><b>□</b><span>容器</span></button>
+        </div>
+        <div class="section-sep"></div>
+        <h3><span class="mini-bars"><i></i><i></i><i></i></span>页面</h3>
+        <div class="page-form">
+          <label>预设<select id="pagePreset"><option value="215x140">215×140</option><option value="210x297">A4</option><option value="148x210">A5</option><option value="100x150">100×150</option><option value="70x50">70×50</option><option value="custom">自定义</option></select></label>
+          <div class="two"><label>宽<input id="pageW" type="number" step=".1"></label><label>高<input id="pageH" type="number" step=".1"></label></div>
+          <label>安全区<input id="safeArea" type="number" step=".5" min="0"></label>
+          <button id="applyPage" class="wide-btn">应用页面尺寸</button>
+        </div>
+      </section>
+      <section id="fieldsTab" class="tab-body hidden">
+        <h3><span class="mini-bars"><i></i><i></i><i></i></span>飞书字段</h3>
+        <input id="fieldSearch" class="field-search" placeholder="搜索字段">
+        <div id="fieldList" class="field-list"></div>
+      </section>
+    </aside>
+
+    <section class="designer-center">
+      <div class="canvas-toolbar glass">
+        <div><label><input id="gridToggle" type="checkbox" checked> 网格</label><label><input id="snapToggle" type="checkbox" checked> 吸附</label><label><input id="safeToggle" type="checkbox" checked> 安全区</label></div>
+        <div id="pageInfo">215 × 140 mm</div>
+      </div>
+      <div id="canvasScroller" class="canvas-scroller">
+        <div id="zoomLayer" class="zoom-layer">
+          <div id="topRuler" class="top-ruler"></div>
+          <div class="canvas-row"><div id="leftRuler" class="left-ruler"></div><div class="page-pad">
+            <div id="printPage" class="print-page grid-on">
+              <div id="safeGuide" class="safe-guide"></div>
+              <div id="guideX" class="guide guide-x hidden"></div>
+              <div id="guideY" class="guide guide-y hidden"></div>
+            </div>
+          </div></div>
+        </div>
+      </div>
+      <footer class="designer-status glass">
+        <span id="saveState"><i></i>已加载</span><span id="selectionState">0 个元素</span>
+        <div class="zoom-box"><button id="zoomOut">−</button><input id="zoomRange" type="range" min="40" max="160" step="5" value="75"><button id="zoomIn">＋</button><b id="zoomText">75%</b></div>
+      </footer>
+    </section>
+
+    <aside class="designer-right glass">
+      <div class="right-tabs"><button class="rtab active" data-rtab="props">属性</button><button class="rtab" data-rtab="layers">图层</button></div>
+      <section id="propsTab" class="right-body">
+        <div id="noSelection" class="no-selection">选择画布元素后可精确调整</div>
+        <div id="props" class="hidden">
+          <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>位置与尺寸</div>
+          <div class="four-grid"><label>X<input id="propX" type="number" step=".1"></label><label>Y<input id="propY" type="number" step=".1"></label><label>W<input id="propW" type="number" step=".1"></label><label>H<input id="propH" type="number" step=".1"></label></div>
+          <div class="section-sep"></div>
+          <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>内容</div>
+          <label class="stack">文本<textarea id="propText" rows="3"></textarea></label>
+          <label class="stack">绑定字段<select id="propField"><option value="">未绑定</option></select></label>
+          <div class="two"><label>字号<input id="propFontSize" type="number" min="6"></label><label>字重<select id="propWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option><option value="800">特粗</option></select></label></div>
+          <label class="stack">对齐<div class="segmented"><button data-align="left">左</button><button data-align="center">中</button><button data-align="right">右</button></div></label>
+          <div class="section-sep"></div>
+          <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>元素</div>
+          <div class="action-grid"><button id="duplicateBtn">复制</button><button id="lockBtn">锁定</button><button id="hideBtn">隐藏</button><button id="frontBtn">置顶</button><button id="backBtn">置底</button><button id="deleteBtn" class="danger">删除</button></div>
+        </div>
+      </section>
+      <section id="layersTab" class="right-body hidden"><div id="layerList" class="layer-list"></div></section>
+    </aside>
+  </main>
+
+  <div id="toast" class="toast" role="status"></div>
+  <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
+  <script type="module" src="./js/designer.js"></script>
+</body>
+</html>
