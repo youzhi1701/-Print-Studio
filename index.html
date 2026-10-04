@@ -45,6 +45,13 @@
         <button id="zoomPreviewBtn" class="preview-action">弹出预览 ↗</button>
       </div>
       <div id="previewViewport" class="preview-viewport">
+        <div class="preview-float-tools" aria-label="预览缩放工具">
+          <button id="previewFitBtn" title="适配">适配</button>
+          <button id="previewResetBtn" title="还原">还原</button>
+          <button id="previewZoomOutBtn" title="缩小">−</button>
+          <span id="previewZoomText">100%</span>
+          <button id="previewZoomInBtn" title="放大">＋</button>
+        </div>
         <div id="previewStage" class="preview-stage">
           <div id="previewEmpty" class="preview-empty">
             <b>选择记录后显示打印成品</b>
@@ -55,7 +62,7 @@
       </div>
       <div class="preview-footer">
         <span id="previewCounter">1 / 1</span>
-        <span id="previewHint">点击预览可放大</span>
+        <span id="previewHint">滚轮缩放 · 拖动画布 · 双击适配</span>
       </div>
     </section>
 
