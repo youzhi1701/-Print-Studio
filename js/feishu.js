@@ -100,6 +100,15 @@ export async function chooseRecords(bitable,table,fields,selection){
 export async function readSelectedRecords(bitable,table,fields){
   try{
     const selection=await bitable.base.getSelection();
+    if(selection?.viewId){
+      try{
+        const view=await table.getViewById(selection.viewId);
+        if(view?.getSelectedRecordIdList){
+          const ids=(await view.getSelectedRecordIdList())||[];
+          if(ids.length) return await readRecordsByIds(table,fields,ids);
+        }
+      }catch(err){console.warn("getSelectedRecordIdList unavailable",err)}
+    }
     if(selection?.recordId){
       const rec=await readRecord(table,fields,selection.recordId);
       return rec?[rec]:[];
