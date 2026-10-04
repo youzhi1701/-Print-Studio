@@ -90,6 +90,11 @@ async function refresh(){
     state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
     state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
     state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);
+    state.selectedRecords=await Promise.all(state.selectedRecords.map(r=>resolveAttachmentUrls(ctx.table,r,ctx.fields)));
+    if(state.record){
+      const same=state.selectedRecords.find(r=>r.id===state.record.id);
+      if(same) state.record=same;
+    }
     if(!state.record&&state.selectedRecords.length)state.record=state.selectedRecords[0];
     if(state.record&&!state.selectedRecords.length)state.selectedRecords=[state.record];
     currentIndex=0;
@@ -103,8 +108,9 @@ async function refresh(){
 async function chooseBatch(single=false){
   if(!state.connected||!state.sdk||!state.table){toast("请先连接飞书数据表");return}
   try{
-    const rows=await chooseRecords(state.sdk,state.table,state.fields,state.selection);
+    let rows=await chooseRecords(state.sdk,state.table,state.fields,state.selection);
     if(!rows.length){toast("没有选择记录");return}
+    rows=await Promise.all(rows.map(r=>resolveAttachmentUrls(state.table,r,state.fields)));
     state.selectedRecords=single?[rows[0]]:rows;
     state.record=state.selectedRecords[0];
     currentIndex=0;autoBind();syncBridge();await renderPreview();
