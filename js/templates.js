@@ -23,12 +23,14 @@ export function loadTemplates(){
     elements:Array.isArray(t.elements)?t.elements.map(el=>{
       if(el.type==="table"){
         const cols=Array.isArray(el.columns)?el.columns.map((c,i)=>typeof c==="string"?{title:c,field:c,width:null,align:i===0?"left":"center"}:c):[];
-        return{showHeader:true,zebra:false,rowHeight:8,maxRows:5,borderWidth:.5,dataField:"",...el,columns:cols}
+        return{showHeader:true,zebra:false,rowHeight:8,maxRows:5,borderWidth:.5,dataField:"",tableImageFit:"contain",wrap:true,hideEmptyColumns:false,merges:[],...el,columns:cols}
       }
-      if(el.type==="image")return{imageFit:"contain",radius:0,...el}
+      if(el.type==="image")return{imageFit:"contain",radius:0,aspectLock:true,alignX:"center",alignY:"center",padding:0,emptyBehavior:"hide",...el}
       if(el.type==="barcode")return{barcodeFormat:"CODE128",showText:true,...el}
       if(el.type==="qrcode")return{qrLevel:"M",qrMargin:0,...el}
       if(el.type==="line"||el.type==="container")return{borderWidth:.5,borderStyle:"solid",radius:0,...el}
+      if(el.type==="field")return{wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"hide",...el}
+      if(el.type==="text")return{wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"blank",...el}
       return el
     }):[],
     ...t
@@ -49,7 +51,8 @@ const FIELD_ALIASES={
   "商品名称":["商品名称","商品","商品标题","产品标题","标题","sku名称","产品名称"],
   "商品属性":["商品属性","规格","规格型号","属性","sku"],
   "数量":["数量","件数","购买数量"],
-  "价格":["价格","单价","金额","成交价","售价"]
+  "价格":["价格","单价","金额","成交价","售价"],
+  "产品图片":["产品图片","商品图片","图片","主图","SKU图片","sku图片"]
 };
 
 function norm(s){return String(s||"").trim().toLowerCase().replace(/[\s_\-]/g,"")}
