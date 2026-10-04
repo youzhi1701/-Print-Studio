@@ -38,15 +38,16 @@ function textCss(el){
 function imagePosition(el){return (el.alignX||"center")+" "+(el.alignY||"center")}
 function visibleColumns(el,rows,data){
   const cols=normalizeColumns(el.columns).map((c,i)=>({...c,_index:i}));
-  if(!el.hideEmptyColumns)return cols;
-  const v=cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field])));
-  return v.length?v:cols
+  let v=el.hideEmptyColumns?cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field]))):cols;
+  if(!v.length)v=cols;
+  const sum=v.reduce((n,col)=>n+(Number(col.width)||0),0)||100;
+  return v.map(col=>({...col,width:(Number(col.width)||0)*100/sum}))
 }
 function mergeAt(el,row,col){return (el.merges||[]).find(m=>m.row===row&&m.col===col)||null}
 function covered(el,row,col){return (el.merges||[]).some(m=>!(m.row===row&&m.col===col)&&row>=m.row&&row<m.row+(m.rowSpan||1)&&col>=m.col&&col<m.col+(m.colSpan||1))}
 function isImageValue(v){return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v))}
 function cellHtml(v,imageFit="contain"){
-  if(isImageValue(v)) return '<img src="'+esc(v)+'" style="width:100%;height:100%;object-fit:'+imageFit+';display:block;margin:0" referrerpolicy="no-referrer">';
+  if(isImageValue(v)) return '<div style="position:absolute;inset:0;overflow:hidden"><img src="'+esc(v)+'" style="width:100%;height:100%;object-fit:'+(imageFit==="original"?"none":imageFit)+';display:block;margin:0" referrerpolicy="no-referrer"></div>';
   return esc(v);
 }
 
@@ -78,14 +79,18 @@ export function renderTemplateToHtml(tpl,data={}){
     if(el.type==="container")return '<div style="'+common+'border:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #cbd2df;border-radius:'+(el.radius||0)+'px"></div>';
     if(el.type==="table"){
       const rows0=tableRows(el,data).slice(0,el.maxRows||5),rows=rows0.length?rows0:[{}];
+      const configured=normalizeColumns(el.columns);
+      const hasAny=rows0.some(row=>configured.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
+      if(!hasAny&&el.emptyBehavior==="hide")return"";
       const cols=visibleColumns(el,rows,data),bw=el.borderWidth??.5;
-      const head=el.showHeader===false?'':'<thead><tr>'+cols.map(c=>'<th style="border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>').join("")+'</tr></thead>';
+      const head=el.showHeader===false?'':'<thead><tr>'+cols.map(c=>'<th style="border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>').join("")+'</tr></thead>';
       const body=rows.map((row,ri)=>{
         let cells="";
         for(const col of cols){
           const ci=col._index;if(covered(el,ri,ci))continue;
           const merge=mergeAt(el,ri,ci),value=row?.[col.field]??data?.[col.field]??"";
-          cells+='<td '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="border:'+bw+'px solid #cbd2df;padding:'+(isImageValue(value)?'0':'2px')+';text-align:'+col.align+';height:'+(el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere;vertical-align:middle">'+cellHtml(value,el.tableImageFit||"contain")+'</td>';
+          const rh=(el.rowHeights&&Number(el.rowHeights[ri]))||el.rowHeight||8;
+          cells+='<td '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="position:relative;border:'+bw+'px solid #cbd2df;padding:'+(isImageValue(value)?'0':'2px')+';text-align:'+col.align+';height:'+rh+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere;word-break:'+(el.wrap===false?'normal':'break-word')+';vertical-align:middle">'+cellHtml(value,el.tableImageFit||"contain")+'</td>';
         }
         return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cells+'</tr>';
       }).join("");
