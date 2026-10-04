@@ -27,6 +27,23 @@ function tableRows(el,data){
   return[data||{}];
 }
 function commonStyle(el){return 'position:absolute;left:'+el.x+'mm;top:'+el.y+'mm;width:'+el.w+'mm;height:'+el.h+'mm;font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;'}
+function hasValue(v){return !(v===undefined||v===null||v==="")}
+function textCss(el){
+  let s="white-space:"+(el.wrap===false?"nowrap":"normal")+";overflow-wrap:"+(el.wrap===false?"normal":"anywhere")+";word-break:"+(el.wrap===false?"normal":"break-word")+";";
+  if(el.overflowMode==="ellipsis"&&el.wrap===false)s+="text-overflow:ellipsis;";
+  if(el.maxLines>0&&el.wrap!==false)s+="display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:"+el.maxLines+";";
+  if(el.overflowMode==="grow")s+="height:auto;min-height:"+el.h+"mm;";
+  return s
+}
+function imagePosition(el){return (el.alignX||"center")+" "+(el.alignY||"center")}
+function visibleColumns(el,rows,data){
+  const cols=normalizeColumns(el.columns).map((c,i)=>({...c,_index:i}));
+  if(!el.hideEmptyColumns)return cols;
+  const v=cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field])));
+  return v.length?v:cols
+}
+function mergeAt(el,row,col){return (el.merges||[]).find(m=>m.row===row&&m.col===col)||null}
+function covered(el,row,col){return (el.merges||[]).some(m=>!(m.row===row&&m.col===col)&&row>=m.row&&row<m.row+(m.rowSpan||1)&&col>=m.col&&col<m.col+(m.colSpan||1))}
 function isImageValue(v){return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v))}
 function cellHtml(v,imageFit="contain"){
   if(isImageValue(v)) return '<img src="'+esc(v)+'" style="width:100%;height:100%;object-fit:'+imageFit+';display:block;margin:0" referrerpolicy="no-referrer">';
@@ -37,8 +54,13 @@ export function renderTemplateToHtml(tpl,data={}){
   const p=tpl.page||{width:215,height:140};
   const items=(tpl.elements||[]).filter(el=>!el.hidden).map(el=>{
     const common=commonStyle(el);
-    if(el.type==="text")return '<div style="'+common+'">'+esc(el.text)+'</div>';
-    if(el.type==="field")return '<div style="'+common+'">'+esc(fieldValue(el,data))+'</div>';
+    if(el.type==="text")return '<div style="'+common+textCss(el)+'">'+esc(el.text)+'</div>';
+    if(el.type==="field"){
+      const raw=data?.[el.field];
+      if(!hasValue(raw)&&el.emptyBehavior==="hide")return"";
+      const value=hasValue(raw)?fieldValue(el,data):(el.emptyBehavior==="placeholder"?(el.text||""):"");
+      return '<div style="'+common+textCss(el)+'">'+esc(value)+'</div>'
+    }
     if(el.type==="barcode"){
       const v=data?.[el.field]||el.text||"";
       return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'"></svg>'+(el.showText===false?'':'<small>'+esc(v)+'</small>')+'</div>';
@@ -49,18 +71,24 @@ export function renderTemplateToHtml(tpl,data={}){
     }
     if(el.type==="image"){
       const src=data?.[el.field]||"";
-      return '<div style="'+common+'border-radius:'+(el.radius||0)+'px">'+(src?'<img src="'+esc(src)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;display:block;object-fit:'+(el.imageFit||"contain")+';border-radius:'+(el.radius||0)+'px">':'')+'</div>';
+      if(!src&&el.emptyBehavior==="hide")return"";
+      return '<div style="'+common+'padding:'+(el.padding||0)+'mm;border-radius:'+(el.radius||0)+'px">'+(src?'<img src="'+esc(src)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;display:block;object-fit:'+(el.imageFit==="original"?"none":(el.imageFit||"contain"))+';object-position:'+imagePosition(el)+';border-radius:'+(el.radius||0)+'px">':'')+'</div>';
     }
     if(el.type==="line")return '<div style="'+common+'border-top:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #17223c"></div>';
     if(el.type==="container")return '<div style="'+common+'border:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #cbd2df;border-radius:'+(el.radius||0)+'px"></div>';
     if(el.type==="table"){
-      const cols=normalizeColumns(el.columns);
-      const rows=tableRows(el,data).slice(0,el.maxRows||5);
-      const bw=el.borderWidth??.5;
-      const widths=cols.map(c=>c.width).filter(v=>Number.isFinite(Number(v))&&Number(v)>0);
-      const hasWidths=widths.length===cols.length;
-      const head=el.showHeader===false?'':'<thead><tr>'+cols.map(c=>'<th style="border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';'+(hasWidths?'width:'+c.width+'%;':'')+'">'+esc(c.title)+'</th>').join("")+'</tr></thead>';
-      const body=rows.map((row,ri)=>'<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cols.map(c=>'<td style="border:'+bw+'px solid #cbd2df;padding:2px;text-align:'+c.align+';height:'+(el.rowHeight||8)+'mm">'+cellHtml(row?.[c.field]??data?.[c.field]??"",el.tableImageFit||"contain")+'</td>').join("")+'</tr>').join("");
+      const rows0=tableRows(el,data).slice(0,el.maxRows||5),rows=rows0.length?rows0:[{}];
+      const cols=visibleColumns(el,rows,data),bw=el.borderWidth??.5;
+      const head=el.showHeader===false?'':'<thead><tr>'+cols.map(c=>'<th style="border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>').join("")+'</tr></thead>';
+      const body=rows.map((row,ri)=>{
+        let cells="";
+        for(const col of cols){
+          const ci=col._index;if(covered(el,ri,ci))continue;
+          const merge=mergeAt(el,ri,ci),value=row?.[col.field]??data?.[col.field]??"";
+          cells+='<td '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="border:'+bw+'px solid #cbd2df;padding:'+(isImageValue(value)?'0':'2px')+';text-align:'+col.align+';height:'+(el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere;vertical-align:middle">'+cellHtml(value,el.tableImageFit||"contain")+'</td>';
+        }
+        return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cells+'</tr>';
+      }).join("");
       return '<table style="'+common+'border-collapse:collapse;table-layout:fixed;width:'+el.w+'mm;height:auto;font-size:'+(el.fontSize||9)+'px">'+head+'<tbody>'+body+'</tbody></table>';
     }
     return""
