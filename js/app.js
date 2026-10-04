@@ -185,6 +185,19 @@ async function openPreviewModal(){
   requestAnimationFrame(fitPreviewModal);
 }
 
+async function applyDesignerTemplate(template){
+  if(!template?.id)return;
+  const i=state.templates.findIndex(t=>t.id===template.id);
+  if(i>=0)state.templates[i]=structuredClone(template);else state.templates.push(structuredClone(template));
+  state.activeTemplateId=template.id;
+  saveTemplates(state.templates);
+  fillTemplates();
+  autoBind();
+  syncBridge();
+  await renderPreview();
+  toast("模板已同步");
+}
+
 async function init(){
   state.templates=loadTemplates();state.activeTemplateId=state.templates[0]?.id||null;fillTemplates();
 
@@ -228,6 +241,9 @@ async function init(){
   $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
 
   window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>{fitPreview();if(!$("previewModal").classList.contains("hidden"))fitPreviewModal()},80)});
+  window.addEventListener("message",e=>{
+    if(e.data?.type==="SUPER_PRINT_TEMPLATE_SAVE"&&e.data.template)applyDesignerTemplate(e.data.template);
+  });
   window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderPreview()});
 
   await refresh();
