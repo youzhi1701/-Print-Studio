@@ -318,3 +318,25 @@
 .resize-handle.sw{left:-6px!important;bottom:-6px!important}
 .image-el.selected{overflow:visible!important}
 .image-el.selected>img{pointer-events:none!important}
+
+/* table-cell editing: keep outer resize controls compact */
+.resize-handle.e,.resize-handle.w{width:8px!important;height:18px!important;border-radius:4px!important}
+.resize-handle.e{right:-4px!important}.resize-handle.w{left:-4px!important}
+.resize-handle.n,.resize-handle.s{width:18px!important;height:8px!important;border-radius:4px!important}
+.resize-handle.n{top:-4px!important}.resize-handle.s{bottom:-4px!important}
+.resize-handle.nw,.resize-handle.ne,.resize-handle.se,.resize-handle.sw{width:8px!important;height:8px!important;border-radius:2px!important}
+.resize-handle.nw{left:-4px!important;top:-4px!important}.resize-handle.ne{right:-4px!important;top:-4px!important}.resize-handle.se{right:-4px!important;bottom:-4px!important}.resize-handle.sw{left:-4px!important;bottom:-4px!important}
+
+.table-col-resizer{width:9px!important;margin-left:-4px!important;z-index:60!important}
+.table-row-resizer{position:absolute;left:0;right:0;height:9px;margin-top:-4px;cursor:row-resize;z-index:60}
+.table-row-resizer::after{content:"";position:absolute;left:0;right:0;top:4px;height:1px;background:transparent}
+.table-el.selected .table-row-resizer:hover::after,.table-el.selected .table-row-resizer.active::after{background:#2563eb}
+.table-edit-cell{position:relative;cursor:cell}
+.table-edit-cell.cell-selected{outline:2px solid #2563eb!important;outline-offset:-2px;background:rgba(37,99,235,.06)!important}
+.table-edit-cell.cell-range{background:rgba(37,99,235,.05)!important}
+.table-cell-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.table-cell-actions button{height:27px;border:1px solid var(--border);border-radius:7px;background:rgba(255,255,255,.52);font-size:8px;color:var(--ink2);cursor:pointer}
+.table-cell-actions button:hover{background:rgba(37,99,235,.06);color:var(--blue)}
+.table-el td,.table-el th{vertical-align:middle}
+.table-el.wrap-on td,.table-el.wrap-on th{white-space:normal!important;overflow-wrap:anywhere!important;word-break:break-word!important}
+.table-el.wrap-off td,.table-el.wrap-off th{white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
