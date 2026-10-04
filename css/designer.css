@@ -284,3 +284,37 @@
 }
 .table-el td{position:relative}
 .table-el td:has(.table-cell-image){padding:0!important}
+
+/* improve resize hit areas: horizontal/vertical resizing must be easy to grab */
+.resize-handle{z-index:40!important;box-sizing:border-box}
+.resize-handle.e,
+.resize-handle.w{
+  width:14px!important;
+  height:38px!important;
+  top:50%!important;
+  transform:translateY(-50%)!important;
+  border-radius:7px!important;
+}
+.resize-handle.e{right:-7px!important}
+.resize-handle.w{left:-7px!important}
+.resize-handle.n,
+.resize-handle.s{
+  width:38px!important;
+  height:14px!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  border-radius:7px!important;
+}
+.resize-handle.n{top:-7px!important}
+.resize-handle.s{bottom:-7px!important}
+.resize-handle.nw,.resize-handle.ne,.resize-handle.se,.resize-handle.sw{
+  width:11px!important;
+  height:11px!important;
+  border-radius:3px!important;
+}
+.resize-handle.nw{left:-6px!important;top:-6px!important}
+.resize-handle.ne{right:-6px!important;top:-6px!important}
+.resize-handle.se{right:-6px!important;bottom:-6px!important}
+.resize-handle.sw{left:-6px!important;bottom:-6px!important}
+.image-el.selected{overflow:visible!important}
+.image-el.selected>img{pointer-events:none!important}
