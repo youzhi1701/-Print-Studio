@@ -38,22 +38,27 @@ function fit(){
 }
 async function printOne(){
   const tpl=template(),rec=currentRecord();if(!tpl||!rec)return;
-  const old=$("sheetHost").innerHTML;
-  $("sheetHost").innerHTML=renderTemplateToHtml(tpl,rec.data||{});
-  await hydrateCodes($("sheetHost"));
-  $("sheetHost").style.zoom="1";
+  const host=$("sheetHost"),old=host.innerHTML,p=tpl.page||{width:215,height:140};
+  host.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
+  await hydrateCodes(host);host.style.zoom="1";
+  const style=document.createElement("style");style.id="previewPrintPage";
+  style.textContent="@media print{@page{size:"+p.width+"mm "+p.height+"mm;margin:0}.print-sheet{width:"+p.width+"mm!important;height:"+p.height+"mm!important}}";
+  document.head.appendChild(style);
+  const cleanup=async()=>{style.remove();window.removeEventListener("afterprint",cleanup);host.innerHTML=old;await hydrateCodes(host);if(fitMode)fit()};
+  window.addEventListener("afterprint",cleanup);
   window.print();
-  $("sheetHost").innerHTML=old;
-  await hydrateCodes($("sheetHost"));
-  if(fitMode)fit();
 }
 async function printAll(){
   const tpl=template(),list=records();if(!tpl||!list.length)return;
-  const host=$("sheetHost"),old=host.innerHTML;
+  const host=$("sheetHost"),old=host.innerHTML,p=tpl.page||{width:215,height:140};
   host.innerHTML=list.map(r=>renderTemplateToHtml(tpl,r.data||{})).join("");
   await hydrateCodes(host);host.style.zoom="1";
+  const style=document.createElement("style");style.id="previewPrintPage";
+  style.textContent="@media print{@page{size:"+p.width+"mm "+p.height+"mm;margin:0}.print-sheet{width:"+p.width+"mm!important;height:"+p.height+"mm!important}}";
+  document.head.appendChild(style);
+  const cleanup=async()=>{style.remove();window.removeEventListener("afterprint",cleanup);host.innerHTML=old;await hydrateCodes(host);if(fitMode)fit()};
+  window.addEventListener("afterprint",cleanup);
   window.print();
-  host.innerHTML=old;await hydrateCodes(host);if(fitMode)fit();
 }
 function applyPayload(data){payload=data||payload;index=0;render()}
 
