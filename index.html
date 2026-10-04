@@ -1,503 +1,57 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印</title>
   <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
+  <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
+  <main class="shell">
+    <header class="brand glass">
+      <div class="bars"><i></i><i></i><i></i></div>
+      <div><h1>超级打印</h1><p>通用可视化打印设计器</p></div>
+      <span id="sdkState" class="pill">正在连接飞书</span>
+    </header>
 
-<div id="app">
-
-  <!-- 极光背景 -->
-  <div class="aurora aurora-1"></div>
-  <div class="aurora aurora-2"></div>
-  <div class="aurora aurora-3"></div>
-  <div class="aurora aurora-4"></div>
-  <div class="aurora aurora-5"></div>
-  <div class="aurora aurora-6"></div>
-
-  <!-- 顶部 -->
-  <header class="topbar glass">
-
-    <div class="brand">
-      <div class="tri-bars">
-        <i></i>
-        <i></i>
-        <i></i>
+    <section class="glass card">
+      <div class="section-title"><div class="bars small"><i></i><i></i><i></i></div>当前记录</div>
+      <div id="recordEmpty" class="empty">在左侧多维表格中选中一条记录</div>
+      <div id="recordBox" class="record hidden">
+        <div class="record-top"><strong id="recordTitle">当前记录</strong><span id="recordStatus" class="pill ok">已读取</span></div>
+        <div id="recordFields" class="field-list"></div>
       </div>
-
-      <div>
-        <div class="brand-name">超级打印</div>
-        <div class="brand-sub">通用可视化打印设计器</div>
-      </div>
-    </div>
-
-    <div class="template-name-wrap">
-      <span class="mini-label">当前模板</span>
-      <input id="templateName" value="发货单 215×140">
-    </div>
-
-    <div class="top-actions">
-
-      <button class="icon-btn" id="undoBtn" title="撤销">
-        ↶
-      </button>
-
-      <button class="icon-btn" id="redoBtn" title="重做">
-        ↷
-      </button>
-
-      <button class="btn glass-btn" id="newBtn">
-        新建
-      </button>
-
-      <button class="btn glass-btn" id="saveBtn">
-        保存
-      </button>
-
-      <button class="btn glass-btn" id="previewBtn">
-        实际预览
-      </button>
-
-      <button class="btn primary-btn" id="printBtn">
-        打印
-      </button>
-
-    </div>
-
-  </header>
-
-
-  <!-- 主体 -->
-  <main class="workspace">
-
-    <!-- 左侧组件 -->
-    <aside class="sidebar left-panel glass">
-
-      <section class="panel-section">
-
-        <div class="section-title">
-          <div class="tri-bars small">
-            <i></i><i></i><i></i>
-          </div>
-          基础组件
-        </div>
-
-        <div class="component-grid">
-
-          <button class="component-btn" data-type="text">
-            <span class="component-icon">T</span>
-            <span>文本</span>
-          </button>
-
-          <button class="component-btn" data-type="field">
-            <span class="component-icon">{ }</span>
-            <span>数据字段</span>
-          </button>
-
-          <button class="component-btn" data-type="image">
-            <span class="component-icon">▧</span>
-            <span>图片</span>
-          </button>
-
-          <button class="component-btn" data-type="table">
-            <span class="component-icon">▦</span>
-            <span>明细表格</span>
-          </button>
-
-        </div>
-
-      </section>
-
-
-      <div class="panel-divider"></div>
-
-
-      <section class="panel-section">
-
-        <div class="section-title">
-          <div class="tri-bars small">
-            <i></i><i></i><i></i>
-          </div>
-          编码组件
-        </div>
-
-        <div class="component-grid">
-
-          <button class="component-btn" data-type="barcode">
-            <span class="component-icon">|||</span>
-            <span>条码</span>
-          </button>
-
-          <button class="component-btn" data-type="qrcode">
-            <span class="component-icon">▦</span>
-            <span>二维码</span>
-          </button>
-
-        </div>
-
-      </section>
-
-
-      <div class="panel-divider"></div>
-
-
-      <section class="panel-section">
-
-        <div class="section-title">
-          <div class="tri-bars small">
-            <i></i><i></i><i></i>
-          </div>
-          布局组件
-        </div>
-
-        <div class="component-grid">
-
-          <button class="component-btn" data-type="line">
-            <span class="component-icon">—</span>
-            <span>分隔线</span>
-          </button>
-
-          <button class="component-btn" data-type="container">
-            <span class="component-icon">□</span>
-            <span>容器</span>
-          </button>
-
-        </div>
-
-      </section>
-
-
-      <div class="panel-divider"></div>
-
-
-      <section class="panel-section">
-
-        <div class="section-title">
-          <div class="tri-bars small">
-            <i></i><i></i><i></i>
-          </div>
-          页面
-        </div>
-
-        <label class="property-row">
-          <span>宽度</span>
-          <div class="input-unit">
-            <input id="pageWidth" type="number" value="215">
-            <b>mm</b>
-          </div>
-        </label>
-
-        <label class="property-row">
-          <span>高度</span>
-          <div class="input-unit">
-            <input id="pageHeight" type="number" value="140">
-            <b>mm</b>
-          </div>
-        </label>
-
-        <button class="full-btn glass-btn" id="applyPageBtn">
-          应用纸张尺寸
-        </button>
-
-      </section>
-
-    </aside>
-
-
-    <!-- 中间 -->
-    <section class="canvas-area">
-
-      <!-- 画布工具 -->
-      <div class="canvas-toolbar glass">
-
-        <div class="tool-group">
-
-          <label class="switch-row">
-            <input id="gridToggle" type="checkbox" checked>
-            <span class="switch"></span>
-            <b>网格</b>
-          </label>
-
-          <label class="switch-row">
-            <input id="snapToggle" type="checkbox" checked>
-            <span class="switch"></span>
-            <b>吸附</b>
-          </label>
-
-        </div>
-
-        <div class="canvas-info">
-          <span id="pageSizeText">215 × 140 mm</span>
-          <span class="dot">·</span>
-          <span>白色区域为实际打印内容</span>
-        </div>
-
-      </div>
-
-
-      <!-- 标尺 + 页面 -->
-      <div class="canvas-scroll">
-
-        <div id="zoomLayer">
-
-          <div class="top-ruler" id="topRuler"></div>
-
-          <div class="canvas-row">
-
-            <div class="left-ruler" id="leftRuler"></div>
-
-            <div class="page-wrap">
-
-              <div id="printPage" class="print-page grid-on">
-
-                <div class="safe-area"></div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-      </div>
-
-
-      <!-- 底部 -->
-      <div class="statusbar glass">
-
-        <div class="status-left">
-          <span class="status-dot success"></span>
-          <span id="saveStatus">准备就绪</span>
-        </div>
-
-        <div class="status-center">
-          <span id="elementCount">0 个元素</span>
-        </div>
-
-        <div class="zoom-control">
-
-          <button id="zoomOut">−</button>
-
-          <input
-            id="zoomRange"
-            type="range"
-            min="50"
-            max="150"
-            step="5"
-            value="75"
-          >
-
-          <button id="zoomIn">＋</button>
-
-          <span id="zoomValue">75%</span>
-
-        </div>
-
-      </div>
-
     </section>
 
-
-    <!-- 右侧 -->
-    <aside class="sidebar right-panel glass">
-
-      <div id="noSelection" class="empty-state">
-        <div class="empty-icon">◇</div>
-        <b>未选择元素</b>
-        <span>点击画布中的元素后，可在这里精确调整属性。</span>
+    <section class="glass card">
+      <div class="section-title"><div class="bars small"><i></i><i></i><i></i></div>打印模板</div>
+      <label class="label">模板
+        <select id="templateSelect">
+          <option value="shipping">发货单 · 215×140</option>
+        </select>
+      </label>
+      <div class="preview-mini">
+        <div class="paper"><b>发货单</b><span>当前记录实时预览</span><div class="lines"></div></div>
       </div>
+      <button id="printCurrent" class="btn primary">打印当前记录</button>
+      <button id="printSelected" class="btn secondary">批量打印所选记录</button>
+    </section>
 
-
-      <div id="propertyPanel" class="property-panel hidden">
-
-        <section class="panel-section">
-
-          <div class="section-title">
-            <div class="tri-bars small">
-              <i></i><i></i><i></i>
-            </div>
-            元素
-          </div>
-
-          <div class="element-actions">
-
-            <button id="duplicateBtn" class="icon-text-btn">
-              复制
-            </button>
-
-            <button id="lockBtn" class="icon-text-btn">
-              锁定
-            </button>
-
-            <button id="deleteBtn" class="icon-text-btn danger-text">
-              删除
-            </button>
-
-          </div>
-
-        </section>
-
-
-        <div class="panel-divider"></div>
-
-
-        <section class="panel-section">
-
-          <div class="section-title">
-            <div class="tri-bars small">
-              <i></i><i></i><i></i>
-            </div>
-            位置与尺寸
-          </div>
-
-          <div class="xy-grid">
-
-            <label>
-              <span>X</span>
-              <div class="input-unit">
-                <input id="propX" type="number" step="0.1">
-                <b>mm</b>
-              </div>
-            </label>
-
-            <label>
-              <span>Y</span>
-              <div class="input-unit">
-                <input id="propY" type="number" step="0.1">
-                <b>mm</b>
-              </div>
-            </label>
-
-            <label>
-              <span>W</span>
-              <div class="input-unit">
-                <input id="propW" type="number" step="0.1">
-                <b>mm</b>
-              </div>
-            </label>
-
-            <label>
-              <span>H</span>
-              <div class="input-unit">
-                <input id="propH" type="number" step="0.1">
-                <b>mm</b>
-              </div>
-            </label>
-
-          </div>
-
-        </section>
-
-
-        <div class="panel-divider"></div>
-
-
-        <section class="panel-section text-properties">
-
-          <div class="section-title">
-            <div class="tri-bars small">
-              <i></i><i></i><i></i>
-            </div>
-            内容与文字
-          </div>
-
-          <label class="stack-field">
-            <span>内容</span>
-            <textarea id="propText" rows="3"></textarea>
-          </label>
-
-          <div class="two-grid">
-
-            <label class="stack-field">
-              <span>字号</span>
-              <div class="input-unit">
-                <input id="propFontSize" type="number">
-                <b>px</b>
-              </div>
-            </label>
-
-            <label class="stack-field">
-              <span>字重</span>
-              <select id="propFontWeight">
-                <option value="400">常规</option>
-                <option value="500">中等</option>
-                <option value="600">半粗</option>
-                <option value="700">粗体</option>
-                <option value="800">特粗</option>
-              </select>
-            </label>
-
-          </div>
-
-
-          <label class="stack-field">
-            <span>文字对齐</span>
-
-            <div class="segmented">
-              <button data-align="left">左</button>
-              <button data-align="center">中</button>
-              <button data-align="right">右</button>
-            </div>
-
-          </label>
-
-        </section>
-
-
-        <div class="panel-divider"></div>
-
-
-        <section class="panel-section">
-
-          <div class="section-title">
-            <div class="tri-bars small">
-              <i></i><i></i><i></i>
-            </div>
-            数据
-          </div>
-
-          <label class="stack-field">
-            <span>字段绑定</span>
-
-            <select id="dataFieldSelect">
-              <option value="">未绑定</option>
-              <option value="订单编号">订单编号</option>
-              <option value="收件人">收件人</option>
-              <option value="手机号">手机号</option>
-              <option value="收货地址">收货地址</option>
-              <option value="商品名称">商品名称</option>
-              <option value="数量">数量</option>
-              <option value="价格">价格</option>
-            </select>
-
-          </label>
-
-          <div class="hint-box">
-            下一阶段这里会自动读取当前飞书多维表格字段。
-          </div>
-
-        </section>
-
+    <section class="glass card compact">
+      <div class="section-title"><div class="bars small"><i></i><i></i><i></i></div>设计与管理</div>
+      <button id="openDesigner" class="btn designer">全屏设计模板 ↗</button>
+      <div class="mini-actions">
+        <button id="refreshData">刷新数据</button>
+        <button id="exportTemplate">导出模板</button>
       </div>
+    </section>
 
-    </aside>
-
+    <footer class="status glass">
+      <span><i class="dot ok"></i><b id="statusText">准备就绪</b></span>
+      <span id="selectionText">未选择记录</span>
+    </footer>
   </main>
-
-
-  <!-- Toast -->
-  <div id="toast" class="toast glass">
-    <span id="toastText">已保存</span>
-  </div>
-
-</div>
-
-<script src="app.js"></script>
-
+  <script type="module" src="app.js"></script>
 </body>
 </html>
