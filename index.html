@@ -3,55 +3,68 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light">
   <title>超级打印</title>
-  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="./css/theme.css">
+  <link rel="stylesheet" href="./css/sidebar.css">
+  <link rel="stylesheet" href="./css/print.css" media="print">
 </head>
-<body>
-  <div class="aurora a1"></div><div class="aurora a2"></div><div class="aurora a3"></div>
-  <main class="shell">
-    <header class="brand glass">
-      <div class="bars"><i></i><i></i><i></i></div>
-      <div><h1>超级打印</h1><p>通用可视化打印设计器</p></div>
-      <span id="sdkState" class="pill">正在连接飞书</span>
+<body class="aurora-app">
+  <div class="aurora-layer" aria-hidden="true"></div>
+  <main class="sidebar-shell">
+    <header class="glass-card brand-card">
+      <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <div class="brand-copy">
+        <h1>超级打印</h1>
+        <p>通用可视化打印设计器</p>
+      </div>
+      <span id="sdkState" class="status-pill">连接中</span>
     </header>
 
-    <section class="glass card">
-      <div class="section-title"><div class="bars small"><i></i><i></i><i></i></div>当前记录</div>
-      <div id="recordEmpty" class="empty">在左侧多维表格中选中一条记录</div>
-      <div id="recordBox" class="record hidden">
-        <div class="record-top"><strong id="recordTitle">当前记录</strong><span id="recordStatus" class="pill ok">已读取</span></div>
-        <div id="recordFields" class="field-list"></div>
+    <section class="glass-card block">
+      <div class="block-title"><span class="mini-bars"><i></i><i></i><i></i></span>当前记录</div>
+      <div id="recordEmpty" class="empty-state">在左侧多维表格中选择一条记录</div>
+      <div id="recordBox" class="record-box hidden">
+        <div class="record-head">
+          <strong id="recordTitle">当前记录</strong>
+          <span class="status-pill success">已读取</span>
+        </div>
+        <div id="recordFields" class="record-fields"></div>
       </div>
     </section>
 
-    <section class="glass card">
-      <div class="section-title"><div class="bars small"><i></i><i></i><i></i></div>打印模板</div>
-      <label class="label">模板
-        <select id="templateSelect">
-          <option value="shipping">发货单 · 215×140</option>
-        </select>
+    <section class="glass-card block">
+      <div class="block-title"><span class="mini-bars"><i></i><i></i><i></i></span>打印模板</div>
+      <label class="field-label">模板
+        <select id="templateSelect"></select>
       </label>
-      <div class="preview-mini">
-        <div class="paper"><b>发货单</b><span>当前记录实时预览</span><div class="lines"></div></div>
+      <div id="quickPreview" class="quick-preview" aria-label="打印预览">
+        <div class="paper-mini">
+          <strong id="previewTitle">发货单</strong>
+          <span id="previewSubtitle">选择记录后显示真实数据</span>
+          <div id="previewLines" class="preview-lines"></div>
+        </div>
       </div>
-      <button id="printCurrent" class="btn primary">打印当前记录</button>
-      <button id="printSelected" class="btn secondary">批量打印所选记录</button>
+      <button id="printCurrent" class="btn btn-primary">打印当前记录</button>
+      <button id="printSelected" class="btn btn-secondary">批量打印所选记录</button>
     </section>
 
-    <section class="glass card compact">
-      <div class="section-title"><div class="bars small"><i></i><i></i><i></i></div>设计与管理</div>
-      <button id="openDesigner" class="btn designer">全屏设计模板 ↗</button>
-      <div class="mini-actions">
-        <button id="refreshData">刷新数据</button>
-        <button id="exportTemplate">导出模板</button>
+    <section class="glass-card block compact">
+      <div class="block-title"><span class="mini-bars"><i></i><i></i><i></i></span>设计与管理</div>
+      <button id="openDesigner" class="btn btn-designer">全屏设计模板 ↗</button>
+      <div class="mini-grid">
+        <button id="refreshData" class="mini-btn">刷新数据</button>
+        <button id="exportTemplate" class="mini-btn">导出模板</button>
       </div>
     </section>
 
-    <footer class="status glass">
-      <span><i class="dot ok"></i><b id="statusText">准备就绪</b></span>
+    <footer class="glass-card footer-status">
+      <span><i class="status-dot"></i><b id="statusText">准备就绪</b></span>
       <span id="selectionText">未选择记录</span>
     </footer>
   </main>
-  <script type="module" src="app.js"></script>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
