@@ -1,8 +1,8 @@
-import {state} from "./state.js";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js";
-import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js";
+import {state} from "./state.js?v=20261004-6";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261004-6";
+import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js?v=20261004-6";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261004-6";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261004-6";
 
 const $=id=>document.getElementById(id);
 let toastTimer,refreshing=false,currentIndex=0;let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
