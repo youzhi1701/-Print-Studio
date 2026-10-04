@@ -1,6 +1,124 @@
 let sdkModule=null;
-async function loadSdk(){if(sdkModule)return sdkModule;try{sdkModule=await import("https://cdn.jsdelivr.net/npm/@lark-base-open/js-sdk/+esm");return sdkModule}catch(err){console.warn("飞书 SDK 加载失败",err);return null}}
-function cellToText(v){if(v==null)return"";if(typeof v==="string"||typeof v==="number"||typeof v==="boolean")return String(v);if(Array.isArray(v))return v.map(cellToText).filter(Boolean).join("、");if(typeof v==="object"){if("text"in v)return cellToText(v.text);if("name"in v)return cellToText(v.name);if("value"in v)return cellToText(v.value);return Object.values(v).map(cellToText).filter(Boolean).join("、")}return String(v)}
-export async function connectFeishu(){const mod=await loadSdk();if(!mod?.bitable)return{connected:false,reason:"SDK unavailable"};return{connected:true,bitable:mod.bitable}}
-export async function readContext(bitable){const selection=await bitable.base.getSelection();const tableId=selection?.tableId;const recordId=selection?.recordId;if(!tableId)return{selection,fields:[],record:null,table:null};const table=await bitable.base.getTableById(tableId);const fieldMeta=await table.getFieldMetaList();const fields=fieldMeta.map(f=>({id:f.id,name:f.name,type:f.type}));let record=null;if(recordId){const rec=await table.getRecordById(recordId);const data={};for(const f of fields){data[f.name]=cellToText(rec?.fields?.[f.id])}record={id:recordId,data,raw:rec}}return{selection,fields,record,table}}
-export async function readSelectedRecords(bitable,table,fields){try{const ids=await bitable.base.getSelection();if(ids?.recordId){const rec=await table.getRecordById(ids.recordId);const data={};for(const f of fields)data[f.name]=cellToText(rec?.fields?.[f.id]);return[{id:ids.recordId,data}]}return[]}catch{return[]}}
+
+async function loadSdk(){
+  if(sdkModule) return sdkModule;
+  try{
+    sdkModule=await import("https://cdn.jsdelivr.net/npm/@lark-base-open/js-sdk/+esm");
+    return sdkModule;
+  }catch(err){
+    console.warn("飞书 SDK 加载失败",err);
+    return null;
+  }
+}
+
+function cellToText(v){
+  if(v==null) return "";
+  if(typeof v==="string"||typeof v==="number"||typeof v==="boolean") return String(v);
+  if(Array.isArray(v)) return v.map(cellToText).filter(Boolean).join("、");
+  if(typeof v==="object"){
+    if("text" in v) return cellToText(v.text);
+    if("name" in v) return cellToText(v.name);
+    if("value" in v) return cellToText(v.value);
+    if("url" in v) return cellToText(v.url);
+    return Object.values(v).map(cellToText).filter(Boolean).join("、");
+  }
+  return String(v);
+}
+
+async function getFields(table,selection){
+  let meta=[];
+  try{
+    if(selection?.viewId){
+      const view=await table.getViewById(selection.viewId);
+      if(view?.getFieldMetaList) meta=await view.getFieldMetaList();
+    }
+  }catch{}
+  if(!meta?.length){
+    try{meta=await table.getFieldMetaList()}catch{meta=[]}
+  }
+  return (meta||[]).map(f=>({id:f.id,name:f.name,type:f.type}));
+}
+
+async function readRecord(table,fields,recordId){
+  if(!recordId) return null;
+  let raw=null;
+  try{raw=await table.getRecordById(recordId)}catch{}
+  const data={};
+  for(const f of fields){
+    let value="";
+    try{
+      if(table.getCellString) value=await table.getCellString(f.id,recordId);
+    }catch{}
+    if(value==null||value===""){
+      value=cellToText(raw?.fields?.[f.id]);
+    }
+    data[f.name]=value??"";
+  }
+  return {id:recordId,data,raw};
+}
+
+export async function connectFeishu(){
+  const mod=await loadSdk();
+  if(!mod?.bitable) return {connected:false,reason:"SDK unavailable"};
+  return {connected:true,bitable:mod.bitable};
+}
+
+export async function readContext(bitable){
+  const selection=await bitable.base.getSelection();
+  let table=null;
+  try{table=await bitable.base.getActiveTable()}catch{}
+  if(!table&&selection?.tableId){
+    try{table=await bitable.base.getTableById(selection.tableId)}catch{}
+  }
+  if(!table) return {selection,fields:[],record:null,table:null,tableName:""};
+
+  const fields=await getFields(table,selection);
+  let tableName="";
+  try{tableName=await table.getName()}catch{}
+  const record=selection?.recordId?await readRecord(table,fields,selection.recordId):null;
+  return {selection,fields,record,table,tableName};
+}
+
+export async function readRecordsByIds(table,fields,ids=[]){
+  const rows=[];
+  for(const id of ids){
+    const rec=await readRecord(table,fields,id);
+    if(rec) rows.push(rec);
+  }
+  return rows;
+}
+
+export async function chooseRecords(bitable,table,fields,selection){
+  if(!table) return [];
+  const tableId=table.id||selection?.tableId;
+  const viewId=selection?.viewId;
+  if(!tableId||!viewId||!bitable.ui?.selectRecordIdList) return [];
+  const ids=await bitable.ui.selectRecordIdList(tableId,viewId);
+  return await readRecordsByIds(table,fields,ids||[]);
+}
+
+export async function readSelectedRecords(bitable,table,fields){
+  try{
+    const selection=await bitable.base.getSelection();
+    if(selection?.recordId){
+      const rec=await readRecord(table,fields,selection.recordId);
+      return rec?[rec]:[];
+    }
+  }catch{}
+  return [];
+}
+
+export async function resolveAttachmentUrls(table,record,fields){
+  if(!table||!record) return record;
+  const next={...record,data:{...record.data}};
+  for(const f of fields){
+    const raw=record.raw?.fields?.[f.id];
+    if(!Array.isArray(raw)||!raw.length) continue;
+    const token=raw[0]?.token;
+    if(!token||!table.getAttachmentUrl) continue;
+    try{
+      next.data[f.name]=await table.getAttachmentUrl(token);
+    }catch{}
+  }
+  return next;
+}
