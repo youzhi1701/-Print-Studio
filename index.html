@@ -1,21 +1,79 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>发货单打印</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>发货单打印</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
 
-<div class="app">
-    <h1>发货单打印</h1>
-    <p>飞书多维表格打印插件正在运行</p>
+<div class="toolbar">
+  <button id="printBtn">打印发货单</button>
+</div>
 
-    <button id="printBtn">
-        测试打印
-    </button>
+<div class="sheet">
+
+  <div class="title">发货单</div>
+
+  <div class="info-grid">
+    <div><b>收件人：</b>张三</div>
+    <div><b>手机号：</b>13800138000</div>
+
+    <div class="wide"><b>收货地址：</b>湖北省荆州市沙市区测试地址 123 号</div>
+
+    <div><b>订单编号：</b>202610040001</div>
+    <div><b>打印日期：</b>2026-10-04</div>
+
+    <div class="wide"><b>买家留言：</b>请尽快发货</div>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:8%">序号</th>
+        <th style="width:16%">SKU图片</th>
+        <th style="width:36%">商品名称</th>
+        <th style="width:18%">商品属性</th>
+        <th style="width:10%">数量</th>
+        <th style="width:12%">价格</th>
+      </tr>
+    </thead>
+
+    <tbody>
+      <tr>
+        <td>1</td>
+        <td>
+          <div class="img-placeholder">图片</div>
+        </td>
+        <td>足银9999投资银条</td>
+        <td>100g</td>
+        <td>1</td>
+        <td>¥1500</td>
+      </tr>
+
+      <tr>
+        <td>2</td>
+        <td>
+          <div class="img-placeholder">图片</div>
+        </td>
+        <td>足银9999投资银条</td>
+        <td>50g</td>
+        <td>2</td>
+        <td>¥760</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="total">
+    合计：¥2260
+  </div>
+
+  <div class="footer">
+    温馨提示：请检查商品数量及质量，如对商品或服务不满意，请及时联系客服。
+  </div>
+
 </div>
 
 <script src="app.js"></script>
