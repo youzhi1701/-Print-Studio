@@ -273,3 +273,14 @@
   box-shadow:0 0 0 1px rgba(37,99,235,.08);
 }
 .table-el.selected{overflow:visible!important}
+
+.table-cell-image{
+  width:100%!important;
+  height:100%!important;
+  max-width:100%!important;
+  max-height:100%!important;
+  display:block!important;
+  margin:0!important;
+}
+.table-el td{position:relative}
+.table-el td:has(.table-cell-image){padding:0!important}
