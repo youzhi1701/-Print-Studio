@@ -82,11 +82,31 @@
           <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>位置与尺寸</div>
           <div class="four-grid"><label>X<input id="propX" type="number" step=".1"></label><label>Y<input id="propY" type="number" step=".1"></label><label>W<input id="propW" type="number" step=".1"></label><label>H<input id="propH" type="number" step=".1"></label></div>
           <div class="section-sep"></div>
-          <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>内容</div>
-          <label class="stack">文本<textarea id="propText" rows="3"></textarea></label>
-          <label class="stack">绑定字段<select id="propField"><option value="">未绑定</option></select></label>
-          <div class="two"><label>字号<input id="propFontSize" type="number" min="6"></label><label>字重<select id="propWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option><option value="800">特粗</option></select></label></div>
-          <label class="stack">对齐<div class="segmented"><button data-align="left">左</button><button data-align="center">中</button><button data-align="right">右</button></div></label>
+          <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>内容 <span id="elementTypeBadge" class="type-badge"></span></div>
+          <div id="textProps" class="prop-group">
+            <label class="stack">文本<textarea id="propText" rows="3"></textarea></label>
+            <label class="stack">绑定字段<select id="propField"><option value="">未绑定</option></select></label>
+            <div class="two"><label>字号<input id="propFontSize" type="number" min="6"></label><label>字重<select id="propWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option><option value="800">特粗</option></select></label></div>
+            <label class="stack">对齐<div class="segmented"><button data-align="left">左</button><button data-align="center">中</button><button data-align="right">右</button></div></label>
+          </div>
+          <div id="imageProps" class="prop-group hidden">
+            <label class="stack">图片字段<select id="imageField"><option value="">未绑定</option></select></label>
+            <div class="two"><label>适应<select id="imageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option></select></label><label>圆角<input id="imageRadius" type="number" min="0" step="1"></label></div>
+          </div>
+          <div id="tableProps" class="prop-group hidden">
+            <label class="stack">列字段（逗号分隔）<textarea id="tableColumns" rows="3" placeholder="商品名称,商品属性,数量,价格"></textarea></label>
+            <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>行高<input id="tableRowHeight" type="number" min="4" step="1"></label></div>
+            <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
+          </div>
+          <div id="codeProps" class="prop-group hidden">
+            <label class="stack">数据字段<select id="codeField"><option value="">未绑定</option></select></label>
+            <div id="barcodeOnly" class="two"><label>格式<select id="barcodeFormat"><option value="CODE128">CODE128</option><option value="CODE39">CODE39</option><option value="EAN13">EAN13</option></select></label><label>文字<select id="barcodeText"><option value="true">显示</option><option value="false">隐藏</option></select></label></div>
+            <div id="qrOnly" class="two hidden"><label>纠错<select id="qrLevel"><option value="L">L</option><option value="M">M</option><option value="Q">Q</option><option value="H">H</option></select></label><label>边距<input id="qrMargin" type="number" min="0" max="8"></label></div>
+          </div>
+          <div id="shapeProps" class="prop-group hidden">
+            <div class="two"><label>线宽<input id="shapeBorderWidth" type="number" min="0" max="6" step=".5"></label><label>圆角<input id="shapeRadius" type="number" min="0" step="1"></label></div>
+            <label class="stack">线型<select id="shapeBorderStyle"><option value="solid">实线</option><option value="dashed">虚线</option><option value="dotted">点线</option></select></label>
+          </div>
           <div class="section-sep"></div>
           <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>元素</div>
           <div class="action-grid"><button id="duplicateBtn">复制</button><button id="lockBtn">锁定</button><button id="hideBtn">隐藏</button><button id="frontBtn">置顶</button><button id="backBtn">置底</button><button id="deleteBtn" class="danger">删除</button></div>
