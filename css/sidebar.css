@@ -104,3 +104,13 @@
 .preview-float-tools button:hover{background:rgba(37,99,235,.07);color:var(--blue)}
 #previewZoomText{min-width:34px;text-align:center;font-size:8px;color:var(--muted);font-variant-numeric:tabular-nums}
 .preview-host .print-sheet{pointer-events:none}
+
+.preview-host{
+  --preview-scale:1;
+  --preview-pan-x:0px;
+  --preview-pan-y:0px;
+  transform:
+    translate(calc(-50% + var(--preview-pan-x)),calc(-50% + var(--preview-pan-y)))
+    scale(var(--preview-scale)) !important;
+  transform-origin:center center!important;
+}
