@@ -1,4 +1,4 @@
-import {state,uid,STORAGE_KEYS} from "./state.js";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261004-6";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261004-6";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261004-6";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261004-6";
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
