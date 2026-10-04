@@ -74,3 +74,130 @@
   .zoom-box input{display:none}
   #fitBtn{min-width:36px}
 }
+
+/* =========================================================
+   Compact density pass — maximize canvas, minimize dead space
+   ========================================================= */
+.designer-top{
+  height:50px!important;
+  margin:4px!important;
+  padding:5px 8px!important;
+  border-radius:12px!important;
+  gap:7px!important;
+}
+.designer-brand{min-width:142px!important;gap:6px!important}
+.designer-brand b{font-size:14px!important;line-height:1.05}
+.designer-brand small{font-size:8px!important;line-height:1.05}
+.template-name{height:30px!important;width:180px!important;padding:0 8px!important;font-size:11px!important}
+.top-tools{gap:3px!important}
+.top-tools button{height:30px!important;padding:0 8px!important;border-radius:7px!important;font-size:10px!important;min-width:30px!important}
+
+.designer-grid{
+  height:calc(100vh - 58px)!important;
+  grid-template-columns:188px minmax(0,1fr) 220px!important;
+  gap:4px!important;
+  padding:0 4px 4px!important;
+}
+.designer-left,.designer-right{
+  border-radius:12px!important;
+  overflow-x:hidden!important;
+}
+.tabs,.right-tabs{
+  padding:3px!important;
+  gap:2px!important;
+}
+.tab,.rtab{height:28px!important;border-radius:6px!important;font-size:10px!important}
+.tab-body,.right-body{padding:6px!important}
+.tab-body h3{gap:5px!important;font-size:11px!important;margin:2px 0 6px!important}
+.component-palette{gap:4px!important}
+.component-palette button{
+  height:46px!important;
+  border-radius:8px!important;
+  gap:2px!important;
+  padding:2px!important;
+}
+.component-palette b{font-size:13px!important;line-height:1}
+.component-palette span{font-size:9px!important;line-height:1.1}
+.section-sep{margin:6px 0!important}
+.page-form,.page-form label,.stack{gap:3px!important}
+.page-form select,.page-form input,.field-search,.stack select,.stack textarea,.four-grid input,.two input,.two select{
+  min-height:28px!important;
+  padding:0 6px!important;
+  font-size:9px!important;
+}
+.stack textarea{padding:5px 6px!important}
+.two,.four-grid{gap:4px!important}
+.two label,.four-grid label{gap:2px!important}
+.wide-btn{height:29px!important;border-radius:7px!important;font-size:9px!important}
+.field-list{gap:3px!important;margin-top:5px!important}
+.field-item{padding:6px!important;border-radius:7px!important}
+.data-sync-box{gap:4px!important;margin-bottom:5px!important;padding:6px!important;border-radius:8px!important}
+.data-sync-box>div{gap:3px!important}
+.data-sync-box .wide-btn{height:27px!important}
+
+.designer-center{
+  grid-template-rows:34px minmax(0,1fr) 32px!important;
+}
+.canvas-toolbar{
+  height:34px!important;
+  border-radius:10px!important;
+  padding:0 7px!important;
+  font-size:8px!important;
+}
+.canvas-toolbar>div:first-child{gap:8px!important}
+.canvas-toolbar label{gap:3px!important}
+.canvas-scroller{margin-top:4px!important;border-radius:10px!important}
+.top-ruler{height:18px!important;margin-left:20px!important;font-size:7px!important}
+.left-ruler{width:20px!important;flex:0 0 20px!important;font-size:7px!important}
+.page-pad{padding:10px 12px 24px!important}
+.print-page{box-shadow:0 8px 22px rgba(37,52,86,.14)!important}
+
+.designer-status{
+  height:32px!important;
+  border-radius:9px!important;
+  margin-top:4px!important;
+  padding:0 7px!important;
+  font-size:8px!important;
+}
+.zoom-box{gap:3px!important}
+.zoom-box button{width:23px!important;height:23px!important;border-radius:6px!important;font-size:9px!important}
+.zoom-box input{width:72px!important}
+#fitBtn{min-width:34px!important;padding:0 5px!important}
+
+.section-title{gap:5px!important;font-size:11px!important;margin-bottom:5px!important}
+.no-selection{padding:24px 6px!important;font-size:9px!important}
+.action-grid{gap:3px!important}
+.action-grid button{height:28px!important;border-radius:7px!important;font-size:8px!important}
+.segmented{padding:1px!important;border-radius:7px!important}
+.segmented button{height:25px!important;border-radius:5px!important;font-size:9px!important}
+.layer-list{gap:3px!important}
+.layer-row{gap:4px!important;padding:5px 6px!important;border-radius:7px!important;font-size:8px!important}
+
+/* keep compact controls from forcing horizontal scroll */
+.designer-left *, .designer-right *{min-width:0}
+.page-form input,.page-form select,.stack input,.stack select,.stack textarea,.four-grid input,.two input,.two select{width:100%}
+.context-menu{min-width:126px!important;padding:4px!important}
+.context-menu button{height:27px!important;font-size:9px!important}
+
+/* denser layouts at medium widths */
+@media(max-width:1180px){
+  .designer-grid{grid-template-columns:168px minmax(0,1fr) 198px!important}
+  .designer-brand{min-width:120px!important}
+  .template-name{width:145px!important}
+  .top-tools button{padding:0 6px!important}
+}
+@media(max-width:900px){
+  .designer-grid{grid-template-columns:46px minmax(0,1fr) 46px!important}
+  .designer-grid.left-open{grid-template-columns:164px minmax(0,1fr) 46px!important}
+  .designer-grid.right-open{grid-template-columns:46px minmax(0,1fr) 194px!important}
+  .designer-grid.left-open.right-open{grid-template-columns:164px minmax(0,1fr) 194px!important}
+  .page-pad{padding:8px 10px 20px!important}
+}
+@media(max-width:620px){
+  .designer-top{height:46px!important;margin:3px!important;padding:4px 5px!important}
+  .designer-grid{height:calc(100vh - 52px)!important;padding:0 3px 3px!important;gap:3px!important}
+  .designer-center{grid-template-rows:31px minmax(0,1fr) 30px!important}
+  .canvas-toolbar{height:31px!important}
+  .designer-status{height:30px!important}
+  .page-pad{padding:6px 8px 16px!important}
+}
