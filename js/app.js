@@ -120,11 +120,22 @@ function printRecords(records){
   hydrateCodes(host).finally(()=>setTimeout(()=>{window.print();host.remove()},150));
 }
 
-function openPreviewModal(){
+function fitPreviewModal(){
+  const body=$("previewModalBody"),sheet=body?.querySelector(".print-sheet");
+  if(!body||!sheet)return;
+  sheet.style.zoom="1";
+  const sw=sheet.offsetWidth,sh=sheet.offsetHeight;
+  const sx=(body.clientWidth-16)/Math.max(1,sw);
+  const sy=(body.clientHeight-16)/Math.max(1,sh);
+  const scale=Math.max(.2,Math.min(sx,sy,1.25));
+  sheet.style.zoom=String(scale);
+}
+async function openPreviewModal(){
   const rec=activeRecord(),tpl=activeTemplate();if(!rec||!tpl){toast("请先选择记录");return}
   const body=$("previewModalBody");body.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
   $("previewModal").classList.remove("hidden");
-  hydrateCodes(body);
+  await hydrateCodes(body);
+  requestAnimationFrame(fitPreviewModal);
 }
 
 async function init(){
@@ -147,7 +158,7 @@ async function init(){
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
   $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
 
-  window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(fitPreview,80)});
+  window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>{fitPreview();if(!$("previewModal").classList.contains("hidden"))fitPreviewModal()},80)});
   window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderPreview()});
 
   await refresh();
