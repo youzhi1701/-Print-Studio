@@ -14,6 +14,7 @@
     <div class="designer-brand"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器</small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
+      <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
       <button id="undoBtn" title="撤销">↶</button><button id="redoBtn" title="重做">↷</button>
       <button id="quickBtn">快捷模式</button><button id="newBtn">新建</button><button id="saveBtn">保存</button><button id="previewBtn">实际预览</button>
       <button id="fullBtn">⛶ 全屏</button><button id="printBtn" class="primary">测试打印</button>
@@ -69,7 +70,7 @@
       </div>
       <footer class="designer-status glass">
         <span id="saveState"><i></i>已加载</span><span id="selectionState">0 个元素</span>
-        <div class="zoom-box"><button id="zoomOut">−</button><input id="zoomRange" type="range" min="40" max="160" step="5" value="75"><button id="zoomIn">＋</button><b id="zoomText">75%</b></div>
+        <div class="zoom-box"><button id="fitBtn" title="适配窗口">适配</button><button id="zoomOut">−</button><input id="zoomRange" type="range" min="25" max="180" step="5" value="75"><button id="zoomIn">＋</button><b id="zoomText">75%</b></div>
       </footer>
     </section>
 
