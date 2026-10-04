@@ -119,20 +119,30 @@ export async function readSelectedRecords(bitable,table,fields){
 
 export async function resolveAttachmentUrls(table,record,fields){
   if(!table||!record) return record;
-  const next={...record,data:{...record.data},attachments:{}};
+  const next={...record,data:{...record.data},attachments:{...(record.attachments||{})}};
   for(const f of fields){
     const raw=record.raw?.fields?.[f.id];
     if(!Array.isArray(raw)||!raw.length) continue;
-    const items=raw.filter(v=>v&&typeof v==="object"&&(v.token||v.url||v.tmp_url||v.tmpUrl));
-    if(!items.length) continue;
-    const urls=[];
-    for(const item of items){
-      let url=item.url||item.tmp_url||item.tmpUrl||"";
-      if(item.token&&table.getAttachmentUrl){
-        try{url=await table.getAttachmentUrl(item.token)}catch(err){console.warn("getAttachmentUrl failed",f.name,err)}
-      }
-      if(url) urls.push(url);
+    const tokens=raw.map(v=>v?.token).filter(Boolean);
+    if(!tokens.length) continue;
+
+    let urls=[];
+    // Preferred SDK path: attachment field resolves all URLs for a record.
+    try{
+      const field=await table.getFieldById(f.id);
+      if(field?.getAttachmentUrls) urls=(await field.getAttachmentUrls(record.id))||[];
+    }catch(err){console.warn("attachmentField.getAttachmentUrls failed",f.name,err)}
+
+    // Fallback: table cell attachment API.
+    if(!urls.length&&table.getCellAttachmentUrls){
+      try{urls=(await table.getCellAttachmentUrls(tokens,f.id,record.id))||[]}catch(err){console.warn("getCellAttachmentUrls failed",f.name,err)}
     }
+
+    // Final fallback for preview: base64 thumbnails are directly renderable in <img>.
+    if(!urls.length&&table.getCellThumbnailUrls){
+      try{urls=(await table.getCellThumbnailUrls(tokens,f.id,record.id,720))||[]}catch(err){console.warn("getCellThumbnailUrls failed",f.name,err)}
+    }
+
     if(urls.length){
       next.attachments[f.name]=urls;
       next.data[f.name]=urls[0];
