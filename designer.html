@@ -94,11 +94,15 @@
             <label class="stack">绑定字段<select id="propField"><option value="">未绑定</option></select></label>
             <div class="two"><label>字号<input id="propFontSize" type="number" min="6"></label><label>字重<select id="propWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option><option value="800">特粗</option></select></label></div>
             <label class="stack">对齐<div class="segmented"><button data-align="left">左</button><button data-align="center">中</button><button data-align="right">右</button></div></label>
+            <div class="two"><label>自动换行<select id="textWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>最大行数<input id="textMaxLines" type="number" min="0" step="1" placeholder="0=不限"></label></div>
+            <div class="two"><label>溢出<select id="textOverflow"><option value="clip">裁切</option><option value="ellipsis">省略</option><option value="grow">自动增高</option></select></label><label>空值<select id="textEmptyBehavior"><option value="hide">隐藏组件</option><option value="blank">留空</option><option value="placeholder">显示占位</option></select></label></div>
           </div>
           <div id="imageProps" class="prop-group hidden">
             <label class="stack">图片字段<select id="imageField"><option value="">未绑定</option></select></label>
-            <div class="two"><label>适应<select id="imageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option></select></label><label>圆角<input id="imageRadius" type="number" min="0" step="1"></label></div>
+            <div class="two"><label>适应<select id="imageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select></label><label>圆角<input id="imageRadius" type="number" min="0" step="1"></label></div>
             <label class="stack">尺寸比例<select id="imageAspectLock"><option value="true">锁定原图比例</option><option value="false">自由拉伸</option></select></label>
+            <div class="two"><label>水平<select id="imageAlignX"><option value="left">左</option><option value="center">中</option><option value="right">右</option></select></label><label>垂直<select id="imageAlignY"><option value="top">上</option><option value="center">中</option><option value="bottom">下</option></select></label></div>
+            <div class="two"><label>内边距<input id="imagePadding" type="number" min="0" step=".5"></label><label>空值<select id="imageEmptyBehavior"><option value="hide">打印隐藏</option><option value="blank">留空</option><option value="placeholder">显示占位</option></select></label></div>
           </div>
           <div id="tableProps" class="prop-group hidden">
             <label class="stack">数据源<select id="tableDataField"><option value="">当前记录（单行）</option></select></label>
@@ -106,7 +110,8 @@
             <div class="table-column-actions"><button id="addTableColumn" type="button">+ 添加列</button><button id="normalizeTableWidths" type="button">均分列宽</button></div>
             <textarea id="tableColumns" class="hidden" rows="1"></textarea>
             <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>斑马纹<select id="tableZebra"><option value="false">关闭</option><option value="true">开启</option></select></label></div>
-            <label class="stack">图片单元格<select id="tableImageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option></select></label>
+            <label class="stack">图片单元格<select id="tableImageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select></label>
+            <div class="two"><label>文字换行<select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>空列<select id="tableHideEmptyColumns"><option value="false">保留</option><option value="true">自动隐藏</option></select></label></div>
             <div class="two"><label>行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label><label>最多行数<input id="tableMaxRows" type="number" min="1" step="1"></label></div>
             <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
           </div>
