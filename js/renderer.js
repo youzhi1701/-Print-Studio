@@ -26,7 +26,7 @@ function tableRows(el,data){
   }
   return[data||{}];
 }
-function commonStyle(el){return 'position:absolute;left:'+el.x+'mm;top:'+el.y+'mm;width:'+el.w+'mm;height:'+el.h+'mm;font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;'}
+function commonStyle(el){return 'position:absolute;box-sizing:border-box;left:'+el.x+'mm;top:'+el.y+'mm;width:'+el.w+'mm;height:'+el.h+'mm;font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;'}
 function hasValue(v){return !(v===undefined||v===null||v==="")}
 function textCss(el){
   let s="white-space:"+(el.wrap===false?"nowrap":"normal")+";overflow-wrap:"+(el.wrap===false?"normal":"anywhere")+";word-break:"+(el.wrap===false?"normal":"break-word")+";";
