@@ -390,3 +390,76 @@
 .table-row-resizer{opacity:0}
 .table-el.selected:hover .table-row-resizer{opacity:1}
 .table-row-resizer:hover::after,.table-row-resizer.active::after{background:#2563eb!important}
+
+/* interactive layer manager */
+.layers-toolbar{
+  position:sticky;top:42px;z-index:3;display:grid;
+  grid-template-columns:minmax(0,1fr) 28px 28px;gap:4px;
+  padding:4px 0 6px;background:rgba(255,255,255,.54);backdrop-filter:blur(18px)
+}
+.layers-toolbar input{
+  height:28px;min-width:0;padding:0 8px;border:1px solid rgba(84,104,145,.12);
+  border-radius:7px;background:rgba(255,255,255,.62);font-size:9px;color:var(--ink)
+}
+.layers-toolbar button{
+  height:28px;border:1px solid rgba(84,104,145,.12);border-radius:7px;
+  background:rgba(255,255,255,.55);font-size:8px;color:var(--ink2);cursor:pointer
+}
+.layers-hint{font-size:8px;color:var(--muted);padding:0 2px 6px}
+.layer-list{display:grid;gap:3px}
+.layer-row{
+  position:relative;display:grid;grid-template-columns:18px 22px minmax(0,1fr) 24px 24px;
+  align-items:center;gap:3px;height:32px;padding:2px 4px;
+  border:1px solid rgba(84,104,145,.10);border-radius:8px;
+  background:rgba(255,255,255,.36);transition:.12s ease;cursor:default
+}
+.layer-row:hover{background:rgba(37,99,235,.045);border-color:rgba(37,99,235,.18)}
+.layer-row.active{background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.28)}
+.layer-row.dragging{opacity:.45}
+.layer-row.drag-over{box-shadow:inset 0 2px 0 #2563eb}
+.layer-drag{
+  width:16px;height:24px;display:grid;place-items:center;color:var(--muted);
+  cursor:grab;font-size:12px;user-select:none
+}
+.layer-type{
+  width:20px;height:20px;border-radius:6px;display:grid;place-items:center;
+  background:rgba(120,140,180,.08);font-size:9px;color:var(--ink2)
+}
+.layer-name{
+  min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:9px;color:var(--ink2);cursor:text
+}
+.layer-row.hidden-layer .layer-name{opacity:.42;text-decoration:line-through}
+.layer-row.locked-layer .layer-name::after{content:" · 锁定";font-size:7px;color:var(--muted)}
+.layer-icon-btn{
+  width:23px;height:23px;padding:0;border:0;border-radius:6px;
+  background:transparent;color:var(--muted);font-size:9px;cursor:pointer
+}
+.layer-icon-btn:hover{background:rgba(37,99,235,.07);color:var(--blue)}
+.layer-name-input{
+  width:100%;height:24px;padding:0 5px;border:1px solid rgba(37,99,235,.35);
+  border-radius:5px;background:#fff;font-size:9px;color:var(--ink)
+}
+.design-element.layer-hover{
+  outline:1px dashed rgba(14,165,233,.85)!important;
+  outline-offset:2px!important
+}
+
+/* stronger table content behavior */
+.table-el.wrap-on th,.table-el.wrap-on td{
+  white-space:normal!important;word-break:break-word!important;overflow-wrap:anywhere!important;
+  text-overflow:clip!important;line-height:1.35!important
+}
+.table-el.wrap-off th,.table-el.wrap-off td{
+  white-space:nowrap!important;text-overflow:ellipsis!important;overflow:hidden!important
+}
+.table-image-box{position:absolute;inset:0;display:grid;place-items:center;overflow:hidden}
+.table-image-box img{width:100%!important;height:100%!important;display:block!important}
+.table-edit-cell{position:relative!important}
+
+/* row/column resize affordances are almost invisible until hovered */
+.table-col-resizer,.table-row-resizer{opacity:0!important;transition:opacity .12s ease}
+.table-el.selected:hover .table-col-resizer,
+.table-el.selected:hover .table-row-resizer{opacity:.18!important}
+.table-col-resizer:hover,.table-row-resizer:hover,
+.table-col-resizer.active,.table-row-resizer.active{opacity:1!important}
