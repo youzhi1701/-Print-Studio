@@ -1,7 +1,7 @@
 import {state} from "./state.js";
 import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js";
 import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js";
-import {writeBridge,openDesigner} from "./bridge.js";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js";
 
 const $=id=>document.getElementById(id);
@@ -76,7 +76,7 @@ function fitPreview(){
 }
 
 function syncBridge(){
-  writeBridge({fields:state.fields,record:activeRecord(),selection:state.selection,selectedRecords:state.selectedRecords});
+  writeBridge({fields:state.fields,record:activeRecord(),selection:state.selection,selectedRecords:state.selectedRecords,template:activeTemplate(),activeTemplateId:state.activeTemplateId,currentIndex});
 }
 
 async function refresh(){
@@ -151,7 +151,9 @@ async function init(){
   const openDesignerAction=()=>{syncBridge();openDesigner(state.activeTemplateId)};
   $("openDesigner").onclick=openDesignerAction;$("openDesignerMenu").onclick=openDesignerAction;
 
-  $("zoomPreviewBtn").onclick=openPreviewModal;$("previewViewport").onclick=openPreviewModal;$("closePreviewModal").onclick=()=>$("previewModal").classList.add("hidden");
+  const openPopupPreview=()=>{syncBridge();const w=openPreviewWindow();if(!w)toast("浏览器拦截了弹出窗口，请允许后重试")};
+  $("zoomPreviewBtn").onclick=openPopupPreview;$("previewViewport").onclick=openPopupPreview;
+  $("closePreviewModal").onclick=()=>$("previewModal").classList.add("hidden");
   $("previewModal").onclick=e=>{if(e.target===$("previewModal"))$("previewModal").classList.add("hidden")};
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
