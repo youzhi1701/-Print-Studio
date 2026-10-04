@@ -5,18 +5,148 @@ import {writeBridge,openDesigner} from "./bridge.js";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js";
 
 const $=id=>document.getElementById(id);
-let toastTimer;
-let refreshing=false;
+let toastTimer,refreshing=false,currentIndex=0;
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
 function activeTemplate(){return state.templates.find(t=>t.id===state.activeTemplateId)||state.templates[0]}
 function fillTemplates(){const s=$("templateSelect");s.innerHTML="";state.templates.forEach(t=>{const o=document.createElement("option");o.value=t.id;o.textContent=t.name;s.appendChild(o)});if(state.activeTemplateId)s.value=state.activeTemplateId}
-function autoBind(){const tpl=activeTemplate();if(autoBindTemplateFields(tpl,state.fields)){saveTemplates(state.templates)}}
-function renderRecord(){const rec=state.record;$("recordEmpty").classList.toggle("hidden",!!rec);$("recordBox").classList.toggle("hidden",!rec);if(!rec){$("selectionText").textContent=state.selectedRecords.length?("已选择 "+state.selectedRecords.length+" 条记录"):"未选择记录";renderQuickPreview();return}$("recordTitle").textContent=rec.data?.订单编号||rec.data?.["订单号"]||rec.data?.序号||"当前记录";const box=$("recordFields");box.innerHTML="";Object.entries(rec.data||{}).slice(0,12).forEach(([k,v])=>{const row=document.createElement("div");row.className="record-field";row.innerHTML='<span class="k"></span><span class="v"></span>';row.children[0].textContent=k;row.children[1].textContent=v||"—";box.appendChild(row)});$("selectionText").textContent=state.selectedRecords.length>1?("已选择 "+state.selectedRecords.length+" 条记录"):"已选择 1 条记录";renderQuickPreview()}
-function renderQuickPreview(){const tpl=activeTemplate();$("previewTitle").textContent=tpl?.name||"打印模板";$("previewSubtitle").textContent=state.record?"已载入当前记录":"选择记录后显示真实数据";const lines=$("previewLines");lines.innerHTML="";const src=state.record?.data||{};const values=Object.values(src).filter(Boolean).slice(0,5);for(let i=0;i<5;i++){const d=document.createElement("div");d.className="preview-line";d.style.width=(96-i*8)+"%";d.title=values[i]||"";lines.appendChild(d)}}
-async function refresh(){if(refreshing)return;refreshing=true;try{$("statusText").textContent="正在读取飞书数据";const c=await connectFeishu();if(!c.connected){state.connected=false;status("演示模式","warn");$("statusText").textContent="未连接飞书 SDK";renderRecord();return}state.connected=true;state.sdk=c.bitable;status("已连接","success");const ctx=await readContext(c.bitable);state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);if(!state.record&&state.selectedRecords.length)state.record=state.selectedRecords[0];if(state.record&&!state.selectedRecords.length)state.selectedRecords=[state.record];autoBind();writeBridge({fields:state.fields,record:state.record,selection:state.selection,tableName:ctx.tableName});renderRecord();$("statusText").textContent="数据已同步 · "+state.fields.length+" 个字段"}catch(err){console.error(err);status("连接异常","error");$("statusText").textContent="读取失败";toast("读取飞书数据失败")}finally{refreshing=false}}
-async function chooseBatch(asCurrent=false){if(!state.connected||!state.sdk||!state.table){toast("请先连接飞书数据表");return}try{const rows=await chooseRecords(state.sdk,state.table,state.fields,state.selection);if(!rows.length){toast("没有选择记录");return}state.selectedRecords=rows;if(asCurrent||!state.record)state.record=rows[0];autoBind();writeBridge({fields:state.fields,record:state.record,selection:state.selection,selectedRecords:rows});renderRecord();toast(asCurrent?"已选择当前记录":("已选择 "+rows.length+" 条记录"))}catch(err){console.error(err);toast("选择记录失败")}}
-function printRecords(records){const tpl=activeTemplate();if(!tpl)return;const host=document.createElement("div");host.className="print-host";host.style.cssText="position:fixed;inset:0;z-index:9999;background:#fff;overflow:auto";host.innerHTML=records.map(r=>renderTemplateToHtml(tpl,r.data||{})).join("");document.body.appendChild(host);hydrateCodes(host).finally(()=>setTimeout(()=>{window.print();host.remove()},150))}
-async function init(){state.templates=loadTemplates();state.activeTemplateId=state.templates[0]?.id||null;fillTemplates();$("templateSelect").addEventListener("change",e=>{state.activeTemplateId=e.target.value;autoBind();renderQuickPreview()});$("refreshData").addEventListener("click",refresh);$("chooseOne").addEventListener("click",()=>chooseBatch(true));$("chooseBatch").addEventListener("click",()=>chooseBatch(false));$("openDesigner").addEventListener("click",()=>{writeBridge({fields:state.fields,record:state.record,selection:state.selection,selectedRecords:state.selectedRecords});openDesigner(state.activeTemplateId)});$("exportTemplate").addEventListener("click",()=>exportTemplate(activeTemplate()));$("printCurrent").addEventListener("click",()=>state.record?printRecords([state.record]):toast("请先选择一条记录"));$("printSelected").addEventListener("click",()=>state.selectedRecords.length?printRecords(state.selectedRecords):toast("请先选择批量记录"));window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderQuickPreview()});renderQuickPreview();await refresh();try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}setInterval(refresh,5000)}
+function autoBind(){const tpl=activeTemplate();if(autoBindTemplateFields(tpl,state.fields))saveTemplates(state.templates)}
+
+function activeRecord(){
+  if(state.selectedRecords?.length){
+    currentIndex=Math.max(0,Math.min(currentIndex,state.selectedRecords.length-1));
+    return state.selectedRecords[currentIndex];
+  }
+  return state.record||null;
+}
+
+function recordName(rec){
+  return rec?.data?.订单编号||rec?.data?.["订单号"]||rec?.data?.序号||rec?.data?.收件人||"当前记录";
+}
+
+function updateRecordMeta(){
+  const rec=activeRecord();
+  $("recordTitle").textContent=rec?recordName(rec):"未选择记录";
+  $("recordSub").textContent=rec?(state.selectedRecords.length>1?("第 "+(currentIndex+1)+" / "+state.selectedRecords.length+" 条"):"点击切换"):"点击选择";
+  $("selectionText").textContent=state.selectedRecords.length>1?("已选择 "+state.selectedRecords.length+" 条记录"):(rec?"已选择 1 条记录":"未选择记录");
+  $("previewCounter").textContent=state.selectedRecords.length>1?((currentIndex+1)+" / "+state.selectedRecords.length):"1 / 1";
+  $("printCurrent").textContent=state.selectedRecords.length>1?("打印 "+state.selectedRecords.length+" 条记录"):"打印当前记录";
+  $("prevRecord").disabled=state.selectedRecords.length<=1||currentIndex<=0;
+  $("nextRecord").disabled=state.selectedRecords.length<=1||currentIndex>=state.selectedRecords.length-1;
+}
+
+function validateRecord(rec){
+  const data=rec?.data||{};
+  const required=["收件人","电话","手机号","收货地址"];
+  const missing=required.filter(k=>k in data && !data[k]);
+  const bar=$("issueBar"),text=$("issueText");
+  if(!rec){bar.className="issue-bar warn";text.textContent="未选择记录";return}
+  if(missing.length){bar.className="issue-bar warn";text.textContent="缺少 "+missing.join("、");return}
+  bar.className="issue-bar ok";text.textContent="数据正常";
+}
+
+async function renderPreview(){
+  const rec=activeRecord(),tpl=activeTemplate();
+  $("previewEmpty").classList.toggle("hidden",!!rec);
+  const host=$("previewHost");
+  host.innerHTML="";
+  if(!rec||!tpl){updateRecordMeta();validateRecord(rec);return}
+  host.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
+  await hydrateCodes(host);
+  fitPreview();
+  updateRecordMeta();
+  validateRecord(rec);
+}
+
+function fitPreview(){
+  const viewport=$("previewViewport"),host=$("previewHost"),sheet=host.querySelector(".print-sheet");
+  if(!viewport||!sheet)return;
+  host.style.transform="none";
+  const sw=sheet.getBoundingClientRect().width,sh=sheet.getBoundingClientRect().height;
+  const sx=(viewport.clientWidth-34)/Math.max(1,sw),sy=(viewport.clientHeight-34)/Math.max(1,sh);
+  const scale=Math.min(sx,sy,1);
+  host.style.transform="scale("+scale+")";
+  host.style.width=sw+"px";host.style.height=sh+"px";
+}
+
+function syncBridge(){
+  writeBridge({fields:state.fields,record:activeRecord(),selection:state.selection,selectedRecords:state.selectedRecords});
+}
+
+async function refresh(){
+  if(refreshing)return;refreshing=true;
+  try{
+    $("statusText").textContent="正在同步";
+    const c=await connectFeishu();
+    if(!c.connected){state.connected=false;status("演示模式","warn");$("statusText").textContent="未连接飞书";await renderPreview();return}
+    state.connected=true;state.sdk=c.bitable;status("已连接","success");
+    const ctx=await readContext(c.bitable);
+    state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
+    state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
+    state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);
+    if(!state.record&&state.selectedRecords.length)state.record=state.selectedRecords[0];
+    if(state.record&&!state.selectedRecords.length)state.selectedRecords=[state.record];
+    currentIndex=0;
+    autoBind();syncBridge();await renderPreview();
+    $("statusText").textContent="已同步";
+  }catch(err){
+    console.error(err);status("连接异常","error");$("statusText").textContent="同步失败";toast("读取飞书数据失败");
+  }finally{refreshing=false}
+}
+
+async function chooseBatch(single=false){
+  if(!state.connected||!state.sdk||!state.table){toast("请先连接飞书数据表");return}
+  try{
+    const rows=await chooseRecords(state.sdk,state.table,state.fields,state.selection);
+    if(!rows.length){toast("没有选择记录");return}
+    state.selectedRecords=single?[rows[0]]:rows;
+    state.record=state.selectedRecords[0];
+    currentIndex=0;autoBind();syncBridge();await renderPreview();
+    toast(single?"已选择记录":("已选择 "+state.selectedRecords.length+" 条记录"));
+  }catch(err){console.error(err);toast("选择记录失败")}
+}
+
+function printRecords(records){
+  const tpl=activeTemplate();if(!tpl)return;
+  const host=document.createElement("div");host.className="print-host";host.style.cssText="position:fixed;inset:0;z-index:9999;background:#fff;overflow:auto";
+  host.innerHTML=records.map(r=>renderTemplateToHtml(tpl,r.data||{})).join("");
+  document.body.appendChild(host);
+  hydrateCodes(host).finally(()=>setTimeout(()=>{window.print();host.remove()},150));
+}
+
+function openPreviewModal(){
+  const rec=activeRecord(),tpl=activeTemplate();if(!rec||!tpl){toast("请先选择记录");return}
+  const body=$("previewModalBody");body.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
+  $("previewModal").classList.remove("hidden");
+  hydrateCodes(body);
+}
+
+async function init(){
+  state.templates=loadTemplates();state.activeTemplateId=state.templates[0]?.id||null;fillTemplates();
+
+  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;autoBind();syncBridge();await renderPreview()};
+  $("recordChooser").onclick=()=>chooseBatch(true);
+  $("chooseBatch").onclick=()=>chooseBatch(false);
+  $("prevRecord").onclick=async()=>{if(currentIndex>0){currentIndex--;syncBridge();await renderPreview()}};
+  $("nextRecord").onclick=async()=>{if(currentIndex<state.selectedRecords.length-1){currentIndex++;syncBridge();await renderPreview()}};
+  $("printCurrent").onclick=()=>{const records=state.selectedRecords.length>1?state.selectedRecords:(activeRecord()?[activeRecord()]:[]);records.length?printRecords(records):toast("请先选择记录")};
+
+  const openDesignerAction=()=>{syncBridge();openDesigner(state.activeTemplateId)};
+  $("openDesigner").onclick=openDesignerAction;$("openDesignerMenu").onclick=openDesignerAction;
+
+  $("zoomPreviewBtn").onclick=openPreviewModal;$("previewViewport").onclick=openPreviewModal;$("closePreviewModal").onclick=()=>$("previewModal").classList.add("hidden");
+  $("previewModal").onclick=e=>{if(e.target===$("previewModal"))$("previewModal").classList.add("hidden")};
+
+  $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
+  document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
+  $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
+
+  window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(fitPreview,80)});
+  window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderPreview()});
+
+  await refresh();
+  try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}
+  setInterval(refresh,5000);
+}
 init();
