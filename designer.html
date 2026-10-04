@@ -53,7 +53,13 @@
 
     <section class="designer-center">
       <div class="canvas-toolbar glass">
-        <div><label><input id="gridToggle" type="checkbox" checked> 网格</label><label><input id="snapToggle" type="checkbox" checked> 吸附</label><label><input id="safeToggle" type="checkbox" checked> 安全区</label></div>
+        <div class="canvas-tools-left"><label><input id="gridToggle" type="checkbox" checked> 网格</label><label><input id="snapToggle" type="checkbox" checked> 吸附</label><label><input id="safeToggle" type="checkbox" checked> 安全区</label>
+          <div id="multiTools" class="multi-tools hidden">
+            <button data-multi="left" title="左对齐">左</button><button data-multi="hcenter" title="水平居中">中</button><button data-multi="right" title="右对齐">右</button>
+            <button data-multi="top" title="顶部对齐">上</button><button data-multi="vcenter" title="垂直居中">中</button><button data-multi="bottom" title="底部对齐">下</button>
+            <button data-multi="distributeH" title="水平等间距">横距</button><button data-multi="distributeV" title="垂直等间距">纵距</button>
+          </div>
+        </div>
         <div id="pageInfo">215 × 140 mm</div>
       </div>
       <div id="canvasScroller" class="canvas-scroller">
