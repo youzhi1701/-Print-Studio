@@ -104,6 +104,13 @@ function rowsForTable(e,data){
   }
   return[data||{}];
 }
+function isImageValue(v){
+  return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v));
+}
+function tableCellHtml(v,field){
+  if(isImageValue(v)) return '<img class="table-cell-image" src="'+String(v).replace(/"/g,"&quot;")+'" referrerpolicy="no-referrer" alt="'+String(field||"")+'">';
+  return String(v??"");
+}
 function elementTypeName(type){
   return({text:"文本",field:"数据字段",image:"图片",table:"明细表格",barcode:"条码",qrcode:"二维码",line:"分隔线",container:"容器"})[type]||type;
 }
@@ -124,11 +131,20 @@ function renderElements(){const p=$("printPage");p.querySelectorAll(".design-ele
 function content(n,e){
   const data=state.record?.data||{};
   if(e.type==="text"){n.textContent=e.text||"";return}
-  if(e.type==="field"){n.textContent=preview?((e.label||"")+(data[e.field]??"")):(e.text||"{{"+(e.field||"字段")+"}}");return}
+  if(e.type==="field"){
+    const actual=data[e.field];
+    n.textContent=(actual!==undefined&&actual!==null&&actual!=="")?((e.label||"")+actual):(e.text||"{{"+(e.field||"字段")+"}}");
+    return
+  }
   if(e.type==="image"){
     const src=data[e.field]||"";
-    n.innerHTML=src?'<img alt="" src="'+String(src).replace(/"/g,"&quot;")+'">':'<div class="image-placeholder">图片'+(e.field?(" · "+e.field):"")+'</div>';
-    const img=n.querySelector("img");if(img){img.style.objectFit=e.imageFit||"contain";img.style.borderRadius=(e.radius||0)+"px"}
+    n.innerHTML=src?'<img alt="" src="'+String(src).replace(/"/g,"&quot;")+'" referrerpolicy="no-referrer">':'<div class="image-placeholder">暂无图片'+(e.field?(" · "+e.field):"")+'</div>';
+    const img=n.querySelector("img");
+    if(img){
+      img.style.objectFit=e.imageFit||"contain";
+      img.style.borderRadius=(e.radius||0)+"px";
+      img.onerror=()=>{n.innerHTML='<div class="image-placeholder">图片加载失败</div>'}
+    }
     return
   }
   if(e.type==="container"){n.style.border=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" rgba(80,100,140,.35)";n.style.borderRadius=(e.radius||0)+"px";return}
@@ -143,7 +159,11 @@ function content(n,e){
     const rows=rowsForTable(e,data).slice(0,e.maxRows||5);
     const widths=cols.map(c=>c.width).filter(Boolean);const hasWidths=widths.length===cols.length;
     const th=e.showHeader===false?"":("<thead><tr>"+cols.map(c=>'<th style="'+(hasWidths?("width:"+c.width+"%;"):"")+'text-align:'+c.align+'">'+c.title+"</th>").join("")+"</tr></thead>");
-    const bodyRows=(rows.length?rows:[{}]).map((row,ri)=>"<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+cols.map(c=>'<td style="text-align:'+c.align+'">'+(preview?(row?.[c.field]??data?.[c.field]??""):"{{"+c.field+"}}")+"</td>").join("")+"</tr>").join("");
+    const bodyRows=(rows.length?rows:[{}]).map((row,ri)=>"<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+cols.map(c=>{
+      const actual=row?.[c.field]??data?.[c.field];
+      const shown=(actual!==undefined&&actual!==null&&actual!=="")?tableCellHtml(actual,c.field):("{{"+c.field+"}}");
+      return '<td style="text-align:'+c.align+'">'+shown+"</td>";
+    }).join("")+"</tr>").join("");
     n.innerHTML='<table style="font-size:'+(e.fontSize||9)+'px"><tbody style="display:none"></tbody>'+th+"<tbody>"+bodyRows+"</tbody></table>";
     n.querySelectorAll("th,td").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px";cell.style.height=(e.rowHeight||8)*MM+"px"});
     return
