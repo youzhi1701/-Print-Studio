@@ -119,15 +119,24 @@ export async function readSelectedRecords(bitable,table,fields){
 
 export async function resolveAttachmentUrls(table,record,fields){
   if(!table||!record) return record;
-  const next={...record,data:{...record.data}};
+  const next={...record,data:{...record.data},attachments:{}};
   for(const f of fields){
     const raw=record.raw?.fields?.[f.id];
     if(!Array.isArray(raw)||!raw.length) continue;
-    const token=raw[0]?.token;
-    if(!token||!table.getAttachmentUrl) continue;
-    try{
-      next.data[f.name]=await table.getAttachmentUrl(token);
-    }catch{}
+    const items=raw.filter(v=>v&&typeof v==="object"&&(v.token||v.url||v.tmp_url||v.tmpUrl));
+    if(!items.length) continue;
+    const urls=[];
+    for(const item of items){
+      let url=item.url||item.tmp_url||item.tmpUrl||"";
+      if(item.token&&table.getAttachmentUrl){
+        try{url=await table.getAttachmentUrl(item.token)}catch(err){console.warn("getAttachmentUrl failed",f.name,err)}
+      }
+      if(url) urls.push(url);
+    }
+    if(urls.length){
+      next.attachments[f.name]=urls;
+      next.data[f.name]=urls[0];
+    }
   }
   return next;
 }
