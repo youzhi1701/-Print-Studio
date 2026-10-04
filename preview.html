@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>超级打印 · 打印成品预览</title>
+  <link rel="stylesheet" href="./css/theme.css">
+  <link rel="stylesheet" href="./css/preview.css">
+  <link rel="stylesheet" href="./css/print.css" media="print">
+</head>
+<body class="aurora-app preview-window">
+  <div class="aurora-layer" aria-hidden="true"></div>
+  <header class="preview-top glass-card">
+    <div class="preview-title">
+      <span class="brand-mark"><i></i><i></i><i></i></span>
+      <div><b>打印成品预览</b><small id="previewMeta">等待数据</small></div>
+    </div>
+    <div class="preview-actions">
+      <button id="fitBtn">适配</button>
+      <button id="prevBtn">‹</button>
+      <span id="counter">1 / 1</span>
+      <button id="nextBtn">›</button>
+      <button id="printCurrentBtn" class="primary">打印当前</button>
+      <button id="printAllBtn">打印全部</button>
+      <button id="closeBtn">关闭</button>
+    </div>
+  </header>
+
+  <main class="preview-workspace">
+    <div id="sheetStage" class="sheet-stage">
+      <div id="sheetHost" class="sheet-host"></div>
+      <div id="emptyState" class="empty-state">
+        <b>正在读取打印数据</b>
+        <span>请保持飞书“超级打印”快捷模式打开</span>
+      </div>
+    </div>
+  </main>
+
+  <footer class="preview-status glass-card">
+    <span id="statusText">等待同步</span>
+    <span>Esc 关闭 · Ctrl+P 打印当前</span>
+  </footer>
+
+  <script type="module" src="./js/preview.js"></script>
+</body>
+</html>
