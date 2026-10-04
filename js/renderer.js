@@ -28,8 +28,8 @@ function tableRows(el,data){
 }
 function commonStyle(el){return 'position:absolute;left:'+el.x+'mm;top:'+el.y+'mm;width:'+el.w+'mm;height:'+el.h+'mm;font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;'}
 function isImageValue(v){return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v))}
-function cellHtml(v){
-  if(isImageValue(v)) return '<img src="'+esc(v)+'" style="width:100%;height:100%;object-fit:contain;display:block" referrerpolicy="no-referrer">';
+function cellHtml(v,imageFit="contain"){
+  if(isImageValue(v)) return '<img src="'+esc(v)+'" style="width:100%;height:100%;object-fit:'+imageFit+';display:block;margin:0" referrerpolicy="no-referrer">';
   return esc(v);
 }
 
@@ -60,7 +60,7 @@ export function renderTemplateToHtml(tpl,data={}){
       const widths=cols.map(c=>c.width).filter(v=>Number.isFinite(Number(v))&&Number(v)>0);
       const hasWidths=widths.length===cols.length;
       const head=el.showHeader===false?'':'<thead><tr>'+cols.map(c=>'<th style="border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';'+(hasWidths?'width:'+c.width+'%;':'')+'">'+esc(c.title)+'</th>').join("")+'</tr></thead>';
-      const body=rows.map((row,ri)=>'<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cols.map(c=>'<td style="border:'+bw+'px solid #cbd2df;padding:2px;text-align:'+c.align+';height:'+(el.rowHeight||8)+'mm">'+cellHtml(row?.[c.field]??data?.[c.field]??"")+'</td>').join("")+'</tr>').join("");
+      const body=rows.map((row,ri)=>'<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cols.map(c=>'<td style="border:'+bw+'px solid #cbd2df;padding:2px;text-align:'+c.align+';height:'+(el.rowHeight||8)+'mm">'+cellHtml(row?.[c.field]??data?.[c.field]??"",el.tableImageFit||"contain")+'</td>').join("")+'</tr>').join("");
       return '<table style="'+common+'border-collapse:collapse;table-layout:fixed;width:'+el.w+'mm;height:auto;font-size:'+(el.fontSize||9)+'px">'+head+'<tbody>'+body+'</tbody></table>';
     }
     return""
