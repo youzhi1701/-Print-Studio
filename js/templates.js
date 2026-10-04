@@ -8,7 +8,24 @@ const seed={id:"tpl_shipping_215x140",schemaVersion:1,name:"发货单 215×140",
 {id:"tbl",type:"table",x:12,y:59,w:191,h:48,columns:["商品名称","商品属性","数量","价格"],fontSize:9},
 {id:"bc1",type:"barcode",x:120,y:111,w:70,h:18,field:"订单编号",showText:true}
 ],createdAt:Date.now(),updatedAt:Date.now()};
-export function loadTemplates(){const raw=localStorage.getItem(STORAGE_KEYS.templates);const data=safeJson(raw,null);if(Array.isArray(data)&&data.length)return data;localStorage.setItem(STORAGE_KEYS.templates,JSON.stringify([seed]));return [structuredClone(seed)]}
+export function loadTemplates(){
+  const raw=localStorage.getItem(STORAGE_KEYS.templates);
+  const data=safeJson(raw,null);
+  let list=Array.isArray(data)?data.filter(Boolean):[];
+  // Migration guard: always keep the built-in shipping template available.
+  // Older prototype builds may have stored only an empty "未命名模板".
+  if(!list.some(t=>t?.id===seed.id)) list.unshift(structuredClone(seed));
+  list=list.map(t=>({
+    schemaVersion:1,
+    category:"其他",
+    status:"draft",
+    page:{width:215,height:140,orientation:"landscape",margin:5,safeArea:4,...(t.page||{})},
+    elements:Array.isArray(t.elements)?t.elements:[],
+    ...t
+  }));
+  localStorage.setItem(STORAGE_KEYS.templates,JSON.stringify(list));
+  return list;
+}
 export function saveTemplates(list){localStorage.setItem(STORAGE_KEYS.templates,JSON.stringify(list))}
 export function createTemplate(name="未命名模板",page={width:215,height:140}){return{id:uid("tpl"),schemaVersion:1,name,category:"其他",status:"draft",page:{...page,orientation:page.width>=page.height?"landscape":"portrait",margin:5,safeArea:4},elements:[],createdAt:Date.now(),updatedAt:Date.now()}}
 export function exportTemplate(tpl){const blob=new Blob([JSON.stringify(tpl,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(tpl.name||"template")+".superprint.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
