@@ -41,3 +41,24 @@
   .quick-shell{grid-template-rows:auto auto minmax(320px,1fr) auto auto;padding:5px}
   .preview-viewport{min-height:320px}
 }
+
+/* enlarged preview: fit full sheet inside plugin viewport, no dead padding/scrollbars */
+.preview-modal{
+  grid-template-rows:42px minmax(0,1fr);
+}
+.preview-modal-bar{
+  padding:0 10px;
+}
+.preview-modal-body{
+  position:relative;
+  display:grid;
+  place-items:center;
+  overflow:hidden!important;
+  padding:8px!important;
+}
+.preview-modal-body .print-sheet{
+  margin:0!important;
+  transform:none!important;
+  transform-origin:initial!important;
+  box-shadow:0 12px 34px rgba(24,38,69,.20)!important;
+}
