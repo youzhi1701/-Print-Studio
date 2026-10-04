@@ -5,7 +5,7 @@ import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js";
 
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0;
+let toastTimer,refreshing=false,currentIndex=0;let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -59,20 +59,44 @@ async function renderPreview(){
   validateRecord(rec);
 }
 
-function fitPreview(){
-  const viewport=$("previewViewport"),host=$("previewHost"),sheet=host.querySelector(".print-sheet");
+function applyPreviewTransform(){
+  const host=$("previewHost");if(!host)return;
+  host.style.setProperty("--preview-scale",String(previewScale));
+  host.style.setProperty("--preview-pan-x",previewPanX+"px");
+  host.style.setProperty("--preview-pan-y",previewPanY+"px");
+  const z=$("previewZoomText");if(z)z.textContent=Math.round(previewScale*100)+"%";
+}
+function clampPreviewPan(){
+  const viewport=$("previewViewport"),sheet=$("previewHost")?.querySelector(".print-sheet");
   if(!viewport||!sheet)return;
-  // Chrome supports CSS zoom and, unlike transform:scale(), it participates in layout.
-  // That keeps the physical sheet centered instead of visually scaling a large off-center box.
-  host.style.transform="none";
-  host.style.zoom="1";
-  host.style.width="auto";
-  host.style.height="auto";
+  const vw=viewport.clientWidth,vh=viewport.clientHeight,sw=sheet.offsetWidth*previewScale,sh=sheet.offsetHeight*previewScale;
+  const keep=42;
+  const maxX=Math.max(0,(vw+sw)/2-keep),maxY=Math.max(0,(vh+sh)/2-keep);
+  previewPanX=Math.max(-maxX,Math.min(maxX,previewPanX));
+  previewPanY=Math.max(-maxY,Math.min(maxY,previewPanY));
+}
+function setPreviewScale(next,anchorX=null,anchorY=null){
+  const viewport=$("previewViewport");if(!viewport)return;
+  const old=previewScale;next=Math.max(.2,Math.min(3,next));
+  if(anchorX!=null&&anchorY!=null&&old>0){
+    const rect=viewport.getBoundingClientRect();
+    const ox=anchorX-rect.left-viewport.clientWidth/2;
+    const oy=anchorY-rect.top-viewport.clientHeight/2;
+    previewPanX=ox-next*(ox-previewPanX)/old;
+    previewPanY=oy-next*(oy-previewPanY)/old;
+  }
+  previewScale=next;clampPreviewPan();applyPreviewTransform();
+}
+function fitPreview(){
+  const viewport=$("previewViewport"),host=$("previewHost"),sheet=host?.querySelector(".print-sheet");
+  if(!viewport||!sheet)return;
   const sw=sheet.offsetWidth,sh=sheet.offsetHeight;
-  const sx=(viewport.clientWidth-12)/Math.max(1,sw);
-  const sy=(viewport.clientHeight-12)/Math.max(1,sh);
-  const scale=Math.max(.2,Math.min(sx,sy,1.15));
-  host.style.zoom=String(scale);
+  const sx=(viewport.clientWidth-18)/Math.max(1,sw),sy=(viewport.clientHeight-18)/Math.max(1,sh);
+  previewFitScale=Math.max(.2,Math.min(sx,sy,1.15));
+  previewScale=previewFitScale;previewPanX=0;previewPanY=0;applyPreviewTransform();
+}
+function resetPreview(){
+  previewScale=1;previewPanX=0;previewPanY=0;applyPreviewTransform();
 }
 
 function syncBridge(){
@@ -158,7 +182,27 @@ async function init(){
   $("openDesigner").onclick=openDesignerAction;$("openDesignerMenu").onclick=openDesignerAction;
 
   const openPopupPreview=()=>{syncBridge();const w=openPreviewWindow();if(!w)toast("浏览器拦截了弹出窗口，请允许后重试")};
-  $("zoomPreviewBtn").onclick=openPopupPreview;$("previewViewport").onclick=openPopupPreview;
+  $("zoomPreviewBtn").onclick=openPopupPreview;
+
+  const viewport=$("previewViewport");
+  $("previewFitBtn").onclick=e=>{e.stopPropagation();fitPreview()};
+  $("previewResetBtn").onclick=e=>{e.stopPropagation();resetPreview()};
+  $("previewZoomInBtn").onclick=e=>{e.stopPropagation();setPreviewScale(previewScale*1.15)};
+  $("previewZoomOutBtn").onclick=e=>{e.stopPropagation();setPreviewScale(previewScale/1.15)};
+  viewport.addEventListener("wheel",e=>{e.preventDefault();setPreviewScale(previewScale*(e.deltaY<0?1.12:1/1.12),e.clientX,e.clientY)},{passive:false});
+  viewport.addEventListener("pointerdown",e=>{
+    if(e.button!==0||e.target.closest(".preview-float-tools"))return;
+    previewPanning=true;previewPointer={id:e.pointerId,x:e.clientX,y:e.clientY,px:previewPanX,py:previewPanY};
+    viewport.classList.add("is-panning");viewport.setPointerCapture?.(e.pointerId);e.preventDefault();
+  });
+  viewport.addEventListener("pointermove",e=>{
+    if(!previewPanning||!previewPointer||e.pointerId!==previewPointer.id)return;
+    previewPanX=previewPointer.px+(e.clientX-previewPointer.x);previewPanY=previewPointer.py+(e.clientY-previewPointer.y);
+    clampPreviewPan();applyPreviewTransform();
+  });
+  const stopPan=e=>{if(!previewPanning)return;previewPanning=false;previewPointer=null;viewport.classList.remove("is-panning");try{viewport.releasePointerCapture?.(e.pointerId)}catch{}};
+  viewport.addEventListener("pointerup",stopPan);viewport.addEventListener("pointercancel",stopPan);
+  viewport.addEventListener("dblclick",e=>{if(!e.target.closest(".preview-float-tools"))fitPreview()});
   $("closePreviewModal").onclick=()=>$("previewModal").classList.add("hidden");
   $("previewModal").onclick=e=>{if(e.target===$("previewModal"))$("previewModal").classList.add("hidden")};
 
