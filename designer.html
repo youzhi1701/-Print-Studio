@@ -114,6 +114,12 @@
             <div class="two"><label>文字换行<select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>空列<select id="tableHideEmptyColumns"><option value="false">保留</option><option value="true">自动隐藏</option></select></label></div>
             <div class="two"><label>行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label><label>最多行数<input id="tableMaxRows" type="number" min="1" step="1"></label></div>
             <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
+            <div class="table-cell-actions">
+              <button id="mergeCellsBtn" type="button">合并单元格</button>
+              <button id="unmergeCellsBtn" type="button">取消合并</button>
+              <button id="insertRowBtn" type="button">插入行</button>
+              <button id="deleteRowBtn" type="button">删除行</button>
+            </div>
           </div>
           <div id="codeProps" class="prop-group hidden">
             <label class="stack">数据字段<select id="codeField"><option value="">未绑定</option></select></label>
