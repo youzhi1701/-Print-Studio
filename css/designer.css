@@ -201,3 +201,21 @@
   .designer-status{height:30px!important}
   .page-pad{padding:6px 8px 16px!important}
 }
+
+/* component-specific properties */
+.type-badge{margin-left:auto;padding:2px 6px;border-radius:10px;background:rgba(37,99,235,.08);color:var(--blue);font-size:8px;font-weight:700}
+.prop-group{display:grid;gap:5px}
+.prop-group.hidden{display:none!important}
+.prop-group + .prop-group{margin-top:0}
+#tableColumns{resize:vertical;min-height:54px!important}
+.image-el img{width:100%;height:100%;display:block}
+.image-placeholder{width:100%;height:100%;display:grid;place-items:center;background:repeating-linear-gradient(45deg,rgba(120,140,180,.04),rgba(120,140,180,.04) 6px,rgba(120,140,180,.08) 6px,rgba(120,140,180,.08) 12px);color:var(--muted);font-size:9px}
+.qr-placeholder{width:82%;height:82%;background:repeating-conic-gradient(#17223c 0 25%,#fff 0 50%) 0/8px 8px;border:1px solid rgba(23,34,60,.08)}
+.barcode-label{position:absolute;left:0;right:0;bottom:1px;text-align:center;font-size:7px;color:var(--muted)}
+.component-palette button[data-type="image"],
+.component-palette button[data-type="table"],
+.component-palette button[data-type="barcode"],
+.component-palette button[data-type="qrcode"],
+.component-palette button[data-type="line"],
+.component-palette button[data-type="container"]{position:relative}
+.component-palette button:active{transform:scale(.98)}
