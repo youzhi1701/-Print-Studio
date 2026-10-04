@@ -16,26 +16,33 @@ export function loadTemplates(){
   // Older prototype builds may have stored only an empty "未命名模板".
   if(!list.some(t=>t?.id===seed.id)) list.unshift(structuredClone(seed));
   list=list.map(t=>({
+    ...t,
     schemaVersion:2,
-    category:"其他",
-    status:"draft",
+    category:t.category||"其他",
+    status:t.status||"draft",
     page:{width:215,height:140,orientation:"landscape",margin:5,safeArea:4,...(t.page||{})},
     elements:Array.isArray(t.elements)?t.elements.map(el=>{
+      const legacy=Number(t.schemaVersion||1)<2;
       if(el.type==="table"){
-        const cols=Array.isArray(el.columns)?el.columns.map((c,i)=>typeof c==="string"?{title:c,field:c,width:null,align:i===0?"left":"center"}:c):[];
-        const legacy=Number(t.schemaVersion||1)<2;
-        return{showHeader:true,zebra:false,rowHeight:8,maxRows:5,borderWidth:.5,dataField:"",tableImageFit:legacy?"cover":"contain",wrap:true,hideEmptyColumns:legacy?true:false,emptyBehavior:"hide",merges:[],rowHeights:{},...el,columns:cols,
-          ...(legacy?{tableImageFit:"cover",hideEmptyColumns:true,emptyBehavior:"hide"}:{})}
+        const cols=Array.isArray(el.columns)?el.columns.map((col,i)=>typeof col==="string"?{title:col,field:col,width:null,align:i===0?"left":"center"}:{...col}):[];
+        return{
+          showHeader:true,zebra:false,rowHeight:8,maxRows:5,borderWidth:.5,dataField:"",
+          tableImageFit:"contain",wrap:true,hideEmptyColumns:false,emptyBehavior:"hide",merges:[],rowHeights:{},
+          ...el,columns:cols,
+          ...(legacy?{tableImageFit:"cover",hideEmptyColumns:true,emptyBehavior:"hide"}:{})
+        }
       }
-      if(el.type==="image")return{imageFit:"cover",radius:0,aspectLock:true,alignX:"center",alignY:"center",padding:0,emptyBehavior:"hide",...el,...(Number(t.schemaVersion||1)<2?{imageFit:"cover"}:{})}
+      if(el.type==="image")return{
+        imageFit:"contain",radius:0,aspectLock:true,alignX:"center",alignY:"center",padding:0,emptyBehavior:"hide",
+        ...el,...(legacy?{imageFit:"cover"}:{})
+      }
       if(el.type==="barcode")return{barcodeFormat:"CODE128",showText:true,...el}
       if(el.type==="qrcode")return{qrLevel:"M",qrMargin:0,...el}
       if(el.type==="line"||el.type==="container")return{borderWidth:.5,borderStyle:"solid",radius:0,...el}
       if(el.type==="field")return{wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"hide",...el}
       if(el.type==="text")return{wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"blank",...el}
       return el
-    }):[],
-    ...t
+    }):[]
   }));
   localStorage.setItem(STORAGE_KEYS.templates,JSON.stringify(list));
   return list;
