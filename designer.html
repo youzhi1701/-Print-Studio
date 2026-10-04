@@ -101,8 +101,9 @@
           </div>
           <div id="tableProps" class="prop-group hidden">
             <label class="stack">数据源<select id="tableDataField"><option value="">当前记录（单行）</option></select></label>
-            <label class="stack">列配置<textarea id="tableColumns" rows="4" placeholder="商品名称=产品标题@45,商品属性=商品属性@25,数量=数量@15,价格=价格@15"></textarea></label>
-            <div class="table-help">格式：表头=字段@宽度%，宽度可省略；多列用逗号分隔</div>
+            <div class="stack"><span>列配置</span><div id="tableColumnList" class="table-column-list"></div></div>
+            <div class="table-column-actions"><button id="addTableColumn" type="button">+ 添加列</button><button id="normalizeTableWidths" type="button">均分列宽</button></div>
+            <textarea id="tableColumns" class="hidden" rows="1"></textarea>
             <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>斑马纹<select id="tableZebra"><option value="false">关闭</option><option value="true">开启</option></select></label></div>
             <div class="two"><label>行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label><label>最多行数<input id="tableMaxRows" type="number" min="1" step="1"></label></div>
             <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
