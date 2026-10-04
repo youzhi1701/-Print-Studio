@@ -219,3 +219,17 @@
 .component-palette button[data-type="line"],
 .component-palette button[data-type="container"]{position:relative}
 .component-palette button:active{transform:scale(.98)}
+
+/* contextual alignment / denser expert controls */
+.canvas-tools-left{display:flex;align-items:center;gap:7px;min-width:0}
+.multi-tools{display:flex;align-items:center;gap:2px;margin-left:2px;padding-left:5px;border-left:1px solid rgba(23,34,60,.10)}
+.multi-tools.hidden{display:none!important}
+.multi-tools button{height:23px;min-width:24px;padding:0 5px;border:1px solid rgba(84,104,145,.12);border-radius:5px;background:rgba(255,255,255,.52);color:var(--ink2);font-size:8px;cursor:pointer}
+.multi-tools button:hover{border-color:rgba(37,99,235,.25);color:var(--blue);background:rgba(37,99,235,.06)}
+.table-help{font-size:8px;line-height:1.35;color:var(--muted);padding:4px 5px;border-radius:6px;background:rgba(120,140,180,.045)}
+.table-el{overflow:hidden!important}
+.table-el table{table-layout:fixed!important}
+.table-el th,.table-el td{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.table-el .table-empty{color:var(--muted);font-style:normal}
+.element-state-badge{position:absolute;top:2px;right:2px;padding:1px 4px;border-radius:8px;background:rgba(255,255,255,.86);border:1px solid rgba(84,104,145,.12);font-size:7px;color:var(--muted);pointer-events:none}
+@media(max-width:1100px){.multi-tools{display:none!important}}
