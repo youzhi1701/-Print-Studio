@@ -111,7 +111,8 @@
             <textarea id="tableColumns" class="hidden" rows="1"></textarea>
             <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>斑马纹<select id="tableZebra"><option value="false">关闭</option><option value="true">开启</option></select></label></div>
             <label class="stack">图片单元格<select id="tableImageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select></label>
-            <div class="two"><label>文字换行<select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>空列<select id="tableHideEmptyColumns"><option value="false">保留</option><option value="true">自动隐藏</option></select></label></div>
+            <div class="two"><label>文字换行<select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>空列<select id="tableHideEmptyColumns"><option value="true">自动隐藏</option><option value="false">保留</option></select></label></div>
+            <label class="stack">无数据<select id="tableEmptyBehavior"><option value="hide">打印隐藏空表</option><option value="blank">保留空表</option></select></label>
             <div class="two"><label>行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label><label>最多行数<input id="tableMaxRows" type="number" min="1" step="1"></label></div>
             <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
             <div class="table-cell-actions">
@@ -135,7 +136,15 @@
           <div class="action-grid"><button id="duplicateBtn">复制</button><button id="lockBtn">锁定</button><button id="hideBtn">隐藏</button><button id="frontBtn">置顶</button><button id="backBtn">置底</button><button id="deleteBtn" class="danger">删除</button></div>
         </div>
       </section>
-      <section id="layersTab" class="right-body hidden"><div id="layerList" class="layer-list"></div></section>
+      <section id="layersTab" class="right-body hidden">
+        <div class="layers-toolbar">
+          <input id="layerSearch" placeholder="搜索图层">
+          <button id="layerTopBtn" title="置顶">顶</button>
+          <button id="layerBottomBtn" title="置底">底</button>
+        </div>
+        <div class="layers-hint">拖动排序 · 双击名称重命名 · 悬浮定位</div>
+        <div id="layerList" class="layer-list"></div>
+      </section>
     </aside>
   </main>
 
