@@ -233,3 +233,12 @@
 .table-el .table-empty{color:var(--muted);font-style:normal}
 .element-state-badge{position:absolute;top:2px;right:2px;padding:1px 4px;border-radius:8px;background:rgba(255,255,255,.86);border:1px solid rgba(84,104,145,.12);font-size:7px;color:var(--muted);pointer-events:none}
 @media(max-width:1100px){.multi-tools{display:none!important}}
+
+.table-column-list{display:grid;gap:3px}
+.table-column-row{display:grid;grid-template-columns:18px minmax(48px,.8fr) minmax(60px,1fr) 42px 22px;gap:3px;align-items:center;padding:3px;border:1px solid rgba(84,104,145,.10);border-radius:7px;background:rgba(255,255,255,.38)}
+.table-column-row input,.table-column-row select{height:25px;width:100%;padding:0 4px;border-radius:5px;font-size:8px}
+.table-column-row .col-move{display:grid;gap:1px}
+.table-column-row .col-move button,.table-column-row .col-remove{height:12px;min-width:18px;padding:0;border:0;border-radius:4px;background:rgba(120,140,180,.08);font-size:7px;color:var(--muted);cursor:pointer}
+.table-column-row .col-remove{height:24px;color:var(--danger)}
+.table-column-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.table-column-actions button{height:27px;border:1px solid var(--border);border-radius:7px;background:rgba(255,255,255,.5);font-size:8px;color:var(--ink2);cursor:pointer}
