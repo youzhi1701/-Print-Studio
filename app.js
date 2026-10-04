@@ -1,3 +1,3 @@
-document.getElementById("printBtn").addEventListener("click", function () {
-    window.print();
+document.getElementById("printBtn").addEventListener("click", () => {
+  window.print();
 });
