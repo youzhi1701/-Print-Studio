@@ -11,58 +11,84 @@
 </head>
 <body class="aurora-app">
   <div class="aurora-layer" aria-hidden="true"></div>
-  <main class="sidebar-shell">
-    <header class="glass-card brand-card">
-      <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
-      <div class="brand-copy">
-        <h1>超级打印</h1>
-        <p>通用可视化打印设计器</p>
+
+  <main class="quick-shell">
+    <header class="quick-header glass-card">
+      <div class="quick-brand">
+        <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+        <div><h1>超级打印</h1><p>快速打印</p></div>
       </div>
-      <span id="sdkState" class="status-pill">连接中</span>
+      <div class="quick-header-actions">
+        <button id="openDesigner" class="header-icon" title="设计模板">↗</button>
+        <button id="moreBtn" class="header-icon" title="更多">···</button>
+        <span id="sdkState" class="status-pill">连接中</span>
+      </div>
     </header>
 
-    <section class="glass-card block">
-      <div class="block-title"><span class="mini-bars"><i></i><i></i><i></i></span>当前记录</div>
-      <div id="recordEmpty" class="empty-state">在左侧多维表格中激活一条记录，或使用下面的选择按钮</div><div class="record-actions"><button id="chooseOne" class="mini-btn">选择记录</button><button id="chooseBatch" class="mini-btn">选择批量记录</button></div>
-      <div id="recordBox" class="record-box hidden">
-        <div class="record-head">
-          <strong id="recordTitle">当前记录</strong>
-          <span class="status-pill success">已读取</span>
+    <section class="quick-meta glass-card">
+      <div class="meta-row">
+        <span class="meta-label">记录</span>
+        <button id="recordChooser" class="meta-value">
+          <strong id="recordTitle">未选择记录</strong>
+          <small id="recordSub">点击选择</small>
+        </button>
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">模板</span>
+        <select id="templateSelect" class="meta-select"></select>
+      </div>
+      <div id="issueBar" class="issue-bar ok"><span>●</span><b id="issueText">数据正常</b></div>
+    </section>
+
+    <section class="preview-card glass-card">
+      <div class="preview-head">
+        <div><span class="mini-bars"><i></i><i></i><i></i></span><b>打印预览</b></div>
+        <button id="zoomPreviewBtn" class="preview-action">放大</button>
+      </div>
+      <div id="previewViewport" class="preview-viewport">
+        <div id="previewStage" class="preview-stage">
+          <div id="previewEmpty" class="preview-empty">
+            <b>选择记录后显示打印成品</b>
+            <span>预览会按照当前模板真实渲染</span>
+          </div>
+          <div id="previewHost" class="preview-host"></div>
         </div>
-        <div id="recordFields" class="record-fields"></div>
+      </div>
+      <div class="preview-footer">
+        <span id="previewCounter">1 / 1</span>
+        <span id="previewHint">点击预览可放大</span>
       </div>
     </section>
 
-    <section class="glass-card block">
-      <div class="block-title"><span class="mini-bars"><i></i><i></i><i></i></span>打印模板</div>
-      <label class="field-label">模板
-        <select id="templateSelect"></select>
-      </label>
-      <div id="quickPreview" class="quick-preview" aria-label="打印预览">
-        <div class="paper-mini">
-          <strong id="previewTitle">发货单</strong>
-          <span id="previewSubtitle">选择记录后显示真实数据</span>
-          <div id="previewLines" class="preview-lines"></div>
-        </div>
-      </div>
-      <button id="printCurrent" class="btn btn-primary">打印当前记录</button>
-      <button id="printSelected" class="btn btn-secondary">批量打印所选记录</button>
-    </section>
-
-    <section class="glass-card block compact">
-      <div class="block-title"><span class="mini-bars"><i></i><i></i><i></i></span>设计与管理</div>
-      <button id="openDesigner" class="btn btn-designer">全屏设计模板 ↗</button>
-      <div class="mini-grid">
-        <button id="refreshData" class="mini-btn">刷新数据</button>
-        <button id="exportTemplate" class="mini-btn">导出模板</button>
+    <section class="print-dock glass-card">
+      <button id="printCurrent" class="btn btn-primary print-main">打印当前记录</button>
+      <div class="print-secondary">
+        <button id="chooseBatch" class="mini-btn">选择多条</button>
+        <button id="prevRecord" class="mini-btn">上一条</button>
+        <button id="nextRecord" class="mini-btn">下一条</button>
       </div>
     </section>
 
-    <footer class="glass-card footer-status">
+    <footer class="quick-status">
       <span><i class="status-dot"></i><b id="statusText">准备就绪</b></span>
       <span id="selectionText">未选择记录</span>
     </footer>
   </main>
+
+  <div id="moreMenu" class="more-menu hidden">
+    <button id="refreshData">重新同步数据</button>
+    <button id="chooseOne">选择记录</button>
+    <button id="exportTemplate">导出当前模板</button>
+    <button id="openDesignerMenu">设计模板</button>
+  </div>
+
+  <div id="previewModal" class="preview-modal hidden">
+    <div class="preview-modal-bar">
+      <b>打印成品预览</b>
+      <button id="closePreviewModal">×</button>
+    </div>
+    <div id="previewModalBody" class="preview-modal-body"></div>
+  </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./app.js"></script>
