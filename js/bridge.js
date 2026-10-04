@@ -77,3 +77,24 @@ export function openDesigner(templateId){
     location.href=url.toString();
   }
 }
+
+
+export function openPreviewWindow(){
+  installOpenerResponder();
+  const url=new URL("./preview.html",location.href);
+  const width=Math.min(1180,Math.max(860,Math.floor(screen.availWidth*0.72)));
+  const height=Math.min(900,Math.max(680,Math.floor(screen.availHeight*0.82)));
+  const left=Math.max(0,Math.floor((screen.availWidth-width)/2));
+  const top=Math.max(0,Math.floor((screen.availHeight-height)/2));
+  const w=window.open(url.toString(),"super-print-preview",
+    "popup=yes,resizable=yes,scrollbars=no,width="+width+",height="+height+",left="+left+",top="+top);
+  if(w){
+    let tries=0;
+    const timer=setInterval(()=>{
+      tries++;
+      pushBridgeToDesigner(w);
+      if(tries>24||w.closed)clearInterval(timer);
+    },220);
+  }
+  return w;
+}
