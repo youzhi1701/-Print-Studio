@@ -41,9 +41,9 @@ function validateRecord(rec){
   const required=["收件人","电话","手机号","收货地址"];
   const missing=required.filter(k=>k in data && !data[k]);
   const bar=$("issueBar"),text=$("issueText");
-  if(!rec){bar.className="issue-bar warn";text.textContent="未选择记录";return}
-  if(missing.length){bar.className="issue-bar warn";text.textContent="缺少 "+missing.join("、");return}
-  bar.className="issue-bar ok";text.textContent="数据正常";
+  if(!rec){bar.className="preview-health warn";text.textContent="未选择";return}
+  if(missing.length){bar.className="preview-health warn";text.textContent="缺 "+missing.length+" 项";return}
+  bar.className="preview-health ok";text.textContent="数据正常";
 }
 
 async function renderPreview(){
@@ -62,12 +62,17 @@ async function renderPreview(){
 function fitPreview(){
   const viewport=$("previewViewport"),host=$("previewHost"),sheet=host.querySelector(".print-sheet");
   if(!viewport||!sheet)return;
+  // Chrome supports CSS zoom and, unlike transform:scale(), it participates in layout.
+  // That keeps the physical sheet centered instead of visually scaling a large off-center box.
   host.style.transform="none";
-  const sw=sheet.getBoundingClientRect().width,sh=sheet.getBoundingClientRect().height;
-  const sx=(viewport.clientWidth-34)/Math.max(1,sw),sy=(viewport.clientHeight-34)/Math.max(1,sh);
-  const scale=Math.min(sx,sy,1);
-  host.style.transform="scale("+scale+")";
-  host.style.width=sw+"px";host.style.height=sh+"px";
+  host.style.zoom="1";
+  host.style.width="auto";
+  host.style.height="auto";
+  const sw=sheet.offsetWidth,sh=sheet.offsetHeight;
+  const sx=(viewport.clientWidth-12)/Math.max(1,sw);
+  const sy=(viewport.clientHeight-12)/Math.max(1,sh);
+  const scale=Math.max(.2,Math.min(sx,sy,1.15));
+  host.style.zoom=String(scale);
 }
 
 function syncBridge(){
