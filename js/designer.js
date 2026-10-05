@@ -160,6 +160,26 @@ function applyTextBehavior(n,e){
   if(e.overflowMode==="grow"){n.style.height="auto";n.style.minHeight=Math.max(1,e.h*MM)+"px"}
 }
 function imagePosition(e){return (e.alignX||"center")+" "+(e.alignY||"center")}
+function tableCellKey(row,col){return row+":"+col}
+function tableCellOverride(e,row,col){return e.cells?.[tableCellKey(row,col)]||null}
+function tableCellConfig(e,row,col,column){
+  const o=tableCellOverride(e,row,col)||{};
+  return{
+    type:o.type||"inherit",
+    field:o.field??"",
+    text:o.text??"",
+    align:o.align||column?.align||"center",
+    valign:o.valign||"middle",
+    padding:Number.isFinite(Number(o.padding))?Number(o.padding):2,
+    wrap:o.wrap!==undefined?o.wrap:e.wrap!==false,
+    imageFit:o.imageFit||e.tableImageFit||"contain"
+  }
+}
+function tableCellValue(cfg,row,data,column){
+  if(cfg.type==="text")return cfg.text||"";
+  const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
+  return row?.[field]??data?.[field]??""
+}
 function tableColumnsForPreview(e,rows,data){
   const cols=normalizeColumns(e.columns).map((col,i)=>({...col,_index:i}));
   const structural=Array.isArray(e.merges)&&e.merges.length>0;
