@@ -8,7 +8,7 @@ export async function mountBuildVersion(){
   if(!badge){
     badge=document.createElement("span");
     badge.id="buildVersionBadge";
-    badge.className="build-version-badge";
+    badge.className="build-version-badge build-version-fallback";
     badge.setAttribute("aria-label","当前版本");
     document.body.appendChild(badge);
   }
