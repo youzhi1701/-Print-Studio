@@ -1,4 +1,4 @@
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-14";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-18";
 
 let activeJob=null;
 let lastPdfUrl=null;
