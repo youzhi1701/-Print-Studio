@@ -1,6 +1,6 @@
 import {state,storageAvailable} from "./state.js?v=20261005-6";
 import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-6";
-import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-6";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-6";
 import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-6";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-6";
 import {printTemplateRecords} from "./print.js?v=20261005-6";
@@ -261,6 +261,25 @@ async function init(){
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
   $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
+  $("importTemplate").onclick=()=>$("importTemplateFile").click();
+  $("importTemplateFile").onchange=async e=>{
+    const file=e.target.files?.[0];e.target.value="";if(!file)return;
+    try{
+      const parsed=JSON.parse(await file.text());
+      const tpl=importTemplateObject(parsed,state.templates);
+      state.templates.push(tpl);state.activeTemplateId=tpl.id;
+      saveTemplates(state.templates);fillTemplates();autoBind();syncBridge();await renderPreview(true);
+      toast("模板已导入");
+    }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
+  };
+  $("deleteTemplate").onclick=async()=>{
+    const tpl=activeTemplate();if(!tpl)return;
+    if(tpl.id==="tpl_shipping_215x140"){toast("内置发货单模板不可删除");return}
+    if(state.templates.length<=1){toast("至少保留一个模板");return}
+    state.templates=state.templates.filter(t=>t.id!==tpl.id);
+    state.activeTemplateId=state.templates[0]?.id||null;saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
+    toast("模板已删除");
+  };
 
   window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>{fitPreview();if(!$("previewModal").classList.contains("hidden"))fitPreviewModal()},80)});
   window.addEventListener("message",e=>{
