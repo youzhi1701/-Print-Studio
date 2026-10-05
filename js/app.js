@@ -264,6 +264,6 @@ async function init(){
 
   await refresh();
   try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}
-  setInterval(refresh,5000);
+  setInterval(()=>{if(document.visibilityState==="visible")refresh()},20000);
 }
 init();
