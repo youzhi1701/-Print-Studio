@@ -6,7 +6,7 @@ import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-9";import {loadTempl
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
 } from "./table-model.js?v=20261005-9";
-const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null;
+const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,lastBridgeIdentity="";
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
 function clearTableSelection(){selectedCells=[];tableSelectionAnchor=null;tableSelecting=false}
@@ -50,25 +50,43 @@ function populateFields(){
     delete sel.dataset.keep;
   }
 }
-function syncBridgeData(showToast=true,provided=null){
+function bridgeIdentity(bridge){
+  try{return JSON.stringify({
+    fields:(bridge?.fields||[]).map(f=>[f.id,f.name,f.type]),
+    record:[bridge?.record?.id||"",bridge?.record?.data||{}],
+    selected:(bridge?.selectedRecords||[]).map(r=>r.id),
+    templateId:bridge?.template?.id||bridge?.activeTemplateId||""
+  })}catch{return String(Date.now())}
+}
+function syncBridgeData(showToast=true,provided=null,{force=false}={}){
   const bridge=provided||readBridge();
+  const identity=bridgeIdentity(bridge);
+  if(!force&&identity===lastBridgeIdentity){
+    if(showToast)toast("数据已经是最新状态");
+    return{updated:false,templateChanged:false}
+  }
+  lastBridgeIdentity=identity;
   state.fields=bridge?.fields||[];
   state.record=bridge?.record||null;
   state.selectedRecords=bridge?.selectedRecords||[];
+  let templateChanged=false;
   if(bridge?.template?.id){
     const incoming=structuredClone(bridge.template);
     const i=state.templates.findIndex(t=>t.id===incoming.id);
-    if(i>=0)state.templates[i]=incoming;else state.templates.push(incoming);
-    state.activeTemplateId=incoming.id;
-    saveTemplates(state.templates);
+    if(i<0){state.templates.push(incoming);templateChanged=true}
+    if(state.activeTemplateId!==incoming.id){
+      if(i>=0)state.templates[i]=incoming;
+      state.activeTemplateId=incoming.id;templateChanged=true;
+    }
+    if(templateChanged)saveTemplates(state.templates);
   }
   populateFields();
-  const changed=autoBindTemplateFields(current(),state.fields);
-  if(changed) saveTemplates(state.templates);
+  const bound=autoBindTemplateFields(current(),state.fields);
+  if(bound)saveTemplates(state.templates);
   const label=$("dataSyncState");
-  if(label) label.textContent=state.fields.length?("已识别 "+state.fields.length+" 个字段"+(state.record?" · 已载入当前记录":"")):"未读取到飞书字段";
-  if(showToast) toast(state.fields.length?("已同步 "+state.fields.length+" 个字段"):"未读取到字段，请先在快捷模式选择记录");
-  return changed;
+  if(label)label.textContent=state.fields.length?("已识别 "+state.fields.length+" 个字段"+(state.record?" · 已载入当前记录":"")):"未读取到飞书字段";
+  if(showToast)toast(state.fields.length?("已同步 "+state.fields.length+" 个字段"):"未读取到字段，请先在快捷模式选择记录");
+  return{updated:true,templateChanged,bound}
 }
 function autoBindNow(){
   const changed=autoBindTemplateFields(current(),state.fields);
@@ -811,11 +829,11 @@ $("rightToggle").onclick=()=>{
   if(window.innerWidth<=900){g.classList.toggle("right-open");if(g.classList.contains("right-open"))g.classList.remove("left-open")}
   else g.classList.toggle("right-collapsed");
   setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},80);
-};$("newBtn").onclick=()=>{const t=createTemplate();state.templates.push(t);state.activeTemplateId=t.id;history=[];hIndex=-1;selected.clear();clearTableSelection();renderAll();pushHistory();autoSave()};$("fieldSearch").oninput=e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll(".field-item").forEach(n=>n.classList.toggle("hidden",!n.textContent.toLowerCase().includes(q)))};$("syncDataBtn").onclick=()=>{syncBridgeData(true);renderAll()};$("autoBindBtn").onclick=autoBindNow;$("addTableColumn").onclick=addTableColumn;$("normalizeTableWidths").onclick=()=>normalizeTableWidths(true);
+};$("newBtn").onclick=()=>{const t=createTemplate();state.templates.push(t);state.activeTemplateId=t.id;history=[];hIndex=-1;selected.clear();clearTableSelection();renderAll();pushHistory();autoSave()};$("fieldSearch").oninput=e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll(".field-item").forEach(n=>n.classList.toggle("hidden",!n.textContent.toLowerCase().includes(q)))};$("syncDataBtn").onclick=()=>{const r=syncBridgeData(true,null,{force:true});if(r.templateChanged)renderAll();else{renderElements();syncProps()}};$("autoBindBtn").onclick=autoBindNow;$("addTableColumn").onclick=addTableColumn;$("normalizeTableWidths").onclick=()=>normalizeTableWidths(true);
 $("layerSearch").oninput=renderLayers;$("layerTopBtn").onclick=()=>moveLayer(true);$("layerBottomBtn").onclick=()=>moveLayer(false);
 $("contextMenu").onclick=e=>{const c=e.target.dataset.cmd;if(c==="duplicate")duplicate();if(c==="front")moveLayer(true);if(c==="back")moveLayer(false);if(c==="lock")toggleKey("locked");if(c==="delete")del();$("contextMenu").classList.add("hidden")};document.addEventListener("click",()=>$("contextMenu").classList.add("hidden"));document.addEventListener("keydown",e=>{const editing=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);if(e.ctrlKey&&e.key.toLowerCase()==="s"){e.preventDefault();autoSave(true);toast("模板已保存");return}if(e.ctrlKey&&e.key.toLowerCase()==="z"){e.preventDefault();restore(hIndex-1);return}if(e.ctrlKey&&e.key.toLowerCase()==="y"){e.preventDefault();restore(hIndex+1);return}if(editing)return;if(e.key==="Escape"&&selectedCells.length){e.preventDefault();clearTableSelection();renderElements();syncProps();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="m"&&selectedCells.length){e.preventDefault();const t=selectedOne();selectionHasMerge(t)?unmergeSelectedCells():mergeSelectedCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="c"&&selectedCells.length){e.preventDefault();copySelectedTableCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="v"&&selectedCells.length){e.preventDefault();pasteSelectedTableCells();return}if((e.key==="Delete"||e.key==="Backspace")&&selectedCells.length){e.preventDefault();clearSelectedTableCells();return}if((e.key==="Delete"||e.key==="Backspace")&&selected.size){e.preventDefault();del();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="d"){e.preventDefault();duplicate();return}const step=e.shiftKey?5:1;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)&&selected.size){e.preventDefault();for(const x of current().elements.filter(v=>selected.has(v.id))){if(e.key==="ArrowLeft")x.x=Math.max(0,x.x-step);if(e.key==="ArrowRight")x.x+=step;if(e.key==="ArrowUp")x.y=Math.max(0,x.y-step);if(e.key==="ArrowDown")x.y+=step}renderElements();syncProps();pushHistory();autoSave()}})}
 window.addEventListener("storage",e=>{if(e.key===STORAGE_KEYS.bridge){syncBridgeData(false);renderAll()}});
-onBridgeMessage(payload=>{syncBridgeData(false,payload);renderAll()});
+onBridgeMessage(payload=>{const r=syncBridgeData(false,payload);if(!r.updated)return;if(r.templateChanged)renderAll();else{renderElements();syncProps()}});
 window.addEventListener("resize",()=>{clearTimeout(window.__spResize);window.__spResize=setTimeout(()=>{initResponsivePanels();if(zoomMode==="fit")fitCanvas()},100)});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},120));
 window.addEventListener("beforeunload",()=>{if(saveTimer){clearTimeout(saveTimer);autoSave(true)}});
