@@ -1,15 +1,15 @@
-import {mountBuildVersion} from "./version.js?v=20261006-01";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-01";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-01";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261006-01";
-import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-01";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";
-import {printTemplateRecords} from "./print.js?v=20261006-01";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-01";
+import {mountBuildVersion} from "./version.js?v=20261006-02";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-02";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-02";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-02";
+import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-02";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-02";
+import {printTemplateRecords} from "./print.js?v=20261006-02";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-02";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();
+let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();let templateLibraryQuery="",templateLibraryCategory="全部";
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -32,27 +32,63 @@ function showCompat(message,extra=""){
 function hideCompat(){$("compatPanel")?.classList.add("hidden")}
 
 function activeTemplate(){return state.templates.find(t=>t.id===state.activeTemplateId)||state.templates[0]}
+function escHtml(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
+const TEMPLATE_SAMPLE_IMAGE="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="140"><rect width="180" height="140" fill="#eef1f5"/><rect x="18" y="18" width="144" height="104" rx="10" fill="#d8dee8"/><path d="M42 96l28-28 18 18 20-25 30 35z" fill="#aab5c5"/><circle cx="64" cy="51" r="12" fill="#b8c3d2"/></svg>');
+const TEMPLATE_SAMPLE_DATA={
+  "订单编号":"SP202610060001","收件人":"示例客户","手机号":"138****8888","收货地址":"示例省示例市示例区 XX 路 88 号",
+  "商品名称":"示例商品","商品属性":"标准规格","数量":"2","价格":"99.00","产品图片":TEMPLATE_SAMPLE_IMAGE
+};
+function templateSearchText(t){
+  return [t.name,t.category,t.description,...(t.tags||[]),t.page?.width+"x"+t.page?.height].filter(Boolean).join(" ").toLowerCase();
+}
+function filteredTemplates(){
+  const q=templateLibraryQuery.trim().toLowerCase();
+  return state.templates.filter(t=>{
+    if(templateLibraryCategory!=="全部"&&String(t.category||"其他")!==templateLibraryCategory)return false;
+    return !q||templateSearchText(t).includes(q);
+  });
+}
+function populateTemplateCategories(){
+  const select=$("templateCategoryFilter");if(!select)return;
+  const current=templateLibraryCategory;
+  const cats=[...new Set(state.templates.map(t=>String(t.category||"其他")))].sort((a,b)=>a.localeCompare(b,"zh-CN"));
+  select.innerHTML='<option value="全部">全部分类</option>'+cats.map(x=>'<option value="'+escHtml(x)+'">'+escHtml(x)+'</option>').join("");
+  select.value=cats.includes(current)?current:"全部";
+  templateLibraryCategory=select.value;
+}
+async function renderTemplateThumbnails(){
+  const jobs=[...document.querySelectorAll(".template-thumb-inner[data-template-id]")];
+  for(const host of jobs){
+    const tpl=state.templates.find(t=>String(t.id)===host.dataset.templateId);if(!tpl)continue;
+    host.innerHTML=renderTemplateToHtml(tpl,TEMPLATE_SAMPLE_DATA);
+    try{await hydrateCodes(host)}catch{}
+    const stage=host.parentElement,sheet=host.querySelector(".print-sheet");
+    if(!stage||!sheet)continue;
+    const sw=sheet.offsetWidth||1,sh=sheet.offsetHeight||1;
+    const scale=Math.min((stage.clientWidth-8)/sw,(stage.clientHeight-8)/sh,1);
+    host.style.transform="translate(-50%,-50%) scale("+Math.max(.05,scale)+")";
+  }
+}
 function renderTemplateLibrary(){
-  const list=$("templateLibraryList"),count=$("templateLibraryCount");
+  const list=$("templateLibraryList"),count=$("templateLibraryCount"),empty=$("templateLibraryEmpty");
   if(!list)return;
-  if(count)count.textContent=state.templates.length+" 个模板";
-  if(!state.templates.length){list.innerHTML='<div class="template-library-empty">暂无模板</div>';return}
-  list.innerHTML=state.templates.map(t=>{
+  populateTemplateCategories();
+  const shown=filteredTemplates();
+  if(count)count.textContent=shown.length===state.templates.length?(state.templates.length+" 个模板"):(shown.length+" / "+state.templates.length);
+  list.innerHTML=shown.map(t=>{
     const active=t.id===state.activeTemplateId;
     const size=(Number(t.page?.width)||215)+"×"+(Number(t.page?.height)||140);
-    const tag=t.id==="tpl_shipping_215x140"?"内置":(t.status==="published"?"已发布":"自定义");
-    return '<button type="button" class="template-library-item'+(active?" active":"")+'" data-template-id="'+String(t.id).replace(/"/g,"&quot;")+'"><strong>'+String(t.name||"未命名模板").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]))+'</strong><span><em>'+size+' mm</em><em>'+tag+'</em></span></button>';
+    const badge=isBuiltinTemplate(t)?"内置":"自定义";
+    return '<button type="button" class="template-library-item'+(active?" active":"")+'" data-template-id="'+escHtml(t.id)+'" title="'+escHtml(t.description||t.name||"")+'">'
+      +'<div class="template-thumb"><div class="template-thumb-inner" data-template-id="'+escHtml(t.id)+'"></div></div>'
+      +'<span class="template-card-info"><span class="template-card-top"><strong>'+escHtml(t.name||"未命名模板")+'</strong><i class="template-card-badge">'+badge+'</i></span>'
+      +'<span class="template-card-meta"><em>'+escHtml(size)+' mm</em><em>'+escHtml(t.category||"其他")+'</em></span>'
+      +(t.description?'<span class="template-card-desc">'+escHtml(t.description)+'</span>':"")+'</span></button>';
   }).join("");
+  if(empty)empty.classList.toggle("hidden",shown.length>0);
+  requestAnimationFrame(()=>renderTemplateThumbnails());
 }
-function fillTemplates(){
-  const s=$("templateSelect");
-  if(s){
-    s.innerHTML="";
-    state.templates.forEach(t=>{const o=document.createElement("option");o.value=t.id;o.textContent=t.name;s.appendChild(o)});
-    if(state.activeTemplateId)s.value=state.activeTemplateId;
-  }
-  renderTemplateLibrary();
-}
+function fillTemplates(){renderTemplateLibrary()}
 function persistActiveTemplate(){
   const currentSettings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
   storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
@@ -351,11 +387,12 @@ async function init(){
   state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
   fillTemplates();
 
-  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview()};
   $("templateLibraryList")?.addEventListener("click",async e=>{
     const item=e.target.closest("[data-template-id]");if(!item)return;
     state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview(true);
   });
+  if($("templateLibrarySearch"))$("templateLibrarySearch").oninput=e=>{templateLibraryQuery=e.target.value||"";renderTemplateLibrary()};
+  if($("templateCategoryFilter"))$("templateCategoryFilter").onchange=e=>{templateLibraryCategory=e.target.value||"全部";renderTemplateLibrary()};
   if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);fillTemplates();if(!r)toast("模板库同步失败")};
   $("recordChooser").onclick=()=>chooseBatch(true);
   $("chooseBatch").onclick=()=>chooseBatch(false);
@@ -364,7 +401,7 @@ async function init(){
   $("printCurrent").onclick=()=>{const records=state.selectedRecords.length>1?state.selectedRecords:(activeRecord()?[activeRecord()]:[]);records.length?printRecords(records):toast("请先选择记录")};
 
   const openDesignerAction=()=>{syncBridge();const w=openDesigner(state.activeTemplateId);if(!w)toast("浏览器拦截了设计器窗口，请允许弹出窗口后重试")};
-  $("openDesigner").onclick=openDesignerAction;$("openDesignerMenu").onclick=openDesignerAction;
+  $("openDesigner").onclick=openDesignerAction;
 
   const openPopupPreview=()=>{syncBridge();const w=openPreviewWindow();if(!w)toast("浏览器拦截了弹出窗口，请允许后重试")};
   $("zoomPreviewBtn").onclick=openPopupPreview;
@@ -391,7 +428,7 @@ async function init(){
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
-  $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);if($("syncCloudTemplates"))$("syncCloudTemplates").onclick=async()=>{const r=await syncCloudTemplates(true);if(!r)toast("云端模板同步失败")};$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
+  $("refreshData").onclick=refresh;$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
   $("importTemplate").onclick=()=>$("importTemplateFile").click();
   $("importTemplateFile").onchange=async e=>{
     const file=e.target.files?.[0];e.target.value="";if(!file)return;
@@ -405,7 +442,7 @@ async function init(){
   };
   $("deleteTemplate").onclick=async()=>{
     const tpl=activeTemplate();if(!tpl)return;
-    if(tpl.id==="tpl_shipping_215x140"){toast("内置发货单模板不可删除");return}
+    if(isBuiltinTemplate(tpl)){toast("内置模板不可删除，可在设计器中复制后修改");return}
     if(state.templates.length<=1){toast("至少保留一个模板");return}
     const deletedAt=Date.now();
     markTemplateDeleted(tpl.id);
