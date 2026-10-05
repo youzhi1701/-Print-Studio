@@ -230,7 +230,7 @@ async function init(){
   $("nextRecord").onclick=async()=>{if(currentIndex<state.selectedRecords.length-1){currentIndex++;syncBridge();await renderPreview()}};
   $("printCurrent").onclick=()=>{const records=state.selectedRecords.length>1?state.selectedRecords:(activeRecord()?[activeRecord()]:[]);records.length?printRecords(records):toast("请先选择记录")};
 
-  const openDesignerAction=()=>{syncBridge();openDesigner(state.activeTemplateId)};
+  const openDesignerAction=()=>{syncBridge();const w=openDesigner(state.activeTemplateId);if(!w)toast("浏览器拦截了设计器窗口，请允许弹出窗口后重试")};
   $("openDesigner").onclick=openDesignerAction;$("openDesignerMenu").onclick=openDesignerAction;
 
   const openPopupPreview=()=>{syncBridge();const w=openPreviewWindow();if(!w)toast("浏览器拦截了弹出窗口，请允许后重试")};
