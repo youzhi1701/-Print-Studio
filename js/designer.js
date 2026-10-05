@@ -840,8 +840,10 @@ function autoSave(immediate=false){
   const stateNode=$("saveState");if(stateNode)stateNode.innerHTML="<i></i>保存中";
   clearTimeout(saveTimer);
   const commit=()=>{
-    t.updatedAt=Date.now();saveTemplates(state.templates);
-    if(stateNode)stateNode.innerHTML="<i></i>已自动保存";
+    t.updatedAt=Date.now();
+    const persisted=saveTemplates(state.templates);
+    if(stateNode)stateNode.innerHTML=persisted?"<i></i>已自动保存":"<i></i>当前会话已保存";
+    if(!persisted)console.warn("模板未写入持久存储，当前仅保存在本次会话");
     try{
       if(window.opener&&!window.opener.closed){
         window.opener.postMessage({type:"SUPER_PRINT_TEMPLATE_SAVE",template:structuredClone(t)},bridgeTargetOrigin());
