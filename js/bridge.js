@@ -3,6 +3,24 @@ import {STORAGE_KEYS} from "./state.js";
 let lastPayload=null;
 let listenerInstalled=false;
 
+function normalizePayload(payload){
+  const p=payload&&typeof payload==="object"?payload:{};
+  const selectedRecords=Array.isArray(p.selectedRecords)?p.selectedRecords.filter(Boolean):[];
+  const record=p.record||selectedRecords[0]||null;
+  const list=selectedRecords.length?selectedRecords:(record?[record]:[]);
+  const max=Math.max(0,list.length-1);
+  const currentIndex=Math.max(0,Math.min(Number(p.currentIndex)||0,max));
+  return{
+    ...p,
+    fields:Array.isArray(p.fields)?p.fields:[],
+    selectedRecords:list,
+    record:list[currentIndex]||record,
+    template:p.template||null,
+    activeTemplateId:p.activeTemplateId||p.template?.id||null,
+    currentIndex
+  };
+}
+
 function installOpenerResponder(){
   if(listenerInstalled) return;
   listenerInstalled=true;
@@ -19,13 +37,16 @@ function installOpenerResponder(){
 }
 
 export function writeBridge(payload){
-  lastPayload={...payload,updatedAt:Date.now()};
+  lastPayload={...normalizePayload(payload),bridgeUpdatedAt:Date.now()};
   try{localStorage.setItem(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))}catch{}
   installOpenerResponder();
 }
 
 export function readBridge(){
-  try{return JSON.parse(localStorage.getItem(STORAGE_KEYS.bridge)||"null")}catch{return null}
+  try{
+    const raw=JSON.parse(localStorage.getItem(STORAGE_KEYS.bridge)||"null");
+    return raw?normalizePayload(raw):null
+  }catch{return null}
 }
 
 export function requestBridgeFromOpener(timeout=1400){
@@ -34,7 +55,7 @@ export function requestBridgeFromOpener(timeout=1400){
     const done=v=>{if(settled)return;settled=true;window.removeEventListener("message",onMsg);resolve(v||readBridge())};
     const onMsg=event=>{
       const msg=event.data;
-      if(msg?.type==="SUPER_PRINT_DATA") done(msg.payload);
+      if(msg?.type==="SUPER_PRINT_DATA") done(normalizePayload(msg.payload));
     };
     window.addEventListener("message",onMsg);
     try{
@@ -50,7 +71,7 @@ export function requestBridgeFromOpener(timeout=1400){
 export function onBridgeMessage(callback){
   const handler=event=>{
     const msg=event.data;
-    if(msg?.type==="SUPER_PRINT_DATA") callback(msg.payload);
+    if(msg?.type==="SUPER_PRINT_DATA") callback(normalizePayload(msg.payload));
   };
   window.addEventListener("message",handler);
   return ()=>window.removeEventListener("message",handler);
