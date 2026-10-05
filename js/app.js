@@ -282,6 +282,13 @@ async function init(){
     toast("模板已删除");
   };
 
+  document.addEventListener("keydown",e=>{
+    if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="p"){
+      e.preventDefault();
+      const records=state.selectedRecords.length>1?state.selectedRecords:(activeRecord()?[activeRecord()]:[]);
+      records.length?printRecords(records):toast("请先选择记录");
+    }
+  });
   window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>fitPreview(),80)});
   window.addEventListener("message",e=>{
     if(e.data?.type==="SUPER_PRINT_TEMPLATE_SAVE"&&e.data.template)applyDesignerTemplate(e.data.template);
