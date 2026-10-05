@@ -197,7 +197,8 @@ export function mergeVisualRange(el,visualRows,cols,range){
   el.merges.push(merge);
 
   const masterRow=rowIds[0],masterCol=colIds[0];
-  if(!getCellOverride(el,masterRow,masterCol)){
+  const masterVisualRow=visualRows[range.r0];
+  if(masterVisualRow?.type==="manual"&&!getCellOverride(el,masterRow,masterCol)){
     setCellOverride(el,masterRow,masterCol,{type:"text",text:"",align:"center",valign:"middle",padding:2,wrap:true,imageFit:el.tableImageFit||"contain",mergeDefault:true});
   }
   // Clear only explicit subordinate overrides; source data is never destroyed.
@@ -280,6 +281,29 @@ export function insertColumn(el,index){
     }
   }
   el.columns=cols;normalizeTableColumns(el);return col;
+}
+
+function contiguousRuns(ids,order){
+  const indexed=ids.map(id=>({id,index:order.indexOf(id)})).filter(x=>x.index>=0).sort((a,b)=>a.index-b.index);
+  const runs=[];let current=[];
+  for(const item of indexed){
+    if(!current.length||item.index===current[current.length-1].index+1)current.push(item);
+    else{runs.push(current);current=[item]}
+  }
+  if(current.length)runs.push(current);
+  return runs.map(run=>run.map(x=>x.id))
+}
+export function normalizeMergeContiguity(el){
+  const rowOrder=(el.rowDefs||[]).map(r=>r.id),colOrder=normalizeTableColumns(el).map(c=>c.id);
+  const next=[];
+  for(const m of el.merges||[]){
+    const rr=contiguousRuns(m.rowIds||[],rowOrder),cc=contiguousRuns(m.colIds||[],colOrder);
+    for(const rows of rr)for(const cols of cc){
+      if(rows.length*cols.length>1)next.push({id:id("merge"),rowIds:rows,colIds:cols});
+    }
+  }
+  el.merges=next;
+  return next
 }
 
 export function deleteColumns(el,indexes){
