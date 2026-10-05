@@ -123,6 +123,11 @@ export function pushBridgeToDesigner(targetWindow){
   post(targetWindow,{type:"SUPER_PRINT_DATA",payload:lastPayload});
 }
 export function bridgeTargetOrigin(){return MESSAGE_ORIGIN}
+export function requestImageRefresh(recordId=""){
+  try{
+    if(window.opener&&!window.opener.closed)post(window.opener,{type:"SUPER_PRINT_REFRESH_IMAGES",recordId:String(recordId||"")});
+  }catch{}
+}
 
 export function openDesigner(templateId){
   installOpenerResponder();
