@@ -59,11 +59,11 @@ export function renderTemplateToHtml(tpl,data={}){
       return '<div style="'+common+textCss(el)+'">'+esc(value)+'</div>'
     }
     if(el.type==="barcode"){
-      const v=data?.[el.field]||el.text||"";
+      const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
       return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'"></svg>'+(el.showText===false?'':'<small>'+esc(v)+'</small>')+'</div>';
     }
     if(el.type==="qrcode"){
-      const v=data?.[el.field]||el.text||"";
+      const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
       return '<div style="'+common+'display:grid;place-items:center"><canvas class="qrcode" data-value="'+esc(v)+'" data-level="'+esc(el.qrLevel||"M")+'" data-margin="'+Number(el.qrMargin||0)+'"></canvas></div>';
     }
     if(el.type==="image"){
