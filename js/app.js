@@ -110,7 +110,22 @@ function renderTemplateLibrary(){
   if(empty)empty.classList.toggle("hidden",shown.length>0);
   requestAnimationFrame(renderTemplateThumbnails);
 }
-function fillTemplates(){renderTemplateLibrary()}
+function fillTemplates(){
+  const tpl=activeTemplate();
+  const name=$("currentTemplateName");if(name)name.textContent=tpl?.name||"未选择模板";
+  const modal=$("templateLibraryModal");
+  if(modal&&!modal.classList.contains("hidden"))renderTemplateLibrary();
+}
+function openTemplateLibrary(){
+  const modal=$("templateLibraryModal");if(!modal)return;
+  modal.classList.remove("hidden");
+  renderTemplateLibrary();
+  requestAnimationFrame(()=>$("templateLibrarySearch")?.focus());
+}
+function closeTemplateLibrary(){
+  $("templateLibraryModal")?.classList.add("hidden");
+  templateThumbObserver?.disconnect?.();
+}
 function persistActiveTemplate(){
   const currentSettings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
   storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
@@ -428,11 +443,15 @@ async function init(){
 
   $("templateLibraryList")?.addEventListener("click",async e=>{
     const item=e.target.closest("[data-template-id]");if(!item)return;
-    state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview(true);
+    state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();autoBind();syncBridge();await renderPreview(true);
+    closeTemplateLibrary();fillTemplates();
   });
   if($("templateLibrarySearch"))$("templateLibrarySearch").oninput=e=>{templateLibraryQuery=e.target.value||"";clearTimeout(templateSearchTimer);templateSearchTimer=setTimeout(renderTemplateLibrary,120)};
   if($("templateCategoryFilter"))$("templateCategoryFilter").onchange=e=>{templateLibraryCategory=e.target.value||"全部";renderTemplateLibrary()};
-  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);fillTemplates();if(!r)toast("模板库同步失败")};
+  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);if(r)renderTemplateLibrary();else toast("模板库同步失败")};
+  $("templateChooser").onclick=openTemplateLibrary;
+  $("templateLibraryClose").onclick=closeTemplateLibrary;
+  $("templateLibraryModal").addEventListener("click",e=>{if(e.target===$("templateLibraryModal"))closeTemplateLibrary()});
   $("recordChooser").onclick=()=>chooseBatch(true);
   $("chooseBatch").onclick=()=>chooseBatch(false);
   $("prevRecord").onclick=async()=>{if(currentIndex>0){currentIndex--;syncBridge();await renderPreview()}};
@@ -480,6 +499,7 @@ async function init(){
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
+  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("templateLibraryModal").classList.contains("hidden"))closeTemplateLibrary()});
   $("refreshData").onclick=refresh;$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
   $("importTemplate").onclick=()=>$("importTemplateFile").click();
   $("importTemplateFile").onchange=async e=>{
@@ -488,7 +508,7 @@ async function init(){
       const parsed=JSON.parse(await file.text());
       const tpl=importTemplateObject(parsed,state.templates);
       state.templates.push(tpl);state.activeTemplateId=tpl.id;
-      templateThumbCache.clear();persistActiveTemplate();saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);
+      templateThumbCache.clear();persistActiveTemplate();saveTemplates(state.templates);queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);fillTemplates();if(!$("templateLibraryModal").classList.contains("hidden"))renderTemplateLibrary();
       toast("模板已导入并加入云端同步");
     }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
   };
@@ -500,7 +520,7 @@ async function init(){
     markTemplateDeleted(tpl.id);
     clearTimeout(cloudSaveTimers.get(tpl.id));cloudSaveTimers.delete(tpl.id);
     state.templates=state.templates.filter(t=>t.id!==tpl.id);templateThumbCache.clear();
-    state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
+    state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);syncBridge();await renderPreview(true);fillTemplates();if(!$("templateLibraryModal").classList.contains("hidden"))renderTemplateLibrary();
     if(state.connected&&state.sdk){
       try{
         const result=await runCloudOperation(()=>deleteCloudTemplate(state.sdk,tpl.id,deletedAt));
