@@ -63,6 +63,22 @@ export function saveTemplates(list){
   storageSet(STORAGE_KEYS.templates,JSON.stringify(list||[]))
 }
 export function createTemplate(name="未命名模板",page={width:215,height:140}){return{id:uid("tpl"),schemaVersion:7,name,category:"其他",status:"draft",page:{...page,orientation:page.width>=page.height?"landscape":"portrait",margin:5,safeArea:4},elements:[],createdAt:Date.now(),updatedAt:Date.now()}}
+export function importTemplateObject(input,existing=[]){
+  const raw=input?.template&&typeof input.template==="object"?input.template:input;
+  if(!raw||typeof raw!=="object"||!Array.isArray(raw.elements))throw new Error("模板文件格式无效");
+  const tpl=structuredClone(raw);
+  const ids=new Set((existing||[]).map(t=>t.id));
+  if(!tpl.id||ids.has(tpl.id))tpl.id=uid("tpl");
+  tpl.name=String(tpl.name||"导入模板").trim()||"导入模板";
+  tpl.category=tpl.category||"其他";
+  tpl.status=tpl.status||"draft";
+  tpl.page={width:215,height:140,orientation:"landscape",margin:5,safeArea:4,...(tpl.page||{})};
+  tpl.createdAt=Number(tpl.createdAt)||Date.now();
+  tpl.updatedAt=Date.now();
+  normalizeTemplateTables(tpl);
+  return tpl;
+}
+
 export function exportTemplate(tpl){normalizeTemplateTables(tpl);const blob=new Blob([JSON.stringify(tpl,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(tpl.name||"template")+".superprint.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
 
