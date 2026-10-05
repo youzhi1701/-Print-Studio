@@ -2,7 +2,7 @@ import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-1"
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
 
 const $=id=>document.getElementById(id);
-let payload=null,index=0,fitMode=true;
+let payload=null,index=0,fitMode=true,lastRenderKey="";
 
 function records(){
   const arr=payload?.selectedRecords?.length?payload.selectedRecords:(payload?.record?[payload.record]:[]);
@@ -12,12 +12,24 @@ function template(){return payload?.template||null}
 function currentRecord(){const list=records();if(!list.length)return null;index=Math.max(0,Math.min(index,list.length-1));return list[index]}
 function recordLabel(rec){return rec?.data?.订单编号||rec?.data?.["订单号"]||rec?.data?.序号||rec?.data?.收件人||"当前记录"}
 
-async function render(){
+function renderKey(tpl,rec,list){
+  try{return JSON.stringify({
+    tid:tpl?.id||"",updatedAt:tpl?.updatedAt||0,elements:tpl?.elements||[],page:tpl?.page||{},
+    rid:rec?.id||"",data:rec?.data||{},index,count:list.length
+  })}catch{return String(Date.now())}
+}
+async function render(force=false){
   const host=$("sheetHost"),empty=$("emptyState"),tpl=template(),rec=currentRecord(),list=records();
-  host.innerHTML="";
   empty.style.display=tpl&&rec?"none":"flex";
-  if(!tpl||!rec){$("statusText").textContent="等待飞书数据";return}
-  host.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
+  if(!tpl||!rec){
+    if(force||lastRenderKey!=="empty"){host.innerHTML="";lastRenderKey="empty"}
+    $("statusText").textContent="等待飞书数据";return
+  }
+  const key=renderKey(tpl,rec,list);
+  if(!force&&key===lastRenderKey)return;
+  lastRenderKey=key;
+  const html=renderTemplateToHtml(tpl,rec.data||{});
+  if(host.innerHTML!==html)host.innerHTML=html;
   await hydrateCodes(host);
   $("counter").textContent=(index+1)+" / "+list.length;
   $("previewMeta").textContent=(tpl.name||"模板")+" · "+recordLabel(rec);
@@ -60,7 +72,24 @@ async function printAll(){
   window.addEventListener("afterprint",cleanup);
   window.print();
 }
-function applyPayload(data){payload=data||payload;index=0;render()}
+function payloadIdentity(data){
+  try{return JSON.stringify({
+    updatedAt:data?.updatedAt||0,
+    tid:data?.template?.id||"",tUpdated:data?.template?.updatedAt||0,
+    rid:data?.record?.id||"",rdata:data?.record?.data||{},
+    selected:(data?.selectedRecords||[]).map(r=>[r.id,r.data])
+  })}catch{return""}
+}
+let lastPayloadIdentity="";
+function applyPayload(data){
+  if(!data)return;
+  const id=payloadIdentity(data);
+  if(id===lastPayloadIdentity)return;
+  lastPayloadIdentity=id;
+  payload=data;
+  index=Math.max(0,Math.min(Number(data.currentIndex)||0,Math.max(0,records().length-1)));
+  render(false)
+}
 
 $("fitBtn").onclick=fit;
 $("prevBtn").onclick=()=>{if(index>0){index--;render()}};
