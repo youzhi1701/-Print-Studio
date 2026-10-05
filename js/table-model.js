@@ -135,9 +135,9 @@ export function materializeTableRows(el,data={}){
     out.push({id:base+"__auto_"+si,type:"data",height:Number(el.rowHeight)||8,data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si,ephemeral:true});
     si++;
   }
-  if(!out.length){
-    const def=defs[0]||{id:id("row"),type:"data",height:Number(el.rowHeight)||8};
-    out.push({id:def.id,type:def.type,height:def.height,data:{},sourceIndex:0});
+  if(!out.length&&el.emptyBehavior!=="hide"){
+    const def=defs.find(r=>r.type==="manual")||defs[0]||{id:id("row"),height:Number(el.rowHeight)||8};
+    out.push({id:def.id,type:"manual",height:def.height,data:{},sourceIndex:null,placeholder:true});
   }
   return out;
 }
