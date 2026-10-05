@@ -1,6 +1,6 @@
 import {mountBuildVersion} from "./version.js?v=20261006-04";
 import {requestBridgeFromOpener,onBridgeMessage,requestImageRefresh} from "./bridge.js?v=20261006-04";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-04";
+import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-04";
 import {printTemplateRecords} from "./print.js?v=20261006-04";
 
 mountBuildVersion();
@@ -33,6 +33,7 @@ async function render(force=false){
   lastRenderKey=key;
   const html=renderTemplateToHtml(tpl,rec.data||{});
   if(host.innerHTML!==html)host.innerHTML=html;
+  applyTemplateCalibration(host,tpl);
   for(const img of host.querySelectorAll("img")){
     img.addEventListener("error",()=>{$("statusText").textContent="图片加载失败，正在重新获取";requestImageRefresh(rec.id)},{once:true});
   }
