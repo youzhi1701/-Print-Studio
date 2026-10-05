@@ -55,9 +55,14 @@ function populateFields(){
 function bridgeIdentity(bridge){
   try{return JSON.stringify({
     fields:(bridge?.fields||[]).map(f=>[f.id,f.name,f.type]),
-    record:[bridge?.record?.id||"",bridge?.record?.data||{}],
-    selected:(bridge?.selectedRecords||[]).map(r=>r.id),
-    templateId:bridge?.template?.id||bridge?.activeTemplateId||""
+    record:[bridge?.record?.id||"",bridge?.record?.data||{},bridge?.record?.attachments||{}],
+    selected:(bridge?.selectedRecords||[]).map(r=>[r.id,r.data||{},r.attachments||{}]),
+    template:[
+      bridge?.template?.id||bridge?.activeTemplateId||"",
+      bridge?.template?.updatedAt||0,
+      bridge?.template?.page||{},
+      bridge?.template?.elements||[]
+    ]
   })}catch{return String(Date.now())}
 }
 function syncBridgeData(showToast=true,provided=null,{force=false}={}){
@@ -75,16 +80,30 @@ function syncBridgeData(showToast=true,provided=null,{force=false}={}){
   if(bridge?.template?.id){
     const incoming=structuredClone(bridge.template);
     const i=state.templates.findIndex(t=>t.id===incoming.id);
-    if(i<0){state.templates.push(incoming);templateChanged=true}
+    if(i<0){
+      state.templates.push(incoming);
+      templateChanged=true;
+    }else{
+      const local=state.templates[i];
+      const incomingNewer=Number(incoming.updatedAt||0)>Number(local?.updatedAt||0);
+      const contentChanged=JSON.stringify({page:incoming.page,elements:incoming.elements,name:incoming.name})!==JSON.stringify({page:local?.page,elements:local?.elements,name:local?.name});
+      if(incomingNewer||(contentChanged&&Number(incoming.updatedAt||0)>=Number(local?.updatedAt||0))){
+        state.templates[i]=incoming;
+        templateChanged=true;
+      }
+    }
     if(state.activeTemplateId!==incoming.id){
-      if(i>=0)state.templates[i]=incoming;
-      state.activeTemplateId=incoming.id;templateChanged=true;
+      state.activeTemplateId=incoming.id;
+      templateChanged=true;
     }
     if(templateChanged)saveTemplates(state.templates);
   }
   populateFields();
   const bound=autoBindTemplateFields(current(),state.fields);
-  if(bound)saveTemplates(state.templates);
+  if(bound){
+    const t=current();if(t)t.updatedAt=Date.now();
+    saveTemplates(state.templates);
+  }
   const label=$("dataSyncState");
   if(label)label.textContent=state.fields.length?("已识别 "+state.fields.length+" 个字段"+(state.record?" · 已载入当前记录":"")):"未读取到飞书字段";
   if(showToast)toast(state.fields.length?("已同步 "+state.fields.length+" 个字段"):"未读取到字段，请先在快捷模式选择记录");
