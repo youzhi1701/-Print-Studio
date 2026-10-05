@@ -605,12 +605,12 @@ function syncProps(){
   }
   $("lockBtn").textContent=e.locked?"解锁":"锁定";$("hideBtn").textContent=e.hidden?"显示":"隐藏";
 }
-function updateProps(){
+function updateProps(ev){
   const e=selectedOne();if(!e)return;
   e.x=Number($("propX").value)||0;e.y=Number($("propY").value)||0;e.w=Math.max(.5,Number($("propW").value)||1);e.h=Math.max(.5,Number($("propH").value)||1);
   if(["text","field"].includes(e.type)){e.text=$("propText").value;e.field=$("propField").value;e.fontSize=Math.max(6,Number($("propFontSize").value)||11);e.fontWeight=$("propWeight").value;e.wrap=$("textWrap").value==="true";e.maxLines=Math.max(0,Number($("textMaxLines").value)||0);e.overflowMode=$("textOverflow").value;e.emptyBehavior=$("textEmptyBehavior").value;if(e.type==="field"&&e.field)e.text="{{"+e.field+"}}"}
   if(e.type==="image"){e.field=$("imageField").value;e.imageFit=$("imageFit").value;e.radius=Math.max(0,Number($("imageRadius").value)||0);e.aspectLock=$("imageAspectLock").value==="true";e.alignX=$("imageAlignX").value;e.alignY=$("imageAlignY").value;e.padding=Math.max(0,Number($("imagePadding").value)||0);e.emptyBehavior=$("imageEmptyBehavior").value}
-  if(e.type==="table"){e.dataField=$("tableDataField").value;e.showHeader=$("tableHeader").value==="true";e.zebra=$("tableZebra").value==="true";e.tableImageFit=$("tableImageFit").value;e.wrap=$("tableWrap").value==="true";e.hideEmptyColumns=$("tableHideEmptyColumns").value==="true";e.emptyBehavior=$("tableEmptyBehavior").value;e.rowHeight=Math.max(4,Number($("tableRowHeight").value)||8);e.maxRows=Math.max(1,Number($("tableMaxRows").value)||5);e.borderWidth=Math.max(0,Number($("tableBorderWidth").value)||0);e.fontSize=Math.max(6,Number($("tableFontSize").value)||9);applyTableCellInspector(e)}
+  if(e.type==="table"){e.dataField=$("tableDataField").value;e.showHeader=$("tableHeader").value==="true";e.zebra=$("tableZebra").value==="true";e.tableImageFit=$("tableImageFit").value;e.wrap=$("tableWrap").value==="true";e.hideEmptyColumns=$("tableHideEmptyColumns").value==="true";e.emptyBehavior=$("tableEmptyBehavior").value;e.rowHeight=Math.max(4,Number($("tableRowHeight").value)||8);e.maxRows=Math.max(1,Number($("tableMaxRows").value)||5);e.borderWidth=Math.max(0,Number($("tableBorderWidth").value)||0);e.fontSize=Math.max(6,Number($("tableFontSize").value)||9);if(ev?.target?.id?.startsWith("tableCell"))applyTableCellInspector(e)}
   if(e.type==="barcode"){e.field=$("codeField").value;e.barcodeFormat=$("barcodeFormat").value;e.showText=$("barcodeText").value==="true"}
   if(e.type==="qrcode"){e.field=$("codeField").value;e.qrLevel=$("qrLevel").value;e.qrMargin=Math.max(0,Number($("qrMargin").value)||0)}
   if(["line","container"].includes(e.type)){e.borderWidth=Math.max(0,Number($("shapeBorderWidth").value)||0);e.borderStyle=$("shapeBorderStyle").value;e.radius=Math.max(0,Number($("shapeRadius").value)||0)}
