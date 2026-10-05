@@ -1,4 +1,4 @@
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-05";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-06";
 
 let activeJob=null;
 
