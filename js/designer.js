@@ -1,5 +1,5 @@
 import {mountBuildVersion} from "./version.js?v=20261006-04";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-04";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-04";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-04";import {renderTemplateToHtml,renderElementToHtml,hydrateCodes} from "./renderer.js?v=20261006-04";import {printTemplateRecords} from "./print.js?v=20261006-04";import {
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-04";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-04";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-04";import {renderTemplateToHtml,renderElementToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-04";import {printTemplateRecords} from "./print.js?v=20261006-04";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
@@ -173,6 +173,12 @@ function renderElements(){
     layer.className="actual-preview-layer";
     layer.style.cssText="position:absolute;inset:0;pointer-events:none;overflow:hidden;background:#fff";
     if(sheet)while(sheet.firstChild)layer.appendChild(sheet.firstChild);
+    const calibrationHost=document.createElement("div");
+    calibrationHost.className="print-sheet";
+    calibrationHost.style.cssText="position:absolute;inset:0;width:100%;height:100%;overflow:hidden;background:#fff";
+    while(layer.firstChild)calibrationHost.appendChild(layer.firstChild);
+    layer.appendChild(calibrationHost);
+    applyTemplateCalibration(calibrationHost,t);
     p.appendChild(layer);
     requestAnimationFrame(()=>hydrateCodes(layer));
     return
