@@ -96,6 +96,19 @@
     <div id="previewModalBody" class="preview-modal-body"></div>
   </div>
 
+  <div id="compatPanel" class="compat-panel hidden">
+    <div class="compat-card glass-card">
+      <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+      <h2>超级打印暂时无法嵌入加载</h2>
+      <p id="compatMessage">正在检查当前电脑的浏览器与飞书环境。</p>
+      <div class="compat-actions">
+        <button id="compatRetry" class="btn btn-primary">重新连接</button>
+        <button id="compatOpen" class="btn btn-secondary">新窗口打开</button>
+        <button id="compatCopy" class="btn btn-secondary">复制诊断信息</button>
+      </div>
+      <small id="compatDetails"></small>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script type="module" src="./app.js?v=20261005-5"></script>
 </body>
