@@ -162,7 +162,8 @@ function applyTextBehavior(n,e){
 function imagePosition(e){return (e.alignX||"center")+" "+(e.alignY||"center")}
 function tableColumnsForPreview(e,rows,data){
   const cols=normalizeColumns(e.columns).map((col,i)=>({...col,_index:i}));
-  let visible=(preview&&e.hideEmptyColumns)?cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field]))):cols;
+  const structural=Array.isArray(e.merges)&&e.merges.length>0;
+  let visible=(preview&&e.hideEmptyColumns&&!structural)?cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field]))):cols;
   if(!visible.length)visible=cols;
   const sum=visible.reduce((n,col)=>n+(Number(col.width)||0),0)||100;
   return visible.map(col=>({...col,width:(Number(col.width)||0)*100/sum}));
