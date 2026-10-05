@@ -151,7 +151,34 @@ function defaults(type,field=""){
   return b
 }
 function addElement(type,x=25,y=25,field=""){const t=current();const e=defaults(type,field);e.x=x;e.y=y;t.elements.push(e);selected=new Set([e.id]);renderElements();renderLayers();syncProps();pushHistory();autoSave();toast("已添加组件")}
-function renderElements(){const p=$("printPage");p.querySelectorAll(".design-element").forEach(n=>n.remove());const t=current();for(const e of t.elements){const n=document.createElement("div");n.className="design-element "+e.type+"-el"+(selected.has(e.id)?" selected":"")+(e.locked?" locked":"")+(e.hidden?" hidden-element":"");n.dataset.id=e.id;n.style.left=e.x*MM+"px";n.style.top=e.y*MM+"px";n.style.width=e.w*MM+"px";n.style.height=Math.max(1,e.h*MM)+"px";n.style.fontSize=(e.fontSize||11)+"px";n.style.fontWeight=e.fontWeight||400;n.style.textAlign=e.align||"left";content(n,e);n.addEventListener("pointerdown",ev=>startMove(ev,e));n.addEventListener("click",ev=>{ev.stopPropagation();if(ev.shiftKey){selected.has(e.id)?selected.delete(e.id):selected.add(e.id)}else selected=new Set([e.id]);renderElements();renderLayers();syncProps()});n.addEventListener("contextmenu",ev=>showContext(ev,e.id));if(selected.has(e.id)&&!preview&&!e.locked)addHandles(n,e);p.appendChild(n)}}
+function renderElements(){
+  const p=$("printPage");
+  p.querySelectorAll(".design-element,.actual-preview-layer").forEach(n=>n.remove());
+  const t=current();if(!t)return;
+  if(preview){
+    const box=document.createElement("div");
+    box.innerHTML=renderTemplateToHtml(t,state.record?.data||{});
+    const sheet=box.querySelector(".print-sheet");
+    const layer=document.createElement("div");
+    layer.className="actual-preview-layer";
+    layer.style.cssText="position:absolute;inset:0;pointer-events:none;overflow:hidden;background:#fff";
+    if(sheet)while(sheet.firstChild)layer.appendChild(sheet.firstChild);
+    p.appendChild(layer);
+    requestAnimationFrame(()=>hydrateCodes(layer));
+    return
+  }
+  for(const e of t.elements){
+    const n=document.createElement("div");
+    n.className="design-element "+e.type+"-el"+(selected.has(e.id)?" selected":"")+(e.locked?" locked":"")+(e.hidden?" hidden-element":"");
+    n.dataset.id=e.id;n.style.left=e.x*MM+"px";n.style.top=e.y*MM+"px";n.style.width=e.w*MM+"px";n.style.height=Math.max(1,e.h*MM)+"px";n.style.fontSize=(e.fontSize||11)+"px";n.style.fontWeight=e.fontWeight||400;n.style.textAlign=e.align||"left";
+    content(n,e);
+    n.addEventListener("pointerdown",ev=>startMove(ev,e));
+    n.addEventListener("click",ev=>{ev.stopPropagation();if(ev.shiftKey){selected.has(e.id)?selected.delete(e.id):selected.add(e.id)}else selected=new Set([e.id]);renderElements();renderLayers();syncProps()});
+    n.addEventListener("contextmenu",ev=>showContext(ev,e.id));
+    if(selected.has(e.id)&&!e.locked)addHandles(n,e);
+    p.appendChild(n)
+  }
+}
 
 function hasValue(v){return !(v===undefined||v===null||v==="")}
 function applyTextBehavior(n,e){
