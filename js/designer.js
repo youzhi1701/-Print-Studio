@@ -173,6 +173,7 @@ function renderElements(){
     return
   }
   for(const e of t.elements){
+    if(e.type==="table")e.h=buildTableLayout(e,state.record?.data||{},false).totalHeight;
     const n=document.createElement("div");
     n.className="design-element "+e.type+"-el"+(selected.has(e.id)?" selected":"")+(e.locked?" locked":"")+(e.hidden?" hidden-element":"");
     n.dataset.id=e.id;n.style.left=e.x*MM+"px";n.style.top=e.y*MM+"px";n.style.width=e.w*MM+"px";n.style.height=Math.max(1,e.h*MM)+"px";n.style.fontSize=(e.fontSize||11)+"px";n.style.fontWeight=e.fontWeight||400;n.style.textAlign=e.align||"left";
@@ -398,6 +399,9 @@ function addTableRowResizers(n,e,rows){
   });
 }
 function updateTableRowGeometry(node,e,rows){
+  const total=(e.showHeader===false?0:Number(e.headerHeight||e.rowHeight||8))+rows.reduce((sum,row)=>sum+tmRowHeight(row,e),0);
+  e.h=total;node.style.height=total*MM+"px";
+  const table=node.querySelector("table");if(table)table.style.height=total*MM+"px";
   const trs=node.querySelectorAll("tbody tr");
   rows.forEach((row,i)=>{const h=tmRowHeight(row,e)*MM;trs[i]?.querySelectorAll("td").forEach(td=>td.style.height=h+"px")});
   let y=e.showHeader===false?0:(e.headerHeight||e.rowHeight||8);
@@ -499,7 +503,7 @@ function addTableCellToolbar(n,e){
 function insertTableRow(){insertTableRowAt("below")}
 function deleteTableRow(){deleteSelectedRows()}
 
-function addHandles(n,e){for(const d of ["nw","n","ne","e","se","s","sw","w"]){const h=document.createElement("span");h.className="resize-handle "+d;h.dataset.dir=d;h.addEventListener("pointerdown",ev=>startResize(ev,e,d));n.appendChild(h)}}
+function addHandles(n,e){const dirs=e.type==="table"?["e","w"]:["nw","n","ne","e","se","s","sw","w"];for(const d of dirs){const h=document.createElement("span");h.className="resize-handle "+d;h.dataset.dir=d;h.addEventListener("pointerdown",ev=>startResize(ev,e,d));n.appendChild(h)}}
 function startMove(ev,e){if(preview||e.locked||ev.target.closest(".resize-handle,.table-col-resizer,.table-row-resizer,.table-edit-cell,.table-context-tools"))return;ev.preventDefault();ev.stopPropagation();if(!selected.has(e.id))selected=ev.shiftKey?new Set([...selected,e.id]):new Set([e.id]);const sx=ev.clientX,sy=ev.clientY,start=[...selected].map(id=>{const x=current().elements.find(v=>v.id===id);return{x,id,ox:x.x,oy:x.y}}),factor=zoom/100;const move=m=>{let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}for(const a of start){a.x.x=Math.max(0,a.ox+dx);a.x.y=Math.max(0,a.oy+dy)}renderElements();syncProps()};const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};addEventListener("pointermove",move);addEventListener("pointerup",up)}
 function startResize(ev,e,dir){ev.preventDefault();ev.stopPropagation();const sx=ev.clientX,sy=ev.clientY,o={x:e.x,y:e.y,w:e.w,h:e.h},factor=zoom/100,ratio=o.w/Math.max(.1,o.h);const move=m=>{let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}if(dir.includes("e"))e.w=Math.max(2,o.w+dx);if(dir.includes("s"))e.h=Math.max(.5,o.h+dy);if(dir.includes("w")){e.x=o.x+dx;e.w=Math.max(2,o.w-dx)}if(dir.includes("n")){e.y=o.y+dy;e.h=Math.max(.5,o.h-dy)}if(e.type==="image"&&e.aspectLock!==false&&(dir.length===2)){if(Math.abs(dx)>=Math.abs(dy)){e.h=Math.max(.5,e.w/ratio);if(dir.includes("n"))e.y=o.y+(o.h-e.h)}else{e.w=Math.max(2,e.h*ratio);if(dir.includes("w"))e.x=o.x+(o.w-e.w)}}renderElements();syncProps()};const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};addEventListener("pointermove",move);addEventListener("pointerup",up)}
 function selectedOne(){if(selected.size!==1)return null;return current().elements.find(e=>selected.has(e.id))}
@@ -583,6 +587,7 @@ function syncProps(){
   $("multiTools")?.classList.toggle("hidden",selected.size<2);
   if(!e)return;
   for(const [id,k] of [["propX","x"],["propY","y"],["propW","w"],["propH","h"]])$(id).value=Math.round(e[k]*10)/10;
+  $("propH").disabled=e.type==="table";$("propH").title=e.type==="table"?"表格高度由表头和各行高度自动计算":"";
   $("elementTypeBadge").textContent=elementTypeName(e.type);
   ["textProps","imageProps","tableProps","codeProps","shapeProps"].forEach(id=>$(id).classList.add("hidden"));
   if(["text","field"].includes(e.type)){
