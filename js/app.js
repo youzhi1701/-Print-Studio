@@ -1,8 +1,8 @@
-import {state} from "./state.js?v=20261005-1";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-1";
-import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-1";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-1";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
+import {state} from "./state.js?v=20261005-2";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-2";
+import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-2";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-2";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-2";
 import {printTemplateRecords} from "./print.js?v=20261005-2";
 
 const $=id=>document.getElementById(id);
