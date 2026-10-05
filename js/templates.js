@@ -123,9 +123,18 @@ export function autoBindTemplateFields(template,fields=[]){
     if(el.type==="table"&&Array.isArray(el.columns)){
       el.columns=el.columns.map(col=>{
         if(typeof col==="string"){const m=matchFieldName(col,fields)||col;return{title:col,field:m,width:null,align:"center"}}
+        if(col.field&&fields.some(f=>f.name===col.field))return col;
         const matched=matchFieldName(col.field||col.title,fields);
-        return matched?{...col,field:matched}:col
+        if(matched&&matched!==col.field){changed=true;return{...col,field:matched}}
+        return col
       });
+      if(el.cellMap&&typeof el.cellMap==="object"){
+        for(const cell of Object.values(el.cellMap)){
+          if(!cell||!["field","image"].includes(cell.type)||!cell.field||fields.some(f=>f.name===cell.field))continue;
+          const matched=matchFieldName(cell.field,fields);
+          if(matched){cell.field=matched;changed=true}
+        }
+      }
     }
   }
   return changed;
