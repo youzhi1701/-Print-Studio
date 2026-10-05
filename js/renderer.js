@@ -49,7 +49,7 @@ function isImageValue(v){return typeof v==="string"&&(v.startsWith("data:image/"
 function cellHtml(v,imageFit="contain"){
   if(isImageValue(v)){
     const fit=imageFit==="original"?"none":(imageFit||"contain");
-    return '<div style="position:absolute;inset:0;overflow:hidden"><img src="'+esc(v)+'" style="width:100%;height:100%;object-fit:'+fit+';object-position:center center;display:block;margin:0" referrerpolicy="no-referrer"></div>';
+    return '<div style="position:absolute;inset:0;overflow:hidden;background:#fff"><img src="'+esc(v)+'" decoding="async" loading="eager" style="width:100%;height:100%;object-fit:'+fit+';object-position:center center;display:block;margin:0" referrerpolicy="no-referrer"></div>';
   }
   return esc(v);
 }
@@ -76,7 +76,7 @@ export function renderTemplateToHtml(tpl,data={}){
     if(el.type==="image"){
       const src=data?.[el.field]||"";
       if(!src&&el.emptyBehavior==="hide")return"";
-      return '<div style="'+common+'padding:'+(el.padding||0)+'mm;border-radius:'+(el.radius||0)+'px">'+(src?'<img src="'+esc(src)+'" referrerpolicy="no-referrer" style="width:100%;height:100%;display:block;object-fit:'+(el.imageFit==="original"?"none":(el.imageFit||"contain"))+';object-position:'+imagePosition(el)+';border-radius:'+(el.radius||0)+'px">':'')+'</div>';
+      return '<div style="'+common+'padding:'+(el.padding||0)+'mm;border-radius:'+(el.radius||0)+'px">'+(src?'<img src="'+esc(src)+'" referrerpolicy="no-referrer" decoding="async" loading="eager" style="width:100%;height:100%;display:block;object-fit:'+(el.imageFit==="original"?"none":(el.imageFit||"contain"))+';object-position:'+imagePosition(el)+';border-radius:'+(el.radius||0)+'px">':'')+'</div>';
     }
     if(el.type==="line")return '<div style="'+common+'border-top:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #17223c"></div>';
     if(el.type==="container")return '<div style="'+common+'border:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #cbd2df;border-radius:'+(el.radius||0)+'px"></div>';
