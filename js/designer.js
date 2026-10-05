@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261005-23";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-23";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-23";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-23";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-23";import {printTemplateRecords} from "./print.js?v=20261005-23";import {
+import {mountBuildVersion} from "./version.js?v=20261006-01";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-01";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-01";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin} from "./bridge.js?v=20261006-01";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";import {printTemplateRecords} from "./print.js?v=20261006-01";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261005-23";
+} from "./table-model.js?v=20261006-01";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,lastBridgeIdentity="";
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -160,6 +160,7 @@ function renderElements(){
     if(selected.has(e.id)&&!e.locked)addHandles(n,e);
     p.appendChild(n)
   }
+  if(p.querySelector("svg.barcode,canvas.qrcode"))requestAnimationFrame(()=>hydrateCodes(p));
 }
 
 function hasValue(v){return !(v===undefined||v===null||v==="")}
@@ -269,10 +270,18 @@ function content(n,e){
   if(e.type==="container"){n.style.border=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" rgba(80,100,140,.35)";n.style.borderRadius=(e.radius||0)+"px";return}
   if(e.type==="line"){n.style.borderTop=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" #17223c";return}
   if(e.type==="barcode"){
-    n.innerHTML='<div class="barcode-bars"></div>'+(e.showText?'<div class="barcode-label" style="font-size:'+(e.barcodeFontSize||8)+'px">'+htmlEsc(preview?(data[e.field]??""):"{{"+(e.field||"字段")+"}}")+'</div>':"");
+    const actual=hasValue(data[e.field])?String(data[e.field]):"1234567890";
+    const label=hasValue(data[e.field])?actual:"{{"+(e.field||"字段")+"}}";
+    n.style.display="flex";n.style.flexDirection="column";n.style.alignItems="center";n.style.justifyContent="center";n.style.gap="1px";
+    n.innerHTML='<svg class="barcode" data-value="'+htmlEsc(actual)+'" data-format="'+htmlEsc(e.barcodeFormat||"CODE128")+'" style="display:block;width:100%;flex:1 1 auto;min-height:0;max-height:100%"></svg>'+(e.showText?'<div class="barcode-label" style="position:static;display:block;flex:0 0 auto;font-size:'+(e.barcodeFontSize||8)+'px;line-height:1.15;white-space:nowrap">'+htmlEsc(label)+'</div>':"");
     return
   }
-  if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
+  if(e.type==="qrcode"){
+    const actual=hasValue(data[e.field])?String(data[e.field]):"https://example.local/";
+    n.style.background="none";
+    n.innerHTML='<canvas class="qrcode" data-value="'+htmlEsc(actual)+'" data-level="'+htmlEsc(e.qrLevel||"M")+'" data-margin="'+Number(e.qrMargin||0)+'" data-size="240" style="display:block;width:100%;height:100%;max-width:100%;max-height:100%"></canvas>';
+    return
+  }
   if(e.type==="table"){
     const layout=buildTableLayout(e,data,preview&&e.hideEmptyColumns===true);
     const {rows,cols,allCols,cellRows,hasAny}=layout;
@@ -806,7 +815,7 @@ function autoSave(immediate=false){
     if(stateNode)stateNode.innerHTML="<i></i>已自动保存";
     try{
       if(window.opener&&!window.opener.closed){
-        window.opener.postMessage({type:"SUPER_PRINT_TEMPLATE_SAVE",template:structuredClone(t)},"*");
+        window.opener.postMessage({type:"SUPER_PRINT_TEMPLATE_SAVE",template:structuredClone(t)},bridgeTargetOrigin());
       }
     }catch(err){console.warn("template sync to opener failed",err)}
   };
