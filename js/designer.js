@@ -137,8 +137,8 @@ function isImageValue(v){
   return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v));
 }
 function tableCellHtml(v,field,imageFit="contain"){
-  if(isImageValue(v)) return '<div class="table-image-box"><img class="table-cell-image" data-fit="'+imageFit+'" src="'+String(v).replace(/"/g,"&quot;")+'" referrerpolicy="no-referrer" alt="'+String(field||"")+'"></div>';
-  return String(v??"");
+  if(isImageValue(v)) return '<div class="table-image-box"><img class="table-cell-image" data-fit="'+htmlEsc(imageFit)+'" src="'+htmlEsc(v)+'" referrerpolicy="no-referrer" alt="'+htmlEsc(field||"")+'"></div>';
+  return htmlEsc(v);
 }
 function elementTypeName(type){
   return({text:"文本",field:"数据字段",image:"图片",table:"明细表格",barcode:"条码",qrcode:"二维码",line:"分隔线",container:"容器"})[type]||type;
@@ -187,6 +187,7 @@ function renderElements(){
 }
 
 function hasValue(v){return !(v===undefined||v===null||v==="")}
+function htmlEsc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function applyTextBehavior(n,e){
   n.style.whiteSpace=e.wrap===false?"nowrap":"normal";
   n.style.overflowWrap=e.wrap===false?"normal":"anywhere";
@@ -303,7 +304,7 @@ function content(n,e){
     const src=data[e.field]||"";
     if(!src&&e.emptyBehavior==="hide"){n.style.display="none";return}
     n.style.padding=(e.padding||0)*MM+"px";
-    n.innerHTML=src?'<img alt="" src="'+String(src).replace(/"/g,"&quot;")+'" referrerpolicy="no-referrer">':(e.emptyBehavior==="blank"?"":'<div class="image-placeholder">暂无图片'+(e.field?(" · "+e.field):"")+'</div>');
+    n.innerHTML=src?'<img alt="" src="'+htmlEsc(src)+'" referrerpolicy="no-referrer">':(e.emptyBehavior==="blank"?"":'<div class="image-placeholder">暂无图片'+(e.field?(" · "+htmlEsc(e.field)):"")+'</div>');
     const img=n.querySelector("img");
     if(img){
       img.style.width="100%";img.style.height="100%";img.style.display="block";
@@ -317,7 +318,7 @@ function content(n,e){
   if(e.type==="container"){n.style.border=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" rgba(80,100,140,.35)";n.style.borderRadius=(e.radius||0)+"px";return}
   if(e.type==="line"){n.style.borderTop=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" #17223c";return}
   if(e.type==="barcode"){
-    n.innerHTML='<div class="barcode-bars"></div>'+(e.showText?'<div class="barcode-label">'+(preview?(data[e.field]??""):"{{"+(e.field||"字段")+"}}")+'</div>':"");
+    n.innerHTML='<div class="barcode-bars"></div>'+(e.showText?'<div class="barcode-label">'+htmlEsc(preview?(data[e.field]??""):"{{"+(e.field||"字段")+"}}")+'</div>':"");
     return
   }
   if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
@@ -327,7 +328,7 @@ function content(n,e){
     if(!hasAny&&e.emptyBehavior==="hide"&&!selected.has(e.id)){n.style.display="none";return}
     n.classList.toggle("wrap-on",e.wrap!==false);n.classList.toggle("wrap-off",e.wrap===false);
     const colgroup="<colgroup>"+cols.map(col=>'<col style="width:'+col.width+'%">').join("")+"</colgroup>";
-    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col.index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+col.title+"</th>").join("")+"</tr></thead>");
+    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col.index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+htmlEsc(col.title)+"</th>").join("")+"</tr></thead>");
     const bodyRows=cellRows.map((cells,ri)=>{
       let html="";
       for(const cell of cells){
