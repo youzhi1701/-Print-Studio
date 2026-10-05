@@ -1,4 +1,11 @@
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-6";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-6";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-6";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-6";import {printTemplateRecords} from "./print.js?v=20261005-6";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-6";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-6";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-6";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-6";import {printTemplateRecords} from "./print.js?v=20261005-6";import {
+  ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
+  visibleColumns as tmVisibleColumns,cellValue as tmCellValue,
+  mergeForCell as tmMergeForCell,isMergeMaster as tmIsMergeMaster,isCoveredCell as tmIsCoveredCell,
+  mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
+  insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
+  getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight
+} from "./table-model.js?v=20261005-7";
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
@@ -160,37 +167,19 @@ function applyTextBehavior(n,e){
   if(e.overflowMode==="grow"){n.style.height="auto";n.style.minHeight=Math.max(1,e.h*MM)+"px"}
 }
 function imagePosition(e){return (e.alignX||"center")+" "+(e.alignY||"center")}
-function tableCellKey(row,col){return row+":"+col}
-function tableCellOverride(e,row,col){return e.cells?.[tableCellKey(row,col)]||null}
-function tableCellConfig(e,row,col,column){
-  const o=tableCellOverride(e,row,col)||{};
-  return{
-    type:o.type||"inherit",
-    field:o.field??"",
-    text:o.text??"",
-    align:o.align||column?.align||"center",
-    valign:o.valign||"middle",
-    padding:Number.isFinite(Number(o.padding))?Number(o.padding):2,
-    wrap:o.wrap!==undefined?o.wrap:e.wrap!==false,
-    imageFit:o.imageFit||e.tableImageFit||"contain"
-  }
+function tableAxes(e,data=state.record?.data||{}){
+  ensureTableModel(e,data);
+  return{rows:materializeTableRows(e,data),cols:tmNormalizeColumns(e)}
 }
-function tableCellValue(cfg,row,data,column){
-  if(cfg.type==="text")return cfg.text||"";
-  const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
-  if(row?.__manualBlank&&cfg.type==="inherit")return "";
-  return row?.[field]??((cfg.type==="field"||cfg.type==="image")?data?.[field]:"")??""
+function tableCellOverride(e,row,col){
+  const {rows,cols}=tableAxes(e);const r=rows[row],c=cols[col];
+  return r&&c?tmGetCellOverride(e,r.id,c.id):null
 }
 function tableColumnsForPreview(e,rows,data){
-  const cols=normalizeColumns(e.columns).map((col,i)=>({...col,_index:i}));
-  const structural=Array.isArray(e.merges)&&e.merges.length>0;
-  let visible=(preview&&e.hideEmptyColumns&&!structural)?cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field]))):cols;
-  if(!visible.length)visible=cols;
-  const sum=visible.reduce((n,col)=>n+(Number(col.width)||0),0)||100;
-  return visible.map(col=>({...col,width:(Number(col.width)||0)*100/sum}));
+  const all=tmNormalizeColumns(e);
+  const visible=(preview&&e.hideEmptyColumns)?tmVisibleColumns(e,rows,data,true):all;
+  return visible.map(col=>({...col,_index:all.findIndex(c=>c.id===col.id)}))
 }
-function mergeAt(e,row,col){return (e.merges||[]).find(m=>m.row===row&&m.col===col)||null}
-function coveredByMerge(e,row,col){return (e.merges||[]).some(m=>!(m.row===row&&m.col===col)&&row>=m.row&&row<m.row+(m.rowSpan||1)&&col>=m.col&&col<m.col+(m.colSpan||1))}
 function cellKey(row,col){return row+":"+col}
 function setCellRectSelection(a,b){
   const r0=Math.min(a.row,b.row),r1=Math.max(a.row,b.row),c0=Math.min(a.col,b.col),c1=Math.max(a.col,b.col);
@@ -269,13 +258,11 @@ function content(n,e){
   }
   if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
   if(e.type==="table"){
-    const sourceRows=rowsForTable(e,data).slice(0,e.maxRows||5);
-    const rows=(sourceRows.length?sourceRows:[{}]).map(r=>({...((r&&typeof r==="object")?r:{}),__sourceRow:true}));
-    const wanted=Math.max(rows.length,Number(e.designRowCount)||1);
-    while(rows.length<wanted)rows.push({__manualBlank:true});
+    ensureTableModel(e,data);
+    const rows=materializeTableRows(e,data);
+    const allCols=tmNormalizeColumns(e);
     const cols=tableColumnsForPreview(e,rows,data);
-    const configuredCols=normalizeColumns(e.columns);
-    const hasAnyData=sourceRows.some(row=>configuredCols.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
+    const hasAnyData=rows.some(row=>allCols.some(col=>hasValue(tmCellValue(e,row,col,data).value)));
     if(!hasAnyData&&e.emptyBehavior==="hide"&&!selected.has(e.id)){n.style.display="none";return}
     n.classList.toggle("wrap-on",e.wrap!==false);n.classList.toggle("wrap-off",e.wrap===false);
     const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col._index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+col.title+"</th>").join("")+"</tr></thead>");
@@ -283,13 +270,15 @@ function content(n,e){
       let cells="";
       for(const col of cols){
         const ci=col._index;
-        if(coveredByMerge(e,ri,ci))continue;
-        const merge=mergeAt(e,ri,ci),cfg=tableCellConfig(e,ri,ci,col),actual=tableCellValue(cfg,row,data,col);
+        if(tmIsCoveredCell(e,row.id,col.id))continue;
+        const merge=tmMergeForCell(e,row.id,col.id),master=tmIsMergeMaster(merge,row.id,col.id);
+        const {cfg,value:actual}=tmCellValue(e,row,col,data);
         const shown=hasValue(actual)?tableCellHtml(actual,cfg.field||col.field,cfg.imageFit):"";
         const sel=selectedCells.some(s=>s.row===ri&&s.col===ci);
-        const rh=(e.rowHeights&&Number(e.rowHeights[ri]))||e.rowHeight||8;
         const whiteSpace=cfg.wrap?"normal":"nowrap";
-        cells+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+ci+'" '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="text-align:'+cfg.align+';vertical-align:'+cfg.valign+';padding:'+cfg.padding*MM+'px;white-space:'+whiteSpace+';height:'+rh*MM+'px">'+shown+"</td>";
+        const rowspan=master&&merge?.rowIds?.length>1?'rowspan="'+merge.rowIds.length+'" ':"";
+        const colspan=master&&merge?.colIds?.length>1?'colspan="'+merge.colIds.length+'" ':"";
+        cells+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+ci+'" '+rowspan+colspan+'style="text-align:'+cfg.align+';vertical-align:'+cfg.valign+';padding:'+cfg.padding*MM+'px;white-space:'+whiteSpace+';height:'+tmRowHeight(row,e)*MM+'px">'+shown+"</td>";
       }
       return "<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+cells+"</tr>";
     }).join("");
@@ -306,16 +295,17 @@ function content(n,e){
     n.querySelectorAll("th.table-head-cell").forEach(cell=>{
       cell.addEventListener("pointerdown",ev=>{
         ev.stopPropagation();ev.preventDefault();
-        const col=Number(cell.dataset.col),rowCount=Math.max(rows.length,Number(e.designRowCount)||1);
+        const col=Number(cell.dataset.col);
         selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
-        for(let r=0;r<rowCount;r++)selectedCells.push({row:r,col});
+        for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
         renderElements();renderLayers();syncProps();
       });
     });
     if(selected.has(e.id)&&!preview&&!e.locked){
-      addTableColumnResizers(n,e,normalizeColumns(e.columns));addTableRowResizers(n,e,rows.length);
+      addTableColumnResizers(n,e,allCols);addTableRowResizers(n,e,rows);
       if(selectedCells.length)addTableCellToolbar(n,e);
     }
+    return
     return
   }
 }
@@ -345,31 +335,29 @@ function startTableColumnResize(ev,e,index,node){
   const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);e.columns=normalizeColumns(cols);renderElements();renderTableColumnEditor(e);pushHistory();autoSave()};
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
-function addTableRowResizers(n,e,rowCount){
+function addTableRowResizers(n,e,rows){
   const headerH=e.showHeader===false?0:(e.headerHeight||e.rowHeight||8);
   let y=headerH;
-  for(let ri=0;ri<rowCount;ri++){
-    y+=(e.rowHeights&&Number(e.rowHeights[ri]))||e.rowHeight||8;
+  rows.forEach((row,ri)=>{
+    y+=tmRowHeight(row,e);
     const h=document.createElement("span");
     h.className="table-row-resizer";h.style.top=y*MM+"px";h.dataset.row=ri;h.title="拖动调整此行高度";
-    h.addEventListener("pointerdown",ev=>startTableRowResize(ev,e,ri));n.appendChild(h)
-  }
+    h.addEventListener("pointerdown",ev=>startTableRowResize(ev,e,ri,rows));n.appendChild(h)
+  });
 }
-function startTableRowResize(ev,e,rowIndex){
+function startTableRowResize(ev,e,rowIndex,rows){
   ev.preventDefault();ev.stopPropagation();
-  const sy=ev.clientY,factor=zoom/100;
-  e.rowHeights={...(e.rowHeights||{})};
-  const start=Number(e.rowHeights[rowIndex])||e.rowHeight||8;
-  const move=m=>{e.rowHeights[rowIndex]=Math.max(4,start+(m.clientY-sy)/factor/MM);renderElements();syncProps()};
+  const row=rows[rowIndex];if(!row||row.ephemeral)return;
+  const def=(e.rowDefs||[]).find(r=>r.id===row.id);if(!def)return;
+  const sy=ev.clientY,factor=zoom/100,start=Number(def.height)||Number(e.rowHeight)||8;
+  const move=m=>{def.height=Math.max(4,start+(m.clientY-sy)/factor/MM);renderElements();syncProps()};
   const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
+
 function selectionIsRectangle(){
   const b=tableSelectionBounds();if(!b)return false;
   return (b.r1-b.r0+1)*(b.c1-b.c0+1)===selectedCells.length
-}
-function mergeIntersects(m,b){
-  return !(m.row+(m.rowSpan||1)-1<b.r0||m.row>b.r1||m.col+(m.colSpan||1)-1<b.c0||m.col>b.c1)
 }
 function commitTableEdit(message){
   renderElements();renderTableColumnEditor(selectedOne());syncProps();pushHistory();autoSave();if(message)toast(message)
@@ -378,120 +366,49 @@ function mergeSelectedCells(){
   const e=selectedOne(),b=tableSelectionBounds();
   if(!e||e.type!=="table"||!b||selectedCells.length<2){toast("拖拽选择至少两个连续格子");return}
   if(!selectionIsRectangle()){toast("合并区域必须是连续矩形");return}
-  e.merges=(e.merges||[]).filter(m=>!mergeIntersects(m,b));
-  e.merges.push({row:b.r0,col:b.c0,rowSpan:b.r1-b.r0+1,colSpan:b.c1-b.c0+1});
-  e.cells={...(e.cells||{})};
-  const anchorKey=tableCellKey(b.r0,b.c0);
-  if(!e.cells[anchorKey])e.cells[anchorKey]={type:"text",text:"",align:"center",valign:"middle",padding:2,wrap:true,imageFit:e.tableImageFit||"contain",mergeDefault:true};
-  selectedCells=[];for(let r=b.r0;r<=b.r1;r++)for(let col=b.c0;col<=b.c1;col++)selectedCells.push({row:r,col});
-  tableSelectionAnchor={row:b.r0,col:b.c0};
+  const {rows,cols}=tableAxes(e);
+  const merged=mergeVisualRange(e,rows,cols,b);
+  if(!merged){toast("当前区域无法合并");return}
   commitTableEdit("已合并 "+(b.r1-b.r0+1)+"×"+(b.c1-b.c0+1)+" 区域")
 }
 function unmergeSelectedCells(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
-  const before=(e.merges||[]).length;
-  const removed=(e.merges||[]).filter(m=>mergeIntersects(m,b));
-  e.merges=(e.merges||[]).filter(m=>!mergeIntersects(m,b));
-  e.cells={...(e.cells||{})};
-  for(const m of removed){
-    const k=tableCellKey(m.row,m.col);
-    if(e.cells[k]?.mergeDefault)delete e.cells[k];
-  }
-  commitTableEdit(before===e.merges.length?"当前区域没有合并":"已取消合并")
-}
-function remapCellOverrides(e,mapper){
-  const next={};
-  for(const [key,value] of Object.entries(e.cells||{})){
-    const [r,c]=key.split(":").map(Number),mapped=mapper(r,c);
-    if(mapped)next[tableCellKey(mapped.row,mapped.col)]=value;
-  }
-  e.cells=next;
-}
-function shiftCellsRowInsert(e,index){remapCellOverrides(e,(r,c)=>({row:r>=index?r+1:r,col:c}))}
-function shiftCellsRowDelete(e,index){remapCellOverrides(e,(r,c)=>r===index?null:{row:r>index?r-1:r,col:c})}
-function shiftCellsColInsert(e,index){remapCellOverrides(e,(r,c)=>({row:r,col:c>=index?c+1:c}))}
-function shiftCellsColDelete(e,index){remapCellOverrides(e,(r,c)=>c===index?null:{row:r,col:c>index?c-1:c})}
-function shiftRowHeightsOnInsert(e,index){
-  const src=e.rowHeights||{},next={};
-  Object.entries(src).forEach(([k,v])=>{const r=Number(k);next[r>=index?r+1:r]=v});
-  e.rowHeights=next;
-}
-function shiftRowHeightsOnDelete(e,index){
-  const src=e.rowHeights||{},next={};
-  Object.entries(src).forEach(([k,v])=>{const r=Number(k);if(r===index)return;next[r>index?r-1:r]=v});
-  e.rowHeights=next;
-}
-function transformMergesRowInsert(e,index){
-  e.merges=(e.merges||[]).map(m=>{
-    m={...m};
-    if(index<=m.row)m.row++;
-    else if(index<m.row+(m.rowSpan||1))m.rowSpan=(m.rowSpan||1)+1;
-    return m
-  })
-}
-function transformMergesRowDelete(e,index){
-  e.merges=(e.merges||[]).map(m=>{
-    m={...m};const end=m.row+(m.rowSpan||1)-1;
-    if(index<m.row)m.row--;
-    else if(index<=end)m.rowSpan=(m.rowSpan||1)-1;
-    return m
-  }).filter(m=>(m.rowSpan||1)>0)
+  const {rows,cols}=tableAxes(e),count=unmergeVisualRange(e,rows,cols,b);
+  commitTableEdit(count?"已取消合并":"当前区域没有合并")
 }
 function insertTableRowAt(where="below"){
   const e=selectedOne();if(!e||e.type!=="table")return;
-  const b=tableSelectionBounds(),base=b?(where==="above"?b.r0:b.r1+1):Math.max(1,Number(e.designRowCount)||1);
-  const currentRows=Math.max(Number(e.designRowCount)||1,(b?.r1??0)+1);
-  const index=Math.max(0,Math.min(base,currentRows));
-  e.designRowCount=currentRows+1;shiftRowHeightsOnInsert(e,index);shiftCellsRowInsert(e,index);transformMergesRowInsert(e,index);
-  selectedCells=normalizeColumns(e.columns).map((_,col)=>({row:index,col}));tableSelectionAnchor={row:index,col:0};
-  commitTableEdit(where==="above"?"已在上方插入行":"已在下方插入行")
+  const {rows,cols}=tableAxes(e),b=tableSelectionBounds();
+  const index=Math.max(0,Math.min(b?(where==="above"?b.r0:b.r1+1):rows.length,rows.length));
+  insertManualRow(e,rows,index);
+  const nextRows=materializeTableRows(e,state.record?.data||{});
+  const target=Math.min(index,nextRows.length-1);
+  selectedCells=cols.map((_,col)=>({row:target,col}));tableSelectionAnchor={row:target,col:0};
+  commitTableEdit(where==="above"?"已在上方插入空白行":"已在下方插入空白行")
 }
 function deleteSelectedRows(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
-  let total=Math.max(Number(e.designRowCount)||1,b.r1+1),indexes=[];
-  for(let r=b.r0;r<=b.r1;r++)indexes.push(r);
-  if(indexes.length>=total){toast("表格至少保留一行");return}
-  indexes.sort((a,b)=>b-a).forEach(index=>{shiftRowHeightsOnDelete(e,index);shiftCellsRowDelete(e,index);transformMergesRowDelete(e,index);total--});
-  e.designRowCount=Math.max(1,total);
-  const row=Math.min(b.r0,e.designRowCount-1),col=Math.min(b.c0,normalizeColumns(e.columns).length-1);
+  const {rows,cols}=tableAxes(e),indexes=[];for(let r=b.r0;r<=b.r1;r++)indexes.push(r);
+  if(!deleteVisualRows(e,rows,indexes)){toast("表格至少保留一行");return}
+  const nextRows=materializeTableRows(e,state.record?.data||{});
+  const row=Math.min(b.r0,nextRows.length-1),col=Math.min(b.c0,cols.length-1);
   selectedCells=[{row,col}];tableSelectionAnchor={row,col};commitTableEdit("已删除 "+indexes.length+" 行")
-}
-function transformMergesColInsert(e,index){
-  e.merges=(e.merges||[]).map(m=>{
-    m={...m};
-    if(index<=m.col)m.col++;
-    else if(index<m.col+(m.colSpan||1))m.colSpan=(m.colSpan||1)+1;
-    return m
-  })
-}
-function transformMergesColDelete(e,index){
-  e.merges=(e.merges||[]).map(m=>{
-    m={...m};const end=m.col+(m.colSpan||1)-1;
-    if(index<m.col)m.col--;
-    else if(index<=end)m.colSpan=(m.colSpan||1)-1;
-    return m
-  }).filter(m=>(m.colSpan||1)>0)
 }
 function insertTableColumnAt(where="right"){
   const e=selectedOne();if(!e||e.type!=="table")return;
-  const cols=normalizeColumns(e.columns),b=tableSelectionBounds();
+  const {cols}=tableAxes(e),b=tableSelectionBounds();
   const index=Math.max(0,Math.min(where==="left"?(b?.c0??0):(b?b.c1+1:cols.length),cols.length));
-  const neighbor=cols[Math.min(index,cols.length-1)]||cols[cols.length-1];
-  let nw=20;
-  if(neighbor){nw=Math.max(8,Number(neighbor.width)/2);neighbor.width=Math.max(8,Number(neighbor.width)-nw)}
-  cols.splice(index,0,{id:uid("col"),title:"新列",field:"",width:nw,align:"center"});
-  e.columns=cols;shiftCellsColInsert(e,index);transformMergesColInsert(e,index);e.columns=normalizeColumns(e.columns);
-  const row=b?.r0??0;selectedCells=[{row,col:index}];tableSelectionAnchor={row,col:index};
+  tmInsertColumn(e,index);
+  const nextCols=tmNormalizeColumns(e),row=b?.r0??0,col=Math.min(index,nextCols.length-1);
+  selectedCells=[{row,col}];tableSelectionAnchor={row,col};
   commitTableEdit(where==="left"?"已在左侧插入列":"已在右侧插入列")
 }
 function deleteSelectedColumns(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
-  const cols=normalizeColumns(e.columns),indexes=[];for(let col=b.c0;col<=b.c1;col++)indexes.push(col);
-  if(indexes.length>=cols.length){toast("表格至少保留一列");return}
-  indexes.sort((a,b)=>b-a).forEach(index=>{cols.splice(index,1);shiftCellsColDelete(e,index);transformMergesColDelete(e,index)});
-  e.columns=normalizeColumns(cols);
-  const col=Math.min(b.c0,e.columns.length-1),row=b.r0;selectedCells=[{row,col}];tableSelectionAnchor={row,col};
-  commitTableEdit("已删除 "+indexes.length+" 列")
+  const {cols}=tableAxes(e),indexes=[];for(let col=b.c0;col<=b.c1;col++)indexes.push(col);
+  if(!tmDeleteColumns(e,indexes)){toast("表格至少保留一列");return}
+  const nextCols=tmNormalizeColumns(e),col=Math.min(b.c0,nextCols.length-1),row=b.r0;
+  selectedCells=[{row,col}];tableSelectionAnchor={row,col};commitTableEdit("已删除 "+indexes.length+" 列")
 }
 function addTableCellToolbar(n,e){
   const b=tableSelectionBounds();if(!b)return;
