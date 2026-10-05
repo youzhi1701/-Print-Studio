@@ -1,4 +1,4 @@
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-23";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";
 
 let activeJob=null;
 
@@ -155,9 +155,30 @@ table{border-spacing:0}
 </style>
 </head>
 <body>${markup}<script>
+async function waitImages(timeout=8000){
+  const imgs=[...document.images];
+  if(!imgs.length)return true;
+  let timer;
+  const done=Promise.all(imgs.map(img=>new Promise(resolve=>{
+    if(img.complete)return resolve(img.naturalWidth>0);
+    const ok=()=>resolve(true),bad=()=>resolve(false);
+    img.addEventListener("load",ok,{once:true});
+    img.addEventListener("error",bad,{once:true});
+  })));
+  const timed=new Promise(resolve=>{timer=setTimeout(()=>resolve(null),timeout)});
+  const result=await Promise.race([done,timed]);
+  clearTimeout(timer);
+  if(result===null)return false;
+  return result.every(Boolean);
+}
 window.addEventListener("load",async()=>{
   try{if(document.fonts&&document.fonts.ready)await document.fonts.ready}catch{}
-  setTimeout(()=>{window.focus();window.print()},180);
+  const imagesOk=await waitImages();
+  if(!imagesOk){
+    document.body.insertAdjacentHTML("afterbegin",'<div style="position:fixed;z-index:99999;left:12px;right:12px;top:12px;padding:10px 12px;border:1px solid #ef4444;background:#fff5f5;color:#b91c1c;font:14px Microsoft YaHei,Arial,sans-serif">部分图片未加载完成，已暂停打印。请关闭窗口并重新同步数据后重试。</div>');
+    return;
+  }
+  setTimeout(()=>{window.focus();window.print()},120);
 });
 </script></body></html>`;
 }
