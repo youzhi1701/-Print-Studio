@@ -82,7 +82,7 @@ function applyPage(save=true){
   for(const el of t.elements||[])clampElementToPage(el);
   const p=$("printPage");p.style.width=w*MM+"px";p.style.height=h*MM+"px";
   const s=$("safeGuide");s.style.inset=safe*MM+"px";$("pageInfo").textContent=w+" × "+h+" mm";drawRulers(w,h);
-  if(save){renderElements();t.updatedAt=Date.now();pushHistory();autoSave();toast("页面尺寸已更新")}
+  if(save){renderElements();t.updatedAt=Date.now();pushHistory();autoSave();if(zoomMode==="fit")requestAnimationFrame(fitCanvas);toast("页面尺寸已更新")}
 }
 function drawRulers(w,h){const tr=$("topRuler"),lr=$("leftRuler");tr.innerHTML="";lr.innerHTML="";tr.style.width=w*MM+"px";lr.style.height=h*MM+"px";for(let m=0;m<=w;m+=10){const n=document.createElement("span");n.textContent=m;n.style.cssText="position:absolute;left:"+(m*MM)+"px;top:5px";tr.appendChild(n)}for(let m=0;m<=h;m+=10){const n=document.createElement("span");n.textContent=m;n.style.cssText="position:absolute;top:"+(m*MM)+"px;left:3px;transform:rotate(-90deg);transform-origin:left top";lr.appendChild(n)}}
 function normalizeColumns(cols){
