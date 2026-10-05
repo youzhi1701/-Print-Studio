@@ -322,7 +322,9 @@ export function buildTableLayout(el,rootData={},hideEmpty=false){
     return cells;
   });
   const hasAny=cellRows.some(row=>row.some(cell=>hasValue(cell.value)));
-  return{rows,cols,allCols,cellRows,hasAny};
+  const headerHeight=el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8);
+  const totalHeight=headerHeight+rows.reduce((sum,row)=>sum+rowHeight(row,el),0);
+  return{rows,cols,allCols,cellRows,hasAny,headerHeight,totalHeight};
 }
 
 export function rowHeight(row,el){return Number(row?.height)||Number(el?.rowHeight)||8}
