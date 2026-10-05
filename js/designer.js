@@ -4,7 +4,8 @@ import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-6";import {loadTempl
   mergeForCell as tmMergeForCell,isMergeMaster as tmIsMergeMaster,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
-  getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight
+  getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight,
+  buildTableLayout
 } from "./table-model.js?v=20261005-7";
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -277,29 +278,19 @@ function content(n,e){
   }
   if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
   if(e.type==="table"){
-    ensureTableModel(e,data);
-    const rows=materializeTableRows(e,data);
-    const allCols=tmNormalizeColumns(e);
-    const cols=tableColumnsForPreview(e,rows,data);
-    const hasAnyData=rows.some(row=>allCols.some(col=>hasValue(tmCellValue(e,row,col,data).value)));
-    if(!hasAnyData&&e.emptyBehavior==="hide"&&!selected.has(e.id)){n.style.display="none";return}
+    const layout=buildTableLayout(e,data,preview&&e.hideEmptyColumns===true);
+    const {rows,cols,allCols,cellRows,hasAny}=layout;
+    if(!hasAny&&e.emptyBehavior==="hide"&&!selected.has(e.id)){n.style.display="none";return}
     n.classList.toggle("wrap-on",e.wrap!==false);n.classList.toggle("wrap-off",e.wrap===false);
-    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col._index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+col.title+"</th>").join("")+"</tr></thead>");
-    const bodyRows=rows.map((row,ri)=>{
-      let cells="";
-      for(const col of cols){
-        const ci=col._index;
-        if(tmIsCoveredCell(e,row.id,col.id))continue;
-        const merge=tmMergeForCell(e,row.id,col.id),master=tmIsMergeMaster(merge,row.id,col.id);
-        const {cfg,value:actual}=tmCellValue(e,row,col,data);
-        const shown=hasValue(actual)?tableCellHtml(actual,cfg.field||col.field,cfg.imageFit):"";
-        const sel=selectedCells.some(s=>s.row===ri&&s.col===ci);
-        const whiteSpace=cfg.wrap?"normal":"nowrap";
-        const rowspan=master&&merge?.rowIds?.length>1?'rowspan="'+merge.rowIds.length+'" ':"";
-        const colspan=master&&merge?.colIds?.length>1?'colspan="'+merge.colIds.length+'" ':"";
-        cells+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+ci+'" '+rowspan+colspan+'style="text-align:'+cfg.align+';vertical-align:'+cfg.valign+';padding:'+cfg.padding*MM+'px;white-space:'+whiteSpace+';height:'+tmRowHeight(row,e)*MM+'px">'+shown+"</td>";
+    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col.index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+col.title+"</th>").join("")+"</tr></thead>");
+    const bodyRows=cellRows.map((cells,ri)=>{
+      let html="";
+      for(const cell of cells){
+        const shown=hasValue(cell.value)?tableCellHtml(cell.value,cell.cfg.field||cell.col.field,cell.cfg.imageFit):"";
+        const sel=selectedCells.some(s=>s.row===ri&&s.col===cell.colIndex);
+        html+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'" '+(cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"")+(cell.colspan>1?'colspan="'+cell.colspan+'" ':"")+'style="text-align:'+cell.cfg.align+';vertical-align:'+cell.cfg.valign+';padding:'+cell.cfg.padding*MM+'px;white-space:'+(cell.cfg.wrap?"normal":"nowrap")+';height:'+cell.height*MM+'px">'+shown+"</td>";
       }
-      return "<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+cells+"</tr>";
+      return "<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+html+"</tr>";
     }).join("");
     n.innerHTML='<table style="font-size:'+(e.fontSize||9)+'px">'+head+"<tbody>"+bodyRows+"</tbody></table>";
     n.querySelectorAll("th").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px";cell.style.height=(e.headerHeight||e.rowHeight||8)*MM+"px"});
