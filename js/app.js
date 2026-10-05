@@ -3,7 +3,7 @@ import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAG
 import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-04";
 import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-04";
 import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-04";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-04";
+import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-04";
 import {printTemplateRecords} from "./print.js?v=20261006-04";
 import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-04";
 
@@ -260,6 +260,7 @@ async function renderPreview(force=false){
   lastPreviewKey=key;
   const html=renderTemplateToHtml(tpl,rec.data||{});
   if(host.innerHTML!==html)host.innerHTML=html;
+  applyTemplateCalibration(host,tpl);
   armPreviewImageRecovery(host,rec);
   await hydrateCodes(host);
   requestAnimationFrame(fitPreview);
