@@ -1,4 +1,4 @@
-import {state,storageAvailable} from "./state.js?v=20261005-6";
+import {state,storageAvailable,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-6";
 import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-6";
 import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-6";
 import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-6";
@@ -232,9 +232,12 @@ async function init(){
   if($("compatOpen"))$("compatOpen").onclick=()=>window.open(location.href,"_blank","noopener");
   if($("compatCopy"))$("compatCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("compatDetails")?.textContent||compatInfo());toast("诊断信息已复制")}catch{toast("复制失败，请手动复制")}};
 
-  state.templates=loadTemplates();state.activeTemplateId=state.templates[0]?.id||null;fillTemplates();
+  state.templates=loadTemplates();
+  const settings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
+  state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
+  fillTemplates();
 
-  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;autoBind();syncBridge();await renderPreview()};
+  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;storageSet(STORAGE_KEYS.settings,JSON.stringify({...settings,activeTemplateId:state.activeTemplateId}));autoBind();syncBridge();await renderPreview()};
   $("recordChooser").onclick=()=>chooseBatch(true);
   $("chooseBatch").onclick=()=>chooseBatch(false);
   $("prevRecord").onclick=async()=>{if(currentIndex>0){currentIndex--;syncBridge();await renderPreview()}};
@@ -279,7 +282,7 @@ async function init(){
       const parsed=JSON.parse(await file.text());
       const tpl=importTemplateObject(parsed,state.templates);
       state.templates.push(tpl);state.activeTemplateId=tpl.id;
-      saveTemplates(state.templates);fillTemplates();autoBind();syncBridge();await renderPreview(true);
+      storageSet(STORAGE_KEYS.settings,JSON.stringify({...settings,activeTemplateId:state.activeTemplateId}));saveTemplates(state.templates);fillTemplates();autoBind();syncBridge();await renderPreview(true);
       toast("模板已导入");
     }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
   };
@@ -288,7 +291,7 @@ async function init(){
     if(tpl.id==="tpl_shipping_215x140"){toast("内置发货单模板不可删除");return}
     if(state.templates.length<=1){toast("至少保留一个模板");return}
     state.templates=state.templates.filter(t=>t.id!==tpl.id);
-    state.activeTemplateId=state.templates[0]?.id||null;saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
+    state.activeTemplateId=state.templates[0]?.id||null;storageSet(STORAGE_KEYS.settings,JSON.stringify({...settings,activeTemplateId:state.activeTemplateId}));saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
     toast("模板已删除");
   };
 
