@@ -616,11 +616,12 @@ function syncTableCellInspector(e){
   const panel=$("tableCellInspector"),hint=$("tableSelectionHint"),b=tableSelectionBounds();
   if(!panel)return;
   panel.classList.toggle("hidden",!b);
-  if(hint)hint.textContent=b?("已选择 "+(b.r1-b.r0+1)+" 行 × "+(b.c1-b.c0+1)+" 列 · 可直接拖拽或使用悬浮工具栏"):("单击或拖拽选择格子，操作工具会悬浮在表格上方");
+  if(hint)hint.textContent=b?("已选择 "+(b.r1-b.r0+1)+" 行 × "+(b.c1-b.c0+1)+" 列"):("单击或拖拽选择格子");
   if(!b)return;
   const {rows,cols}=tableAxes(e),row=rows[b.r0],col=cols[b.c0];
   const raw=row&&col?tmGetCellOverride(e,row.id,col.id)||{}:{};
-  $("tableCellType").value=raw.type||"inherit";
+  const type=raw.type||"inherit";
+  $("tableCellType").value=type;
   $("tableCellField").value=raw.field||"";
   $("tableCellText").value=raw.text||"";
   $("tableCellAlign").value=raw.align||"";
@@ -628,6 +629,26 @@ function syncTableCellInspector(e){
   $("tableCellPadding").value=raw.padding??2;
   $("tableCellWrap").value=String(raw.wrap!==false);
   $("tableCellImageFit").value=raw.imageFit||e.tableImageFit||"contain";
+
+  $("tableCellFieldGroup")?.classList.toggle("hidden",!["field","image"].includes(type));
+  $("tableCellTextGroup")?.classList.toggle("hidden",type!=="text");
+  $("tableCellImageFitGroup")?.classList.toggle("hidden",type!=="image");
+
+  const stateNode=$("tableCellValueState");
+  if(stateNode){
+    if(row&&col&&["field","image"].includes(type)){
+      const resolved=tmCellValue(e,row,col,state.record?.data||{},state.record?.data||{}).value;
+      const field=raw.field||col.field||"";
+      stateNode.classList.remove("hidden","ok","empty");
+      if(hasValue(resolved)){
+        stateNode.classList.add("ok");
+        stateNode.textContent="当前值："+String(resolved).slice(0,60);
+      }else{
+        stateNode.classList.add("empty");
+        stateNode.textContent="字段「"+(field||"未绑定")+"」当前无值 · 预览/打印自动隐藏空行";
+      }
+    }else stateNode.classList.add("hidden");
+  }
 }
 function applyTableCellInspector(e){
   if(!selectedCells.length)return;
