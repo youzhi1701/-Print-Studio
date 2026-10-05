@@ -179,6 +179,28 @@ function createElementNode(e){
     renderElements();renderLayers();syncProps()
   });
   n.addEventListener("contextmenu",ev=>showContext(ev,e.id));
+  if(e.type==="text"&&!e.locked){
+    n.addEventListener("dblclick",ev=>{
+      ev.stopPropagation();ev.preventDefault();
+      const target=n.querySelector(".render-text")||n;
+      target.contentEditable="true";target.spellcheck=false;target.focus();
+      const range=document.createRange();range.selectNodeContents(target);range.collapse(false);
+      const sel=window.getSelection();sel.removeAllRanges();sel.addRange(range);
+      const finish=()=>{
+        target.removeEventListener("blur",finish);
+        target.contentEditable="false";
+        const next=target.textContent??"";
+        if(next!==e.text){
+          e.text=next;refreshElementNode(e);syncProps();pushHistory();autoSave();
+        }else refreshElementNode(e);
+      };
+      target.addEventListener("blur",finish,{once:true});
+      target.addEventListener("keydown",k=>{
+        if(k.key==="Escape"){k.preventDefault();target.textContent=e.text||"";target.blur()}
+        if((k.ctrlKey||k.metaKey)&&k.key==="Enter"){k.preventDefault();target.blur()}
+      });
+    });
+  }
   if(selected.has(e.id)&&!e.locked)addHandles(n,e);
   return n
 }
