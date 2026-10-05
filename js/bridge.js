@@ -2,6 +2,7 @@ import {STORAGE_KEYS,storageGet,storageSet} from "./state.js";
 
 let lastPayload=null;
 let listenerInstalled=false;
+const childWindows=new Set();
 
 function sanitizeRecord(record){
   if(!record||typeof record!=="object")return null;
@@ -37,6 +38,19 @@ function normalizePayload(payload){
   };
 }
 
+function registerChild(win){
+  if(!win)return win;
+  childWindows.add(win);
+  return win
+}
+function broadcastPayload(){
+  if(!lastPayload)return;
+  for(const win of [...childWindows]){
+    if(!win||win.closed){childWindows.delete(win);continue}
+    try{win.postMessage({type:"SUPER_PRINT_DATA",payload:lastPayload},"*")}catch{}
+  }
+}
+
 function installOpenerResponder(){
   if(listenerInstalled) return;
   listenerInstalled=true;
@@ -55,7 +69,7 @@ function installOpenerResponder(){
 export function writeBridge(payload){
   lastPayload={...normalizePayload(payload),bridgeUpdatedAt:Date.now()};
   try{storageSet(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))}catch(err){console.warn("bridge persistence failed",err)}
-  installOpenerResponder();
+  installOpenerResponder();broadcastPayload();
 }
 
 export function readBridge(){
@@ -106,8 +120,8 @@ export function openDesigner(templateId){
   const height=Math.min(900,Math.max(600,Math.floor((screen.availHeight||800)*0.90)));
   const left=Math.max(0,Math.floor(((screen.availWidth||width)-width)/2));
   const top=Math.max(0,Math.floor(((screen.availHeight||height)-height)/2));
-  const w=window.open(url.toString(),"super-print-designer",
-    "popup=yes,width="+width+",height="+height+",left="+left+",top="+top+",resizable=yes,scrollbars=yes");
+  const w=registerChild(window.open(url.toString(),"super-print-designer",
+    "popup=yes,width="+width+",height="+height+",left="+left+",top="+top+",resizable=yes,scrollbars=yes"));
   if(w){
     let tries=0;
     const timer=setInterval(()=>{
@@ -128,8 +142,8 @@ export function openPreviewWindow(){
   const height=Math.min(900,Math.max(520,Math.floor(ah*0.86)),ah);
   const left=Math.max(0,Math.floor((aw-width)/2));
   const top=Math.max(0,Math.floor((ah-height)/2));
-  const w=window.open(url.toString(),"super-print-preview",
-    "popup=yes,resizable=yes,scrollbars=no,width="+width+",height="+height+",left="+left+",top="+top);
+  const w=registerChild(window.open(url.toString(),"super-print-preview",
+    "popup=yes,resizable=yes,scrollbars=no,width="+width+",height="+height+",left="+left+",top="+top));
   if(w){
     let tries=0;
     const timer=setInterval(()=>{
