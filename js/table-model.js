@@ -23,6 +23,13 @@ export function sourceRowsForTable(el,data){
   return[data||{}];
 }
 
+function sourceEntriesForTable(el,data){
+  const suppressed=new Set((el?.suppressedDataIndexes||[]).map(Number));
+  return sourceRowsForTable(el,data).slice(0,el?.maxRows||5)
+    .map((data,index)=>({data,index}))
+    .filter(entry=>!suppressed.has(entry.index));
+}
+
 export function normalizeTableColumns(el){
   let cols=Array.isArray(el?.columns)&&el.columns.length?el.columns:[
     {title:"商品名称",field:"商品名称",width:45,align:"left"},
@@ -48,7 +55,7 @@ function legacyRowCount(el,sourceCount){
 export function ensureTableModel(el,data={}){
   if(!el||el.type!=="table")return el;
   const cols=normalizeTableColumns(el);
-  const src=sourceRowsForTable(el,data).slice(0,el.maxRows||5);
+  const srcEntries=sourceEntriesForTable(el,data),src=srcEntries.map(x=>x.data);
 
   if(!Array.isArray(el.rowDefs)||!el.rowDefs.length){
     const count=legacyRowCount(el,src.length);
@@ -102,7 +109,7 @@ export function ensureTableModel(el,data={}){
 
 export function materializeTableRows(el,data={}){
   ensureTableModel(el,data);
-  const source=sourceRowsForTable(el,data).slice(0,el.maxRows||5);
+  const sourceEntries=sourceEntriesForTable(el,data),source=sourceEntries.map(x=>x.data);
   const defs=el.rowDefs||[];
   let dataDefs=defs.filter(r=>r.type==="data");
   if(source.length>dataDefs.length){
@@ -119,14 +126,14 @@ export function materializeTableRows(el,data={}){
     if(def.type==="manual"){
       out.push({id:def.id,type:"manual",height:def.height,data:{},sourceIndex:null});
     }else if(si<source.length){
-      out.push({id:def.id,type:"data",height:def.height,data:source[si]||{},sourceIndex:si});
+      out.push({id:def.id,type:"data",height:def.height,data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si});
       si++;
     }
   }
   // If data grows beyond saved data slots, append stable ephemeral rows after the last data slot.
   while(si<source.length){
     const base=dataDefs[dataDefs.length-1]?.id||"data";
-    out.push({id:base+"__auto_"+si,type:"data",height:Number(el.rowHeight)||8,data:source[si]||{},sourceIndex:si,ephemeral:true});
+    out.push({id:base+"__auto_"+si,type:"data",height:Number(el.rowHeight)||8,data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si,ephemeral:true});
     si++;
   }
   if(!out.length){
@@ -250,9 +257,14 @@ export function insertManualRow(el,visualRows,index){
 
 export function deleteVisualRows(el,visualRows,rowIndexes){
   ensureTableModel(el,{});
-  const ids=[...new Set(rowIndexes)].map(i=>visualRows[i]?.id).filter(Boolean);
-  const persistentIds=ids.filter(rid=>rowDefIndex(el,rid)>=0);
-  if(persistentIds.length>=el.rowDefs.length)return false;
+  const targets=[...new Set(rowIndexes)].map(i=>visualRows[i]).filter(Boolean);
+  if(!targets.length)return false;
+
+  const persistentIds=targets.map(r=>r.id).filter(rid=>rowDefIndex(el,rid)>=0);
+  const suppressed=new Set((el.suppressedDataIndexes||[]).map(Number));
+  for(const row of targets)if(row.type==="data"&&Number.isInteger(row.sourceIndex))suppressed.add(row.sourceIndex);
+  el.suppressedDataIndexes=[...suppressed].sort((a,b)=>a-b);
+
   el.rowDefs=el.rowDefs.filter(r=>!persistentIds.includes(r.id));
   const nextMerges=[];
   for(const m of el.merges||[]){
@@ -262,6 +274,10 @@ export function deleteVisualRows(el,visualRows,rowIndexes){
   el.merges=nextMerges;
   for(const key of Object.keys(el.cellMap||{})){
     const rowId=key.split("::")[0];if(persistentIds.includes(rowId))delete el.cellMap[key];
+  }
+
+  if(!el.rowDefs.length){
+    el.rowDefs=[{id:id("row"),type:"manual",height:Number(el.rowHeight)||8}];
   }
   el.designRowCount=el.rowDefs.length;
   return true;
