@@ -40,7 +40,7 @@ function renderTable(el,rootData,common){
       const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
       return '<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'normal':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
-    return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
+    return '<tr style="height:'+rows[ri].height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
   const tableCommon=common.replace(/height:[^;]+;/,'height:'+totalHeight+'mm;');
