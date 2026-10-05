@@ -131,3 +131,10 @@
   .template-library{border-radius:13px}
   .template-library-item{flex-basis:126px}
 }
+
+#templateLibraryState{padding:2px 5px;border-radius:999px;background:rgba(120,140,180,.08)}
+#templateLibraryState[data-state="ok"]{color:var(--success);background:rgba(12,143,99,.07)}
+#templateLibraryState[data-state="warn"],#templateLibraryState[data-state="busy"]{color:#a16207;background:rgba(245,158,11,.09)}
+#templateLibraryState[data-state="error"]{color:var(--danger);background:rgba(201,56,80,.08)}
+#templateLibrarySync:disabled{opacity:.45;cursor:not-allowed}
+.template-library-item em{font-style:normal}
