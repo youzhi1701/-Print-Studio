@@ -87,8 +87,13 @@ function queueCloudTemplateSave(template){
     cloudSaveTimers.delete(snapshot.id);
     try{
       const result=await runCloudOperation(()=>upsertCloudTemplate(state.sdk,snapshot));
-      if(!result?.reason)clearTemplateDeleted(snapshot.id);
-      updateCloudState("云端已保存","ok");
+      if(result?.reason){
+        updateCloudState("云端版本较新","warn");
+        setTimeout(()=>syncCloudTemplates(true),0);
+      }else{
+        clearTemplateDeleted(snapshot.id);
+        updateCloudState("云端已保存","ok");
+      }
     }catch(err){
       updateCloudState("云端待同步","warn");
       console.warn("云端模板自动保存失败",err);
@@ -351,7 +356,7 @@ async function init(){
     const item=e.target.closest("[data-template-id]");if(!item)return;
     state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview(true);
   });
-  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);fillTemplates();toast(r?"模板库已同步":"模板库同步失败")};
+  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);fillTemplates();if(!r)toast("模板库同步失败")};
   $("recordChooser").onclick=()=>chooseBatch(true);
   $("chooseBatch").onclick=()=>chooseBatch(false);
   $("prevRecord").onclick=async()=>{if(currentIndex>0){currentIndex--;syncBridge();await renderPreview()}};
@@ -386,7 +391,7 @@ async function init(){
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
-  $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);if($("syncCloudTemplates"))$("syncCloudTemplates").onclick=async()=>{const r=await syncCloudTemplates(true);toast(r?"云端模板同步完成":"云端模板同步失败")};$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
+  $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);if($("syncCloudTemplates"))$("syncCloudTemplates").onclick=async()=>{const r=await syncCloudTemplates(true);if(!r)toast("云端模板同步失败")};$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
   $("importTemplate").onclick=()=>$("importTemplateFile").click();
   $("importTemplateFile").onchange=async e=>{
     const file=e.target.files?.[0];e.target.value="";if(!file)return;
