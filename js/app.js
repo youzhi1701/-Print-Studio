@@ -295,7 +295,7 @@ async function init(){
     if(tpl.id==="tpl_shipping_215x140"){toast("内置发货单模板不可删除");return}
     if(state.templates.length<=1){toast("至少保留一个模板");return}
     state.templates=state.templates.filter(t=>t.id!==tpl.id);
-    state.activeTemplateId=state.templates[0]?.id||null;storageSet(STORAGE_KEYS.settings,JSON.stringify({...settings,activeTemplateId:state.activeTemplateId}));saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
+    state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
     toast("模板已删除");
   };
 
