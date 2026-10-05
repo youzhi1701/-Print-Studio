@@ -17,8 +17,7 @@ export function parseRows(value){
 
 export function sourceRowsForTable(el,data){
   if(el?.dataField){
-    const rows=parseRows(data?.[el.dataField]);
-    if(rows.length)return rows;
+    return parseRows(data?.[el.dataField]);
   }
   return[data||{}];
 }
