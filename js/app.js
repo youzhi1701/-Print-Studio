@@ -200,24 +200,6 @@ async function printRecords(records){
   try{await printTemplateRecords(tpl,records)}
   catch(err){console.error(err);toast(err?.message||"打印失败")}
 }
-function fitPreviewModal(){
-  const body=$("previewModalBody"),sheet=body?.querySelector(".print-sheet");
-  if(!body||!sheet)return;
-  sheet.style.zoom="1";
-  const sw=sheet.offsetWidth,sh=sheet.offsetHeight;
-  const sx=(body.clientWidth-16)/Math.max(1,sw);
-  const sy=(body.clientHeight-16)/Math.max(1,sh);
-  const scale=Math.max(.2,Math.min(sx,sy,1.25));
-  sheet.style.zoom=String(scale);
-}
-async function openPreviewModal(){
-  const rec=activeRecord(),tpl=activeTemplate();if(!rec||!tpl){toast("请先选择记录");return}
-  const body=$("previewModalBody");body.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
-  $("previewModal").classList.remove("hidden");
-  await hydrateCodes(body);
-  requestAnimationFrame(fitPreviewModal);
-}
-
 async function applyDesignerTemplate(template){
   if(!template?.id)return;
   const i=state.templates.findIndex(t=>t.id===template.id);
@@ -273,8 +255,6 @@ async function init(){
   const stopPan=e=>{if(!previewPanning)return;previewPanning=false;previewPointer=null;viewport.classList.remove("is-panning");try{viewport.releasePointerCapture?.(e.pointerId)}catch{}};
   viewport.addEventListener("pointerup",stopPan);viewport.addEventListener("pointercancel",stopPan);
   viewport.addEventListener("dblclick",e=>{if(!e.target.closest(".preview-float-tools"))fitPreview()});
-  $("closePreviewModal").onclick=()=>$("previewModal").classList.add("hidden");
-  $("previewModal").onclick=e=>{if(e.target===$("previewModal"))$("previewModal").classList.add("hidden")};
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
@@ -299,7 +279,7 @@ async function init(){
     toast("模板已删除");
   };
 
-  window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>{fitPreview();if(!$("previewModal").classList.contains("hidden"))fitPreviewModal()},80)});
+  window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>fitPreview(),80)});
   window.addEventListener("message",e=>{
     if(e.data?.type==="SUPER_PRINT_TEMPLATE_SAVE"&&e.data.template)applyDesignerTemplate(e.data.template);
   });
