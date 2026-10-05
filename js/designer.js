@@ -227,22 +227,33 @@ function selectTableCell(ev,e,row,col){
   }
   renderElements();renderLayers();syncProps()
 }
+function paintTableSelection(e){
+  const node=document.querySelector('.design-element[data-id="'+CSS.escape(e.id)+'"]');if(!node)return;
+  const keys=new Set(selectedCells.map(s=>s.row+":"+s.col));
+  node.querySelectorAll("td.table-edit-cell").forEach(cell=>{
+    cell.classList.toggle("cell-selected",keys.has(cell.dataset.row+":"+cell.dataset.col));
+  });
+  const hint=$("tableSelectionHint"),b=tableSelectionBounds();
+  if(hint&&b)hint.textContent="已选择 "+(b.r1-b.r0+1)+" 行 × "+(b.c1-b.c0+1)+" 列";
+}
 function beginTableCellDrag(ev,e,row,col){
   if(ev.button!==0)return;
   ev.stopPropagation();ev.preventDefault();
-  selected=new Set([e.id]);
-  tableSelecting=true;
+  selected=new Set([e.id]);tableSelecting=true;
   const cell={row,col};
   if(ev.shiftKey&&tableSelectionAnchor)setCellRectSelection(tableSelectionAnchor,cell,e);
   else{tableSelectionAnchor=cell;setCellRectSelection(cell,cell,e)}
-  renderElements();renderLayers();syncProps();
+  paintTableSelection(e);
 }
 function extendTableCellDrag(e,row,col){
   if(!tableSelecting||!tableSelectionAnchor)return;
   selected=new Set([e.id]);setCellRectSelection(tableSelectionAnchor,{row,col},e);
-  renderElements();syncProps();
+  paintTableSelection(e);
 }
-function endTableCellDrag(){tableSelecting=false}
+function endTableCellDrag(){
+  if(!tableSelecting)return;
+  tableSelecting=false;renderElements();renderLayers();syncProps();
+}
 window.addEventListener("pointerup",endTableCellDrag);
 function content(n,e){
   const data=state.record?.data||{};
