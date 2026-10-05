@@ -363,16 +363,22 @@ function addTableRowResizers(n,e,rows){
     y+=tmRowHeight(row,e);
     const h=document.createElement("span");
     h.className="table-row-resizer";h.style.top=y*MM+"px";h.dataset.row=ri;h.title="拖动调整此行高度";
-    h.addEventListener("pointerdown",ev=>startTableRowResize(ev,e,ri,rows));n.appendChild(h)
+    h.addEventListener("pointerdown",ev=>startTableRowResize(ev,e,ri,rows,n));n.appendChild(h)
   });
 }
-function startTableRowResize(ev,e,rowIndex,rows){
+function updateTableRowGeometry(node,e,rows){
+  const trs=node.querySelectorAll("tbody tr");
+  rows.forEach((row,i)=>{const h=tmRowHeight(row,e)*MM;trs[i]?.querySelectorAll("td").forEach(td=>td.style.height=h+"px")});
+  let y=e.showHeader===false?0:(e.headerHeight||e.rowHeight||8);
+  node.querySelectorAll(".table-row-resizer").forEach((handle,i)=>{y+=tmRowHeight(rows[i],e);handle.style.top=y*MM+"px"});
+}
+function startTableRowResize(ev,e,rowIndex,rows,node){
   ev.preventDefault();ev.stopPropagation();
-  const row=rows[rowIndex];if(!row||row.ephemeral)return;
+  const row=rows[rowIndex];if(!row)return;
   const def=(e.rowDefs||[]).find(r=>r.id===row.id);if(!def)return;
   const sy=ev.clientY,factor=zoom/100,start=Number(def.height)||Number(e.rowHeight)||8;
-  const move=m=>{def.height=Math.max(4,start+(m.clientY-sy)/factor/MM);renderElements();syncProps()};
-  const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};
+  const move=m=>{def.height=Math.max(4,start+(m.clientY-sy)/factor/MM);row.height=def.height;updateTableRowGeometry(node,e,rows)};
+  const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);renderElements();syncProps();pushHistory();autoSave()};
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
 
