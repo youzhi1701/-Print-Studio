@@ -75,7 +75,15 @@ function autoBindNow(){
   if(changed){saveTemplates(state.templates);renderAll();toast("已按字段名称自动绑定")}else{toast(state.fields.length?"当前字段已完成匹配":"没有可绑定的飞书字段")}
 }
 function renderAll(){const t=current();if(!t)return;$("templateName").value=t.name;$("pageW").value=t.page.width;$("pageH").value=t.page.height;$("safeArea").value=t.page.safeArea??4;applyPage(false);renderElements();renderLayers();syncProps();$("selectionState").textContent=(t.elements?.length||0)+" 个元素"}
-function applyPage(save=true){const t=current();if(!t)return;const w=Math.max(20,Number($("pageW").value)||215),h=Math.max(20,Number($("pageH").value)||140),safe=Math.max(0,Number($("safeArea").value)||0);t.page.width=w;t.page.height=h;t.page.safeArea=safe;const p=$("printPage");p.style.width=w*MM+"px";p.style.height=h*MM+"px";const s=$("safeGuide");s.style.inset=safe*MM+"px";$("pageInfo").textContent=w+" × "+h+" mm";drawRulers(w,h);if(save){t.updatedAt=Date.now();pushHistory();autoSave();toast("页面尺寸已更新")}}
+function applyPage(save=true){
+  const t=current();if(!t)return;
+  const w=Math.max(20,Number($("pageW").value)||215),h=Math.max(20,Number($("pageH").value)||140),safe=Math.max(0,Number($("safeArea").value)||0);
+  t.page.width=w;t.page.height=h;t.page.safeArea=safe;
+  for(const el of t.elements||[])clampElementToPage(el);
+  const p=$("printPage");p.style.width=w*MM+"px";p.style.height=h*MM+"px";
+  const s=$("safeGuide");s.style.inset=safe*MM+"px";$("pageInfo").textContent=w+" × "+h+" mm";drawRulers(w,h);
+  if(save){renderElements();t.updatedAt=Date.now();pushHistory();autoSave();toast("页面尺寸已更新")}
+}
 function drawRulers(w,h){const tr=$("topRuler"),lr=$("leftRuler");tr.innerHTML="";lr.innerHTML="";tr.style.width=w*MM+"px";lr.style.height=h*MM+"px";for(let m=0;m<=w;m+=10){const n=document.createElement("span");n.textContent=m;n.style.cssText="position:absolute;left:"+(m*MM)+"px;top:5px";tr.appendChild(n)}for(let m=0;m<=h;m+=10){const n=document.createElement("span");n.textContent=m;n.style.cssText="position:absolute;top:"+(m*MM)+"px;left:3px;transform:rotate(-90deg);transform-origin:left top";lr.appendChild(n)}}
 function normalizeColumns(cols){
   let out;
