@@ -78,18 +78,29 @@ export function renderTemplateToHtml(tpl,data={}){
   return '<section class="print-sheet" style="position:relative;width:'+p.width+'mm;height:'+p.height+'mm;background:#fff;overflow:hidden">'+items+'</section>'
 }
 
+async function importFirst(urls){
+  let last;
+  for(const url of urls){try{return await import(url)}catch(err){last=err}}
+  throw last||new Error("模块加载失败")
+}
 export async function hydrateCodes(root){
   try{
-    const mod=await import("https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/+esm");
+    const mod=await importFirst([
+      "https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/+esm",
+      "https://esm.sh/jsbarcode@3.11.6"
+    ]);
     const JsBarcode=mod.default||mod;
     root.querySelectorAll("svg.barcode").forEach(svg=>{
       try{JsBarcode(svg,svg.dataset.value||"",{format:svg.dataset.format||"CODE128",displayValue:false,margin:0,height:42})}catch{}
     })
-  }catch{}
+  }catch(err){console.warn("条码模块加载失败",err)}
   try{
-    const q=await import("https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm");const QR=q.default||q;
+    const q=await importFirst([
+      "https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm",
+      "https://esm.sh/qrcode@1.5.4"
+    ]);const QR=q.default||q;
     for(const c of root.querySelectorAll("canvas.qrcode")){
       try{await QR.toCanvas(c,c.dataset.value||"",{margin:Number(c.dataset.margin||0),width:120,errorCorrectionLevel:c.dataset.level||"M"})}catch{}
     }
-  }catch{}
+  }catch(err){console.warn("二维码模块加载失败",err)}
 }
