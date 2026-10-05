@@ -140,6 +140,7 @@ function syncBridge(){
 
 async function refresh(){
   if(refreshing)return;refreshing=true;
+  const previousRecordId=activeRecord()?.id||null;
   try{
     $("statusText").textContent="正在同步";
     const c=await connectFeishu();
@@ -156,7 +157,9 @@ async function refresh(){
     }
     if(!state.record&&state.selectedRecords.length)state.record=state.selectedRecords[0];
     if(state.record&&!state.selectedRecords.length)state.selectedRecords=[state.record];
-    currentIndex=0;
+    const preserved=previousRecordId?state.selectedRecords.findIndex(r=>r.id===previousRecordId):-1;
+    currentIndex=preserved>=0?preserved:0;
+    state.record=activeRecord()||state.record;
     autoBind();syncBridge();await renderPreview();
     $("statusText").textContent="已同步";
   }catch(err){
