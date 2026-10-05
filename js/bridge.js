@@ -1,4 +1,4 @@
-import {STORAGE_KEYS,storageGet,storageSet} from "./state.js?v=20261006-04";
+import {STORAGE_KEYS,storageGet,storageSet} from "./state.js?v=20261006-05";
 
 let lastPayload=null;
 let listenerInstalled=false;
