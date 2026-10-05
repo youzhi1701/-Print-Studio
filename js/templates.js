@@ -52,9 +52,18 @@ export function loadTemplates(){
   storageSet(STORAGE_KEYS.templates,JSON.stringify(list));
   return list;
 }
-export function saveTemplates(list){storageSet(STORAGE_KEYS.templates,JSON.stringify(list))}
+function normalizeTemplateTables(template){
+  if(!template)return template;
+  for(const el of template.elements||[])if(el.type==="table")ensureTableModel(el,{});
+  template.schemaVersion=7;
+  return template
+}
+export function saveTemplates(list){
+  for(const tpl of list||[])normalizeTemplateTables(tpl);
+  storageSet(STORAGE_KEYS.templates,JSON.stringify(list||[]))
+}
 export function createTemplate(name="未命名模板",page={width:215,height:140}){return{id:uid("tpl"),schemaVersion:7,name,category:"其他",status:"draft",page:{...page,orientation:page.width>=page.height?"landscape":"portrait",margin:5,safeArea:4},elements:[],createdAt:Date.now(),updatedAt:Date.now()}}
-export function exportTemplate(tpl){const blob=new Blob([JSON.stringify(tpl,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(tpl.name||"template")+".superprint.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
+export function exportTemplate(tpl){normalizeTemplateTables(tpl);const blob=new Blob([JSON.stringify(tpl,null,2)],{type:"application/json"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=(tpl.name||"template")+".superprint.json";a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)}
 
 
 const FIELD_ALIASES={
