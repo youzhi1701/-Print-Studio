@@ -1,5 +1,5 @@
 import {mountBuildVersion} from "./version.js?v=20261006-06";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-06";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-06";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-06";import {renderTemplateToHtml,renderElementToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-06";import {printTemplateRecords} from "./print.js?v=20261006-06";import {
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-06";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-06";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-06";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-06";import {printTemplateRecords} from "./print.js?v=20261006-06";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
@@ -154,13 +154,6 @@ function drawRulers(w,h){const tr=$("topRuler"),lr=$("leftRuler");tr.innerHTML="
 function normalizeColumns(cols){
   const holder={columns:Array.isArray(cols)?cols:[]};
   return tmNormalizeColumns(holder)
-}
-function isImageValue(v){
-  return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v));
-}
-function tableCellHtml(v,field,imageFit="contain"){
-  if(isImageValue(v)) return '<div class="table-image-box"><img class="table-cell-image" data-fit="'+htmlEsc(imageFit)+'" src="'+htmlEsc(v)+'" referrerpolicy="no-referrer" alt="'+htmlEsc(field||"")+'"></div>';
-  return htmlEsc(v);
 }
 function elementTypeName(type){
   return({text:"文本",field:"数据字段",image:"图片",table:"明细表格",barcode:"条码",qrcode:"二维码",line:"分隔线",container:"容器"})[type]||type;
@@ -365,25 +358,10 @@ function content(n,e){
     }
   }
   if(e.type==="table"){
-    const layout=buildTableLayout(e,data,preview&&e.hideEmptyColumns===true);
-    const {rows,cols,allCols,cellRows,hasAny}=layout;
-    if(!hasAny&&e.emptyBehavior==="hide"&&!selected.has(e.id)){n.style.display="none";return}
+    const rendered=renderTableMarkup(e,data,{editable:true,selectedCells});
+    const {rows,allCols}=rendered.layout;
     n.classList.toggle("wrap-on",e.wrap!==false);n.classList.toggle("wrap-off",e.wrap===false);
-    const colgroup="<colgroup>"+cols.map(col=>'<col style="width:'+col.width+'%">').join("")+"</colgroup>";
-    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col.index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+htmlEsc(col.title)+"</th>").join("")+"</tr></thead>");
-    const bodyRows=cellRows.map((cells,ri)=>{
-      let html="";
-      for(const cell of cells){
-        const shown=hasValue(cell.value)?tableCellHtml(cell.value,cell.cfg.field||cell.col.field,cell.cfg.imageFit):"";
-        const sel=selectedCells.some(s=>s.row===ri&&s.col===cell.colIndex);
-        html+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'" '+(cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"")+(cell.colspan>1?'colspan="'+cell.colspan+'" ':"")+'style="text-align:'+cell.cfg.align+';vertical-align:'+cell.cfg.valign+';padding:'+cell.cfg.padding*MM+'px;white-space:'+(cell.cfg.wrap?"pre-wrap":"nowrap")+';height:'+cell.height*MM+'px">'+shown+"</td>";
-      }
-      return '<tr'+(e.zebra&&ri%2?' class="zebra"':"")+' style="height:'+tmRowHeight(rows[ri],e)*MM+'px">'+html+"</tr>";
-    }).join("");
-    n.innerHTML='<table style="font-size:'+(e.fontSize||9)+'px">'+colgroup+head+"<tbody>"+bodyRows+"</tbody></table>";
-    n.querySelectorAll("th").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px";cell.style.height=(e.headerHeight||e.rowHeight||8)*MM+"px"});
-    n.querySelectorAll("td").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px"});
-    n.querySelectorAll(".table-cell-image").forEach(img=>{img.style.objectFit=img.dataset.fit==="original"?"none":(img.dataset.fit||"contain");img.style.width="100%";img.style.height="100%"});
+    n.innerHTML=rendered.html;
     n.querySelectorAll("td.table-edit-cell").forEach(cell=>{
       const row=Number(cell.dataset.row),col=Number(cell.dataset.col);
       cell.addEventListener("pointerdown",ev=>beginTableCellDrag(ev,e,row,col));
@@ -394,9 +372,10 @@ function content(n,e){
       cell.addEventListener("pointerdown",ev=>{
         ev.stopPropagation();ev.preventDefault();
         const col=Number(cell.dataset.col);
+        const previous=new Set(selected);
         selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
         for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
-        refreshElementNode(e);renderLayers();syncProps();
+        refreshElementNode(e);refreshSelectionVisuals(previous);
       });
     });
     if(selected.has(e.id)&&!preview&&!e.locked){
