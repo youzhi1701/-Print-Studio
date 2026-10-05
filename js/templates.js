@@ -1,5 +1,5 @@
 import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet} from "./state.js";
-import {ensureTableModel} from "./table-model.js?v=20261005-9";
+import {ensureTableModel} from "./table-model.js?v=20261005-10";
 const seed={id:"tpl_shipping_215x140",schemaVersion:7,name:"发货单 215×140",category:"发货",status:"published",page:{width:215,height:140,orientation:"landscape",margin:6,safeArea:4},elements:[
 {id:"t1",type:"text",x:82,y:7,w:52,h:10,text:"发货单",fontSize:20,fontWeight:800,align:"center"},
 {id:"f1",type:"field",x:12,y:24,w:78,h:8,label:"收件人：",field:"收件人",fontSize:11},
