@@ -165,7 +165,7 @@ export function cellConfig(el,rowId,colId,column){
   };
 }
 
-export function cellValue(el,row,column,data,rootData={}){
+export function cellValue(el,row,column,rootData={}){
   const cfg=cellConfig(el,row.id,column.id,column);
   if(cfg.type==="text")return{cfg,value:cfg.text||""};
   const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
