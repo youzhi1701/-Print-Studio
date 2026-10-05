@@ -505,6 +505,14 @@ function syncGeometryProps(e){
   const map=[["propX","x"],["propY","y"],["propW","w"],["propH","h"]];
   for(const [id,k] of map){const input=$(id);if(input)input.value=Math.round(Number(e[k]||0)*10)/10}
 }
+function clampElementToPage(e){
+  const page=current()?.page||{width:215,height:140};
+  e.w=Math.max(.5,Math.min(Number(e.w)||.5,page.width));
+  e.h=Math.max(.5,Math.min(Number(e.h)||.5,page.height));
+  e.x=Math.max(0,Math.min(Number(e.x)||0,Math.max(0,page.width-e.w)));
+  e.y=Math.max(0,Math.min(Number(e.y)||0,Math.max(0,page.height-e.h)));
+  return e
+}
 function updateElementNodeGeometry(e){
   const node=document.querySelector('.design-element[data-id="'+CSS.escape(e.id)+'"]');if(!node)return;
   node.style.left=e.x*MM+"px";node.style.top=e.y*MM+"px";
@@ -666,7 +674,7 @@ function updateProps(ev){
   if(e.type==="barcode"){e.field=$("codeField").value;e.barcodeFormat=$("barcodeFormat").value;e.showText=$("barcodeText").value==="true"}
   if(e.type==="qrcode"){e.field=$("codeField").value;e.qrLevel=$("qrLevel").value;e.qrMargin=Math.max(0,Number($("qrMargin").value)||0)}
   if(["line","container"].includes(e.type)){e.borderWidth=Math.max(0,Number($("shapeBorderWidth").value)||0);e.borderStyle=$("shapeBorderStyle").value;e.radius=Math.max(0,Number($("shapeRadius").value)||0)}
-  renderElements()
+  clampElementToPage(e);renderElements();syncGeometryProps(e)
 }
 function layerLabel(e){
   if(e.name)return e.name;
@@ -755,7 +763,7 @@ function autoSave(immediate=false){
   if(immediate)commit();else saveTimer=setTimeout(commit,140);
 }
 function del(){if(!selected.size)return;current().elements=current().elements.filter(e=>!selected.has(e.id));selected.clear();clearTableSelection();renderAll();pushHistory();autoSave()}
-function duplicate(){const els=current().elements.filter(e=>selected.has(e.id));const ids=[];for(const e of els){const c=structuredClone(e);c.id=uid("el");c.x+=4;c.y+=4;c.locked=false;current().elements.push(c);ids.push(c.id)}selectElements(ids);renderAll();pushHistory();autoSave()}
+function duplicate(){const els=current().elements.filter(e=>selected.has(e.id));const ids=[];for(const e of els){const c=structuredClone(e);c.id=uid("el");c.x+=4;c.y+=4;c.locked=false;clampElementToPage(c);current().elements.push(c);ids.push(c.id)}selectElements(ids);renderAll();pushHistory();autoSave()}
 function moveLayer(front){const t=current(),ids=[...selected];const take=t.elements.filter(e=>ids.includes(e.id)),rest=t.elements.filter(e=>!ids.includes(e.id));t.elements=front?[...rest,...take]:[...take,...rest];renderAll();pushHistory();autoSave()}
 function toggleKey(k){for(const e of current().elements.filter(e=>selected.has(e.id)))e[k]=!e[k];renderAll();pushHistory();autoSave()}
 function showContext(ev,id){ev.preventDefault();selectElements(id);renderElements();renderLayers();syncProps();const m=$("contextMenu");m.style.left=ev.clientX+"px";m.style.top=ev.clientY+"px";m.classList.remove("hidden")}
