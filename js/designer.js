@@ -637,7 +637,7 @@ function syncTableCellInspector(e){
   const stateNode=$("tableCellValueState");
   if(stateNode){
     if(row&&col&&["field","image"].includes(type)){
-      const resolved=tmCellValue(e,row,col,state.record?.data||{},state.record?.data||{}).value;
+      const resolved=tmCellValue(e,row,col,state.record?.data||{}).value;
       const field=raw.field||col.field||"";
       stateNode.classList.remove("hidden","ok","empty");
       if(hasValue(resolved)){
