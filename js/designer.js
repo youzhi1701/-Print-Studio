@@ -74,8 +74,8 @@ function normalizeColumns(cols){
     {title:"价格",field:"价格",width:15,align:"right"}
   ];
   else out=cols.map((col,i)=>{
-    if(typeof col==="string")return{title:col,field:col,width:null,align:i===0?"left":"center"};
-    return{title:col.title||col.field||("列"+(i+1)),field:col.field||col.title||"",width:col.width??null,align:col.align||"center"};
+    if(typeof col==="string")return{id:uid("col"),title:col,field:col,width:null,align:i===0?"left":"center"};
+    return{id:col.id||uid("col"),title:col.title||col.field||("列"+(i+1)),field:col.field||col.title||"",width:col.width??null,align:col.align||"center"};
   });
   const valid=out.every(x=>Number.isFinite(Number(x.width))&&Number(x.width)>0);
   if(!valid){
