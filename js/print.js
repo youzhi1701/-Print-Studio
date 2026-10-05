@@ -76,10 +76,21 @@ async function prepareRenderedSheets(template,records){
   return{host,page,sheets:[...host.querySelectorAll(".print-sheet")]};
 }
 
+async function importFirst(urls){
+  let last;
+  for(const url of urls){try{return await import(url)}catch(err){last=err}}
+  throw last||new Error("模块加载失败")
+}
 async function loadPdfDeps(){
   const [hc,jp]=await Promise.all([
-    import("https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm"),
-    import("https://cdn.jsdelivr.net/npm/jspdf@2.5.2/+esm")
+    importFirst([
+      "https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm",
+      "https://esm.sh/html2canvas@1.4.1"
+    ]),
+    importFirst([
+      "https://cdn.jsdelivr.net/npm/jspdf@2.5.2/+esm",
+      "https://esm.sh/jspdf@2.5.2"
+    ])
   ]);
   return{html2canvas:hc.default||hc,jsPDF:jp.jsPDF||jp.default?.jsPDF||jp.default};
 }
