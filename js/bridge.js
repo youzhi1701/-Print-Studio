@@ -71,8 +71,8 @@ export function openDesigner(templateId){
     const timer=setInterval(()=>{
       tries++;
       pushBridgeToDesigner(w);
-      if(tries>20||w.closed)clearInterval(timer);
-    },250);
+      if(tries>6||w.closed)clearInterval(timer);
+    },500);
   }else{
     location.href=url.toString();
   }
@@ -93,8 +93,8 @@ export function openPreviewWindow(){
     const timer=setInterval(()=>{
       tries++;
       pushBridgeToDesigner(w);
-      if(tries>24||w.closed)clearInterval(timer);
-    },220);
+      if(tries>6||w.closed)clearInterval(timer);
+    },500);
   }
   return w;
 }
