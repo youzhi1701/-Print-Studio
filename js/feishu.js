@@ -1,6 +1,6 @@
 let sdkModule=null;
 const attachmentUrlCache=new Map();
-const ATTACHMENT_CACHE_TTL=20*60*1000;
+const ATTACHMENT_CACHE_TTL=2*60*1000;
 
 function attachmentCacheKey(recordId,fieldId,tokens=[]){
   return String(recordId||"")+"|"+String(fieldId||"")+"|"+tokens.join(",");
@@ -141,21 +141,27 @@ export async function resolveAttachmentUrls(table,record,fields){
     let urls=getCachedAttachmentUrls(cacheKey)||[];
 
     if(!urls.length){
-      // Preferred SDK path: attachment field resolves all URLs for a record.
-      try{
-        const field=await table.getFieldById(f.id);
-        if(field?.getAttachmentUrls) urls=(await field.getAttachmentUrls(record.id))||[];
-      }catch(err){console.warn("attachmentField.getAttachmentUrls failed",f.name,err)}
+      // Prefer SDK thumbnails first. These are far more stable for browser preview/print
+      // than short-lived signed attachment URLs and avoid most CORS/referrer failures.
+      if(table.getCellThumbnailUrls){
+        try{
+          const thumbs=(await table.getCellThumbnailUrls(tokens,f.id,record.id,1200))||[];
+          if(thumbs.length)urls=thumbs;
+        }catch(err){console.warn("getCellThumbnailUrls failed",f.name,err)}
+      }
 
-      // Fallback: table cell attachment API.
+      // Fallback to signed attachment URLs only when thumbnail data is unavailable.
+      if(!urls.length){
+        try{
+          const field=await table.getFieldById(f.id);
+          if(field?.getAttachmentUrls) urls=(await field.getAttachmentUrls(record.id))||[];
+        }catch(err){console.warn("attachmentField.getAttachmentUrls failed",f.name,err)}
+      }
+
       if(!urls.length&&table.getCellAttachmentUrls){
         try{urls=(await table.getCellAttachmentUrls(tokens,f.id,record.id))||[]}catch(err){console.warn("getCellAttachmentUrls failed",f.name,err)}
       }
 
-      // Final fallback for preview: base64 thumbnails are directly renderable in <img>.
-      if(!urls.length&&table.getCellThumbnailUrls){
-        try{urls=(await table.getCellThumbnailUrls(tokens,f.id,record.id,720))||[]}catch(err){console.warn("getCellThumbnailUrls failed",f.name,err)}
-      }
       setCachedAttachmentUrls(cacheKey,urls);
     }
 
