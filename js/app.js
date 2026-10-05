@@ -1,11 +1,11 @@
-import {mountBuildVersion} from "./version.js?v=20261005-22";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-22";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-22";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-22";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-22";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-22";
-import {printTemplateRecords} from "./print.js?v=20261005-22";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261005-22";
+import {mountBuildVersion} from "./version.js?v=20261005-23";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-23";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-23";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-23";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-23";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-23";
+import {printTemplateRecords} from "./print.js?v=20261005-23";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261005-23";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
