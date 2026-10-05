@@ -52,10 +52,13 @@ export function ensureTableModel(el,data={}){
 
   if(!Array.isArray(el.rowDefs)||!el.rowDefs.length){
     const count=legacyRowCount(el,src.length);
+    const headerHeight=el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8);
+    const legacyBodyHeight=Math.max(0,Number(el.h||0)-headerHeight);
+    const inferredHeight=legacyBodyHeight>0?Math.max(4,legacyBodyHeight/count):(Number(el.rowHeight)||8);
     el.rowDefs=Array.from({length:count},(_,i)=>({
       id:id("row"),
       type:i<Math.max(1,src.length)?"data":"manual",
-      height:Number(el.rowHeights?.[i])||Number(el.rowHeight)||8
+      height:Number(el.rowHeights?.[i])||inferredHeight
     }));
   }else{
     el.rowDefs=el.rowDefs.map((r,i)=>({
