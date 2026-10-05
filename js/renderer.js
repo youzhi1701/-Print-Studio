@@ -1,6 +1,5 @@
 import {
-  ensureTableModel,materializeTableRows,visibleColumns,cellValue,
-  mergeForCell,isMergeMaster,isCoveredCell,rowHeight,hasValue
+  buildTableLayout,hasValue
 } from "./table-model.js?v=20261005-7";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
@@ -24,30 +23,23 @@ function cellHtml(v,imageFit="contain"){
 }
 
 function renderTable(el,rootData,common){
-  ensureTableModel(el,rootData);
-  const rows=materializeTableRows(el,rootData);
-  const cols=visibleColumns(el,rows,rootData,el.hideEmptyColumns===true);
+  const layout=buildTableLayout(el,rootData,el.hideEmptyColumns===true);
+  const {rows,cols,cellRows,hasAny}=layout;
   const bw=el.borderWidth??.5;
-  const hasAny=rows.some(row=>cols.some(col=>hasValue(cellValue(el,row,col,rootData).value)));
   if(!hasAny&&el.emptyBehavior==="hide")return"";
 
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map(c=>
     '<th style="box-sizing:border-box;border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   ).join("")+'</tr></thead>';
 
-  const body=rows.map((row,ri)=>{
-    let cells="";
-    for(const col of cols){
-      if(isCoveredCell(el,row.id,col.id))continue;
-      const merge=mergeForCell(el,row.id,col.id);
-      const master=isMergeMaster(merge,row.id,col.id);
-      const {cfg,value}=cellValue(el,row,col,rootData);
-      const pad=isImageValue(value)?0:cfg.padding;
-      const rowspan=master&&merge?.rowIds?.length>1?'rowspan="'+merge.rowIds.length+'" ':'';
-      const colspan=master&&merge?.colIds?.length>1?'colspan="'+merge.colIds.length+'" ':'';
-      cells+='<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'px;text-align:'+cfg.align+';height:'+rowHeight(row,el)+'mm;white-space:'+(cfg.wrap?'normal':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cfg.wrap?'break-word':'normal')+';vertical-align:'+cfg.valign+'">'+cellHtml(value,cfg.imageFit)+'</td>';
-    }
-    return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cells+'</tr>';
+  const body=cellRows.map((cells,ri)=>{
+    const html=cells.map(cell=>{
+      const pad=isImageValue(cell.value)?0:cell.cfg.padding;
+      const rowspan=cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"";
+      const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
+      return '<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'px;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'normal':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
+    }).join("");
+    return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
   return '<div style="'+common+'"><table style="width:100%;height:100%;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+head+'<tbody>'+body+'</tbody></table></div>';
