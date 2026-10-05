@@ -1,4 +1,4 @@
-import {state} from "./state.js?v=20261005-5";
+import {state,storageAvailable} from "./state.js?v=20261005-5";
 import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-5";
 import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-5";
 import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-5";
@@ -10,6 +10,24 @@ let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScal
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
+function compatInfo(extra=""){
+  return [
+    "URL="+location.href,
+    "UA="+navigator.userAgent,
+    "iframe="+String(window.self!==window.top),
+    "storage="+String(storageAvailable()),
+    "online="+String(navigator.onLine),
+    extra
+  ].filter(Boolean).join("\n");
+}
+function showCompat(message,extra=""){
+  const p=$("compatPanel");if(!p)return;
+  $("compatMessage").textContent=message||"当前浏览器环境无法正常连接飞书插件。";
+  $("compatDetails").textContent=compatInfo(extra);
+  p.classList.remove("hidden");
+}
+function hideCompat(){$("compatPanel")?.classList.add("hidden")}
+
 function activeTemplate(){return state.templates.find(t=>t.id===state.activeTemplateId)||state.templates[0]}
 function fillTemplates(){const s=$("templateSelect");s.innerHTML="";state.templates.forEach(t=>{const o=document.createElement("option");o.value=t.id;o.textContent=t.name;s.appendChild(o)});if(state.activeTemplateId)s.value=state.activeTemplateId}
 function autoBind(){const tpl=activeTemplate();if(autoBindTemplateFields(tpl,state.fields))saveTemplates(state.templates)}
@@ -125,8 +143,8 @@ async function refresh(){
   try{
     $("statusText").textContent="正在同步";
     const c=await connectFeishu();
-    if(!c.connected){state.connected=false;status("演示模式","warn");$("statusText").textContent="未连接飞书";await renderPreview();return}
-    state.connected=true;state.sdk=c.bitable;status("已连接","success");
+    if(!c.connected){state.connected=false;status("连接失败","error");$("statusText").textContent="未连接飞书";showCompat("这台电脑没有成功加载飞书 SDK，可能被网络、浏览器安全策略或第三方嵌入限制拦截。","reason="+(c.reason||"SDK unavailable"));await renderPreview();return}
+    state.connected=true;state.sdk=c.bitable;status("已连接","success");hideCompat();
     const ctx=await readContext(c.bitable);
     state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
     state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
@@ -196,6 +214,10 @@ async function applyDesignerTemplate(template){
 }
 
 async function init(){
+  if($("compatRetry"))$("compatRetry").onclick=()=>refresh();
+  if($("compatOpen"))$("compatOpen").onclick=()=>window.open(location.href,"_blank","noopener");
+  if($("compatCopy"))$("compatCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("compatDetails")?.textContent||compatInfo());toast("诊断信息已复制")}catch{toast("复制失败，请手动复制")}};
+
   state.templates=loadTemplates();state.activeTemplateId=state.templates[0]?.id||null;fillTemplates();
 
   $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;autoBind();syncBridge();await renderPreview()};
@@ -247,4 +269,4 @@ async function init(){
   try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}
   setInterval(()=>{if(document.visibilityState==="visible")refresh()},20000);
 }
-init();
+init().catch(err=>{console.error(err);showCompat("超级打印初始化失败。请尝试重新连接，或在新窗口中打开。","error="+(err?.stack||err?.message||String(err))) });
