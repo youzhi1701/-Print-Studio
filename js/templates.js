@@ -131,7 +131,7 @@ function normalizeTemplateTables(template){
   template.schemaVersion=7;
   return template
 }
-function normalizeTemplate(t){
+export function normalizeTemplateObject(t){
   const legacy=Number(t?.schemaVersion||1)<7;
   const tpl={
     ...t,
@@ -168,15 +168,15 @@ function normalizeTemplate(t){
 export function loadTemplates(){
   const raw=storageGet(STORAGE_KEYS.templates);
   const data=safeJson(raw,null);
-  let list=Array.isArray(data)?data.filter(Boolean).map(normalizeTemplate):[];
+  let list=Array.isArray(data)?data.filter(Boolean).map(normalizeTemplateObject):[];
   const byId=new Map(list.map(t=>[t.id,t]));
   for(const built of BUILTIN_TEMPLATES){
-    if(!byId.has(built.id))list.push(normalizeTemplate(structuredClone(built)));
+    if(!byId.has(built.id))list.push(normalizeTemplateObject(structuredClone(built)));
     else{
       const existing=byId.get(built.id);
       if(existing?.builtIn||built.id==="tpl_shipping_215x140"){
         const i=list.findIndex(t=>t.id===built.id);
-        list[i]=normalizeTemplate(structuredClone(built));
+        list[i]=normalizeTemplateObject(structuredClone(built));
       }
     }
   }
@@ -197,7 +197,7 @@ export function createTemplate(name="未命名模板",p={width:215,height:140}){
 }
 export function importTemplateObject(input,existing=[]){
   const raw=input?.template&&typeof input.template==="object"?input.template:input;
-  if(!raw||typeof raw!=="object"||!Array.isArray(raw.elements))throw new Error("模板文件格式无效");
+  if(!isValidTemplateObject(raw))throw new Error("模板文件格式无效");
   const tpl=structuredClone(raw);
   const ids=new Set((existing||[]).map(t=>t.id));
   if(!tpl.id||ids.has(tpl.id)||isBuiltinTemplate(tpl.id))tpl.id=uid("tpl");
@@ -209,8 +209,10 @@ export function importTemplateObject(input,existing=[]){
   tpl.printSettings={scale:100,offsetX:0,offsetY:0,...(tpl.printSettings||{})};
   tpl.createdAt=Number(tpl.createdAt)||Date.now();
   tpl.updatedAt=Date.now();
-  normalizeTemplateTables(tpl);
-  return tpl;
+  return normalizeTemplateObject(tpl);
+}
+export function isValidTemplateObject(input){
+  return !!(input&&typeof input==="object"&&Array.isArray(input.elements)&&input.page&&Number(input.page.width)>0&&Number(input.page.height)>0)
 }
 export function exportTemplate(tpl){
   normalizeTemplateTables(tpl);
