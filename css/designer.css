@@ -382,7 +382,7 @@
 }
 .table-el th,.table-el td{box-sizing:border-box!important;position:relative!important;vertical-align:middle}
 .table-el.wrap-on th,.table-el.wrap-on td{
-  white-space:normal!important;word-break:break-word!important;overflow-wrap:anywhere!important;
+  white-space:pre-wrap!important;word-break:break-word!important;overflow-wrap:anywhere!important;
   text-overflow:clip!important;line-height:1.35!important
 }
 .table-el.wrap-off th,.table-el.wrap-off td{
