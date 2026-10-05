@@ -7,7 +7,7 @@ import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-6";import {loadTempl
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
 } from "./table-model.js?v=20261005-7";
-const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
+const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
 function clearTableSelection(){selectedCells=[];tableSelectionAnchor=null;tableSelecting=false}
@@ -421,6 +421,45 @@ function selectionIsRectangle(){
   const b=tableSelectionBounds();if(!b)return false;
   return (b.r1-b.r0+1)*(b.c1-b.c0+1)===selectedCells.length
 }
+function tableSelectionModelCells(e){
+  const {rows,cols}=tableAxes(e);
+  return selectedCells.map(s=>({visual:s,row:rows[s.row],col:cols[s.col]})).filter(x=>x.row&&x.col)
+}
+function clearSelectedTableCells(){
+  const e=selectedOne();if(!e||e.type!=="table"||!selectedCells.length)return;
+  for(const x of tableSelectionModelCells(e)){
+    if(tmIsCoveredCell(e,x.row.id,x.col.id))continue;
+    tmSetCellOverride(e,x.row.id,x.col.id,{type:"text",text:"",align:"",valign:"middle",padding:2,wrap:true,imageFit:e.tableImageFit||"contain"});
+  }
+  commitTableEdit("已清空选中单元格")
+}
+function copySelectedTableCells(){
+  const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
+  const {rows,cols}=tableAxes(e),matrix=[];
+  for(let r=b.r0;r<=b.r1;r++){
+    const line=[];
+    for(let col=b.c0;col<=b.c1;col++){
+      const row=rows[r],column=cols[col];
+      line.push(row&&column?structuredClone(tmGetCellOverride(e,row.id,column.id)):null)
+    }
+    matrix.push(line)
+  }
+  tableClipboard={rows:matrix.length,cols:matrix[0]?.length||0,matrix};
+  toast("已复制 "+tableClipboard.rows+"×"+tableClipboard.cols+" 单元格")
+}
+function pasteSelectedTableCells(){
+  const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b||!tableClipboard)return;
+  const {rows,cols}=tableAxes(e);
+  for(let dr=0;dr<tableClipboard.rows;dr++)for(let dc=0;dc<tableClipboard.cols;dc++){
+    const row=rows[b.r0+dr],col=cols[b.c0+dc];if(!row||!col)continue;
+    const value=tableClipboard.matrix[dr][dc];
+    tmSetCellOverride(e,row.id,col.id,value?structuredClone(value):null);
+  }
+  commitTableEdit("已粘贴单元格")
+}
+function selectionHasMerge(e){
+  return tableSelectionModelCells(e).some(x=>tmMergeForCell(e,x.row.id,x.col.id))
+}
 function commitTableEdit(message){
   renderElements();renderTableColumnEditor(selectedOne());syncProps();pushHistory();autoSave();if(message)toast(message)
 }
@@ -757,7 +796,7 @@ $("rightToggle").onclick=()=>{
   setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},80);
 };$("newBtn").onclick=()=>{const t=createTemplate();state.templates.push(t);state.activeTemplateId=t.id;history=[];hIndex=-1;selected.clear();clearTableSelection();renderAll();pushHistory();autoSave()};$("fieldSearch").oninput=e=>{const q=e.target.value.trim().toLowerCase();document.querySelectorAll(".field-item").forEach(n=>n.classList.toggle("hidden",!n.textContent.toLowerCase().includes(q)))};$("syncDataBtn").onclick=()=>{syncBridgeData(true);renderAll()};$("autoBindBtn").onclick=autoBindNow;$("addTableColumn").onclick=addTableColumn;$("normalizeTableWidths").onclick=()=>normalizeTableWidths(true);
 $("layerSearch").oninput=renderLayers;$("layerTopBtn").onclick=()=>moveLayer(true);$("layerBottomBtn").onclick=()=>moveLayer(false);
-$("contextMenu").onclick=e=>{const c=e.target.dataset.cmd;if(c==="duplicate")duplicate();if(c==="front")moveLayer(true);if(c==="back")moveLayer(false);if(c==="lock")toggleKey("locked");if(c==="delete")del();$("contextMenu").classList.add("hidden")};document.addEventListener("click",()=>$("contextMenu").classList.add("hidden"));document.addEventListener("keydown",e=>{const editing=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);if(e.ctrlKey&&e.key.toLowerCase()==="s"){e.preventDefault();autoSave();toast("模板已保存");return}if(e.ctrlKey&&e.key.toLowerCase()==="z"){e.preventDefault();restore(hIndex-1);return}if(e.ctrlKey&&e.key.toLowerCase()==="y"){e.preventDefault();restore(hIndex+1);return}if(editing)return;if(e.key==="Escape"&&selectedCells.length){e.preventDefault();selectedCells=[];tableSelectionAnchor=null;renderElements();syncProps();return}if((e.key==="Delete"||e.key==="Backspace")&&selectedCells.length){e.preventDefault();toast("请使用悬浮工具栏删除行/列，避免误删整表");return}if((e.key==="Delete"||e.key==="Backspace")&&selected.size){e.preventDefault();del();return}if(e.ctrlKey&&e.key.toLowerCase()==="d"){e.preventDefault();duplicate();return}const step=e.shiftKey?5:1;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)&&selected.size){e.preventDefault();for(const x of current().elements.filter(v=>selected.has(v.id))){if(e.key==="ArrowLeft")x.x=Math.max(0,x.x-step);if(e.key==="ArrowRight")x.x+=step;if(e.key==="ArrowUp")x.y=Math.max(0,x.y-step);if(e.key==="ArrowDown")x.y+=step}renderElements();syncProps();pushHistory();autoSave()}})}
+$("contextMenu").onclick=e=>{const c=e.target.dataset.cmd;if(c==="duplicate")duplicate();if(c==="front")moveLayer(true);if(c==="back")moveLayer(false);if(c==="lock")toggleKey("locked");if(c==="delete")del();$("contextMenu").classList.add("hidden")};document.addEventListener("click",()=>$("contextMenu").classList.add("hidden"));document.addEventListener("keydown",e=>{const editing=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName);if(e.ctrlKey&&e.key.toLowerCase()==="s"){e.preventDefault();autoSave();toast("模板已保存");return}if(e.ctrlKey&&e.key.toLowerCase()==="z"){e.preventDefault();restore(hIndex-1);return}if(e.ctrlKey&&e.key.toLowerCase()==="y"){e.preventDefault();restore(hIndex+1);return}if(editing)return;if(e.key==="Escape"&&selectedCells.length){e.preventDefault();clearTableSelection();renderElements();syncProps();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="m"&&selectedCells.length){e.preventDefault();const t=selectedOne();selectionHasMerge(t)?unmergeSelectedCells():mergeSelectedCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="c"&&selectedCells.length){e.preventDefault();copySelectedTableCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="v"&&selectedCells.length){e.preventDefault();pasteSelectedTableCells();return}if((e.key==="Delete"||e.key==="Backspace")&&selectedCells.length){e.preventDefault();clearSelectedTableCells();return}if((e.key==="Delete"||e.key==="Backspace")&&selected.size){e.preventDefault();del();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="d"){e.preventDefault();duplicate();return}const step=e.shiftKey?5:1;if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)&&selected.size){e.preventDefault();for(const x of current().elements.filter(v=>selected.has(v.id))){if(e.key==="ArrowLeft")x.x=Math.max(0,x.x-step);if(e.key==="ArrowRight")x.x+=step;if(e.key==="ArrowUp")x.y=Math.max(0,x.y-step);if(e.key==="ArrowDown")x.y+=step}renderElements();syncProps();pushHistory();autoSave()}})}
 window.addEventListener("storage",e=>{if(e.key===STORAGE_KEYS.bridge){syncBridgeData(false);renderAll()}});
 onBridgeMessage(payload=>{syncBridgeData(false,payload);renderAll()});
 window.addEventListener("resize",()=>{clearTimeout(window.__spResize);window.__spResize=setTimeout(()=>{initResponsivePanels();if(zoomMode==="fit")fitCanvas()},100)});
