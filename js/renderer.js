@@ -81,7 +81,10 @@ export function renderTemplateToHtml(tpl,data={}){
     if(el.type==="line")return '<div style="'+common+'border-top:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #17223c"></div>';
     if(el.type==="container")return '<div style="'+common+'border:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #cbd2df;border-radius:'+(el.radius||0)+'px"></div>';
     if(el.type==="table"){
-      const rows0=tableRows(el,data).slice(0,el.maxRows||5),rows=rows0.length?rows0:[{}];
+      const rows0=tableRows(el,data).slice(0,el.maxRows||5);
+      const rows=(rows0.length?rows0:[{}]).map(r=>r||{});
+      const wanted=Math.max(rows.length,Number(el.designRowCount)||1);
+      while(rows.length<wanted)rows.push({});
       const configured=normalizeColumns(el.columns);
       const hasAny=rows0.some(row=>configured.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
       if(!hasAny&&el.emptyBehavior==="hide")return"";
