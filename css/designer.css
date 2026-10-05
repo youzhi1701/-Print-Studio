@@ -463,3 +463,32 @@
 .table-el.selected:hover .table-row-resizer{opacity:.18!important}
 .table-col-resizer:hover,.table-row-resizer:hover,
 .table-col-resizer.active,.table-row-resizer.active{opacity:1!important}
+
+/* unified table/image rendering with preview + print */
+.table-el{box-sizing:border-box!important}
+.table-el table{
+  width:100%!important;
+  height:100%!important;
+  table-layout:fixed!important;
+  border-collapse:collapse!important;
+}
+.table-el th,.table-el td{
+  box-sizing:border-box!important;
+  position:relative!important;
+}
+.table-el td:has(.table-image-box){padding:0!important}
+.table-image-box{
+  position:absolute!important;
+  inset:0!important;
+  width:100%!important;
+  height:100%!important;
+  overflow:hidden!important;
+}
+.table-image-box .table-cell-image{
+  width:100%!important;
+  height:100%!important;
+  max-width:none!important;
+  max-height:none!important;
+  display:block!important;
+  margin:0!important;
+}
