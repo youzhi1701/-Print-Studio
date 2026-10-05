@@ -723,11 +723,11 @@ function renderLayers(){
     r.append(drag,type,name,eye,lock);
 
     r.onclick=ev=>{if(ev.target.closest("button")||ev.target.classList.contains("layer-drag")||ev.target.tagName==="INPUT")return;selectElements(e.id);renderElements();renderLayers();syncProps()};
-    eye.onclick=ev=>{ev.stopPropagation();e.hidden=!e.hidden;renderElements();renderLayers();autoSave()};
-    lock.onclick=ev=>{ev.stopPropagation();e.locked=!e.locked;renderElements();renderLayers();autoSave()};
+    eye.onclick=ev=>{ev.stopPropagation();e.hidden=!e.hidden;renderElements();renderLayers();pushHistory();autoSave()};
+    lock.onclick=ev=>{ev.stopPropagation();e.locked=!e.locked;renderElements();renderLayers();pushHistory();autoSave()};
     name.ondblclick=ev=>{
       ev.stopPropagation();const input=document.createElement("input");input.className="layer-name-input";input.value=e.name||label;name.replaceWith(input);input.focus();input.select();
-      const done=()=>{e.name=input.value.trim()||"";renderLayers();autoSave()};input.onblur=done;input.onkeydown=k=>{if(k.key==="Enter")input.blur();if(k.key==="Escape"){input.value=e.name||label;input.blur()}}
+      const done=()=>{e.name=input.value.trim()||"";renderLayers();pushHistory();autoSave()};input.onblur=done;input.onkeydown=k=>{if(k.key==="Enter")input.blur();if(k.key==="Escape"){input.value=e.name||label;input.blur()}}
     };
     r.onmouseenter=()=>document.querySelector('.design-element[data-id="'+e.id+'"]')?.classList.add("layer-hover");
     r.onmouseleave=()=>document.querySelector('.design-element[data-id="'+e.id+'"]')?.classList.remove("layer-hover");
