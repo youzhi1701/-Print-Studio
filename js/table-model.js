@@ -340,8 +340,11 @@ export function deleteColumns(el,indexes){
 
 export function visibleColumns(el,visualRows,rootData={},hideEmpty=false){
   const cols=normalizeTableColumns(el);
-  if(!hideEmpty||((el.merges||[]).length))return cols;
-  const visible=cols.filter(col=>visualRows.some(row=>hasValue(cellValue(el,row,col,rootData).value)));
+  if(!hideEmpty)return cols;
+  const requiredByMerge=new Set((el.merges||[]).flatMap(m=>m.colIds||[]));
+  const visible=cols.filter(col=>
+    requiredByMerge.has(col.id)||visualRows.some(row=>hasValue(cellValue(el,row,col,rootData).value))
+  );
   return visible.length?visible:cols;
 }
 
