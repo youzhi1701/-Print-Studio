@@ -680,9 +680,13 @@ function layerLabel(e){
 }
 function layerIcon(type){return({text:"T",field:"{}",image:"▧",table:"▦",barcode:"|||",qrcode:"▦",line:"—",container:"□"})[type]||"•"}
 function reorderLayersFromDom(){
-  const ids=[...$("layerList").querySelectorAll(".layer-row")].map(n=>n.dataset.id);
+  const visibleOrder=[...$("layerList").querySelectorAll(".layer-row")].map(n=>n.dataset.id);
+  if(!visibleOrder.length)return;
+  const visibleSet=new Set(visibleOrder),topOrder=[...current().elements].reverse().map(e=>e.id);
+  let cursor=0;
+  const mergedTop=topOrder.map(id=>visibleSet.has(id)?visibleOrder[cursor++]:id);
   const map=new Map(current().elements.map(e=>[e.id,e]));
-  current().elements=ids.reverse().map(id=>map.get(id)).filter(Boolean);
+  current().elements=mergedTop.reverse().map(id=>map.get(id)).filter(Boolean);
   renderElements();renderLayers();pushHistory();autoSave()
 }
 function renderLayers(){
