@@ -28,6 +28,7 @@ function renderTable(el,rootData,common){
   const bw=el.borderWidth??.5;
   if(!hasAny&&el.emptyBehavior==="hide")return"";
 
+  const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map(c=>
     '<th style="box-sizing:border-box;border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   ).join("")+'</tr></thead>';
@@ -43,7 +44,7 @@ function renderTable(el,rootData,common){
   }).join("");
 
   const tableCommon=common.replace(/height:[^;]+;/,'height:'+totalHeight+'mm;');
-  return '<div style="'+tableCommon+'"><table style="width:100%;height:'+totalHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+head+'<tbody>'+body+'</tbody></table></div>';
+  return '<div style="'+tableCommon+'"><table style="width:100%;height:'+totalHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+colgroup+head+'<tbody>'+body+'</tbody></table></div>';
 }
 
 export function renderTemplateToHtml(tpl,data={}){
