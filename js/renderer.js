@@ -91,6 +91,16 @@ export function renderTemplateToHtml(tpl,data={}){
   const items=(tpl.elements||[]).filter(el=>!el.hidden).map(el=>renderElementToHtml(el,data,true)).join("");
   return '<section class="print-sheet" style="position:relative;width:'+p.width+'mm;height:'+p.height+'mm;background:#fff;overflow:hidden">'+items+'</section>'
 }
+export function applyTemplateCalibration(root,tpl){
+  const sheet=root?.matches?.(".print-sheet")?root:root?.querySelector?.(".print-sheet");
+  if(!sheet)return;
+  const s=tpl?.printSettings||{};
+  const scale=Math.max(.9,Math.min(1.1,(Number(s.scale)||100)/100));
+  const x=Math.max(-20,Math.min(20,Number(s.offsetX)||0));
+  const y=Math.max(-20,Math.min(20,Number(s.offsetY)||0));
+  sheet.style.transform="translate("+x+"mm,"+y+"mm) scale("+scale+")";
+  sheet.style.transformOrigin="top left";
+}
 
 async function importFirst(urls){
   let last;
