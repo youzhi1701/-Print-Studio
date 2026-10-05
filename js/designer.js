@@ -8,7 +8,7 @@ function updateUndo(){$("undoBtn").disabled=hIndex<=0;$("redoBtn").disabled=hInd
 async function load(){state.templates=loadTemplates();const qs=new URLSearchParams(location.search).get("template");state.activeTemplateId=(qs&&state.templates.some(t=>t.id===qs))?qs:state.templates[0]?.id;const payload=await requestBridgeFromOpener();syncBridgeData(false,payload);renderAll();pushHistory()}
 function populateFields(){
   const list=$("fieldList");
-  const selects=["propField","imageField","codeField","tableDataField"].map(id=>$(id)).filter(Boolean);
+  const selects=["propField","imageField","codeField","tableDataField","tableCellField"].map(id=>$(id)).filter(Boolean);
   list.innerHTML="";
   for(const sel of selects){
     const keep=sel.value;
