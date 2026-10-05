@@ -153,11 +153,15 @@ export async function syncTemplatesWithCloud(bitable,localTemplates=[],deletedId
 
   const clearedDeletedIds=[];
   if(deletedSet.size){
-    for(const row of rows){
-      if(!deletedSet.has(row.id))continue;
-      try{await table.deleteRecord(row.recordId)}catch(err){console.warn("同步删除云端模板失败",row.id,err);continue}
+    for(const id of deletedSet){
+      const matching=rows.filter(row=>row.id===id);
+      let ok=true;
+      for(const row of matching){
+        try{await table.deleteRecord(row.recordId)}
+        catch(err){ok=false;console.warn("同步删除云端模板失败",row.id,err)}
+      }
+      if(ok)clearedDeletedIds.push(id);
     }
-    for(const id of deletedSet)clearedDeletedIds.push(id);
   }
 
   const cloudById=new Map();
