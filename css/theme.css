@@ -17,10 +17,10 @@ input,select,textarea{color:var(--ink);background:rgba(255,255,255,.55);border:1
 
 
 .build-version-badge{
-  font-size:8px;line-height:1;color:rgba(23,34,60,.38);
+  font-size:9px;line-height:1;color:rgba(23,34,60,.52);
   font-weight:500;letter-spacing:.1px;white-space:nowrap;vertical-align:baseline
 }
-.build-version-inline{margin-left:4px}
+.build-version-inline{margin-left:5px}
 .build-version-fallback{
   position:fixed;right:5px;bottom:3px;z-index:2147483000;
   padding:2px 4px;border-radius:4px;background:rgba(255,255,255,.28);
