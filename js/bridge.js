@@ -95,7 +95,12 @@ export function openDesigner(templateId){
   installOpenerResponder();
   const url=new URL("./designer.html",location.href);
   if(templateId)url.searchParams.set("template",templateId);
-  const w=window.open(url.toString(),"super-print-designer","popup=yes,width=1440,height=900,resizable=yes,scrollbars=yes");
+  const width=Math.min(1440,Math.max(720,Math.floor((screen.availWidth||1200)*0.92)));
+  const height=Math.min(900,Math.max(600,Math.floor((screen.availHeight||800)*0.90)));
+  const left=Math.max(0,Math.floor(((screen.availWidth||width)-width)/2));
+  const top=Math.max(0,Math.floor(((screen.availHeight||height)-height)/2));
+  const w=window.open(url.toString(),"super-print-designer",
+    "popup=yes,width="+width+",height="+height+",left="+left+",top="+top+",resizable=yes,scrollbars=yes");
   if(w){
     let tries=0;
     const timer=setInterval(()=>{
@@ -103,19 +108,19 @@ export function openDesigner(templateId){
       pushBridgeToDesigner(w);
       if(tries>6||w.closed)clearInterval(timer);
     },500);
-  }else{
-    location.href=url.toString();
   }
+  return w;
 }
 
 
 export function openPreviewWindow(){
   installOpenerResponder();
   const url=new URL("./preview.html",location.href);
-  const width=Math.min(1180,Math.max(860,Math.floor(screen.availWidth*0.72)));
-  const height=Math.min(900,Math.max(680,Math.floor(screen.availHeight*0.82)));
-  const left=Math.max(0,Math.floor((screen.availWidth-width)/2));
-  const top=Math.max(0,Math.floor((screen.availHeight-height)/2));
+  const aw=screen.availWidth||1000,ah=screen.availHeight||760;
+  const width=Math.min(1180,Math.max(640,Math.floor(aw*0.82)),aw);
+  const height=Math.min(900,Math.max(520,Math.floor(ah*0.86)),ah);
+  const left=Math.max(0,Math.floor((aw-width)/2));
+  const top=Math.max(0,Math.floor((ah-height)/2));
   const w=window.open(url.toString(),"super-print-preview",
     "popup=yes,resizable=yes,scrollbars=no,width="+width+",height="+height+",left="+left+",top="+top);
   if(w){
