@@ -51,8 +51,10 @@ function updateRecordMeta(){
   $("selectionText").textContent=state.selectedRecords.length>1?("已选择 "+state.selectedRecords.length+" 条记录"):(rec?"已选择 1 条记录":"未选择记录");
   $("previewCounter").textContent=state.selectedRecords.length>1?((currentIndex+1)+" / "+state.selectedRecords.length):"1 / 1";
   $("printCurrent").textContent=state.selectedRecords.length>1?("打印 "+state.selectedRecords.length+" 条记录"):"打印当前记录";
-  $("prevRecord").disabled=state.selectedRecords.length<=1||currentIndex<=0;
-  $("nextRecord").disabled=state.selectedRecords.length<=1||currentIndex>=state.selectedRecords.length-1;
+  const multi=state.selectedRecords.length>1;
+  $("prevRecord").hidden=!multi;$("nextRecord").hidden=!multi;
+  $("prevRecord").disabled=!multi||currentIndex<=0;
+  $("nextRecord").disabled=!multi||currentIndex>=state.selectedRecords.length-1;
 }
 
 function validateRecord(rec){
