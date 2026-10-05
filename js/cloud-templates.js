@@ -168,6 +168,9 @@ export async function upsertCloudTemplate(bitable,template){
   const latest=same.sort((a,b)=>rowTime(b)-rowTime(a))[0]||null;
   const localTime=asNumber(template.updatedAt)||Date.now();
 
+  if(latest&&rowTime(latest)>localTime){
+    return{skipped:true,reason:isDeleted(latest)?"cloud-deleted-newer":"cloud-newer"};
+  }
   if(latest&&isDeleted(latest)&&rowTime(latest)>=localTime){
     return{skipped:true,reason:"cloud-deleted-newer"};
   }
