@@ -85,6 +85,7 @@ async function printAll(){
 function payloadIdentity(data){
   try{return JSON.stringify({
     tid:data?.template?.id||"",tUpdated:data?.template?.updatedAt||0,
+    telements:data?.template?.elements||[],tpage:data?.template?.page||{},
     rid:data?.record?.id||"",rdata:data?.record?.data||{},
     selected:(data?.selectedRecords||[]).map(r=>[r.id,r.data])
   })}catch{return""}
