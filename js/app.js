@@ -440,7 +440,7 @@ async function init(){
     if(e.data?.type==="SUPER_PRINT_REFRESH_IMAGES"){
       const id=String(e.data.recordId||activeRecord()?.id||"");
       const rec=state.selectedRecords.find(r=>String(r.id)===id)||((state.record&&String(state.record.id)===id)?state.record:activeRecord());
-      if(rec)recoverPreviewImage(rec,"child:"+id+":"+Date.now());
+      if(rec)recoverPreviewImage(rec,"child:"+id);
     }
   });
   window.addEventListener("focus",()=>{
