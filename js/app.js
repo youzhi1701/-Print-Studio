@@ -1,11 +1,11 @@
-import {mountBuildVersion} from "./version.js?v=20261005-21";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-21";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-21";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-21";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-21";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-21";
-import {printTemplateRecords} from "./print.js?v=20261005-21";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261005-21";
+import {mountBuildVersion} from "./version.js?v=20261005-22";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-22";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-22";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-22";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-22";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-22";
+import {printTemplateRecords} from "./print.js?v=20261005-22";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261005-22";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
@@ -32,7 +32,27 @@ function showCompat(message,extra=""){
 function hideCompat(){$("compatPanel")?.classList.add("hidden")}
 
 function activeTemplate(){return state.templates.find(t=>t.id===state.activeTemplateId)||state.templates[0]}
-function fillTemplates(){const s=$("templateSelect");s.innerHTML="";state.templates.forEach(t=>{const o=document.createElement("option");o.value=t.id;o.textContent=t.name;s.appendChild(o)});if(state.activeTemplateId)s.value=state.activeTemplateId}
+function renderTemplateLibrary(){
+  const list=$("templateLibraryList"),count=$("templateLibraryCount");
+  if(!list)return;
+  if(count)count.textContent=state.templates.length+" 个模板";
+  if(!state.templates.length){list.innerHTML='<div class="template-library-empty">暂无模板</div>';return}
+  list.innerHTML=state.templates.map(t=>{
+    const active=t.id===state.activeTemplateId;
+    const size=(Number(t.page?.width)||215)+"×"+(Number(t.page?.height)||140);
+    const tag=t.id==="tpl_shipping_215x140"?"内置":(t.status==="published"?"已发布":"自定义");
+    return '<button type="button" class="template-library-item'+(active?" active":"")+'" data-template-id="'+String(t.id).replace(/"/g,"&quot;")+'"><strong>'+String(t.name||"未命名模板").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]))+'</strong><span><em>'+size+' mm</em><em>'+tag+'</em></span></button>';
+  }).join("");
+}
+function fillTemplates(){
+  const s=$("templateSelect");
+  if(s){
+    s.innerHTML="";
+    state.templates.forEach(t=>{const o=document.createElement("option");o.value=t.id;o.textContent=t.name;s.appendChild(o)});
+    if(state.activeTemplateId)s.value=state.activeTemplateId;
+  }
+  renderTemplateLibrary();
+}
 function persistActiveTemplate(){
   const currentSettings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
   storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
@@ -274,7 +294,12 @@ async function init(){
   state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
   fillTemplates();
 
-  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;persistActiveTemplate();autoBind();syncBridge();await renderPreview()};
+  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview()};
+  $("templateLibraryList")?.addEventListener("click",async e=>{
+    const item=e.target.closest("[data-template-id]");if(!item)return;
+    state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview(true);
+  });
+  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);fillTemplates();toast(r?"模板库已同步":"模板库同步失败")};
   $("recordChooser").onclick=()=>chooseBatch(true);
   $("chooseBatch").onclick=()=>chooseBatch(false);
   $("prevRecord").onclick=async()=>{if(currentIndex>0){currentIndex--;syncBridge();await renderPreview()}};
