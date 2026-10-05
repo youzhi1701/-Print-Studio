@@ -131,8 +131,32 @@ function normalizeTemplateTables(template){
   template.schemaVersion=7;
   return template
 }
+function finite(v,fallback,min=-Infinity,max=Infinity){
+  const n=Number(v);const x=Number.isFinite(n)?n:fallback;return Math.max(min,Math.min(max,x))
+}
+function normalizeGeometry(el,p){
+  if(!el||typeof el!=="object")return el;
+  const minH=el.type==="line"?.1:.5;
+  el.w=finite(el.w,20,.5,p.width);
+  el.h=finite(el.h,8,minH,p.height);
+  el.x=finite(el.x,0,0,Math.max(0,p.width-el.w));
+  el.y=finite(el.y,0,0,Math.max(0,p.height-el.h));
+  if("fontSize" in el)el.fontSize=finite(el.fontSize,10,5,96);
+  if("borderWidth" in el)el.borderWidth=finite(el.borderWidth,.5,.1,10);
+  if("barcodeFontSize" in el)el.barcodeFontSize=finite(el.barcodeFontSize,8,5,48);
+  return el
+}
 export function normalizeTemplateObject(t){
   const legacy=Number(t?.schemaVersion||1)<7;
+  const rawPage=t?.page||{};
+  const normalizedPage={
+    width:finite(rawPage.width,215,20,1000),
+    height:finite(rawPage.height,140,20,1000),
+    margin:finite(rawPage.margin,5,0,50),
+    safeArea:finite(rawPage.safeArea,4,0,50)
+  };
+  normalizedPage.orientation=normalizedPage.width>=normalizedPage.height?"landscape":"portrait";
+  normalizedPage.safeArea=Math.min(normalizedPage.safeArea,normalizedPage.width/2,normalizedPage.height/2);
   const tpl={
     ...t,
     schemaVersion:7,
@@ -140,8 +164,12 @@ export function normalizeTemplateObject(t){
     description:t?.description||"",
     tags:Array.isArray(t?.tags)?t.tags:[],
     status:t?.status||"draft",
-    page:{width:215,height:140,orientation:"landscape",margin:5,safeArea:4,...(t?.page||{})},
-    printSettings:{scale:100,offsetX:0,offsetY:0,...(t?.printSettings||{})},
+    page:normalizedPage,
+    printSettings:{
+      scale:finite(t?.printSettings?.scale,100,90,110),
+      offsetX:finite(t?.printSettings?.offsetX,0,-20,20),
+      offsetY:finite(t?.printSettings?.offsetY,0,-20,20)
+    },
     elements:Array.isArray(t?.elements)?t.elements.map(el=>{
       if(el.type==="table"){
         const cols=Array.isArray(el.columns)?el.columns.map((col,i)=>typeof col==="string"?{id:uid("col"),title:col,field:col,width:null,align:i===0?"left":"center"}:{id:col.id||uid("col"),...col}):[];
@@ -161,6 +189,7 @@ export function normalizeTemplateObject(t){
       return el
     }):[]
   };
+  tpl.elements=tpl.elements.map(el=>normalizeGeometry(el,tpl.page));
   normalizeTemplateTables(tpl);
   return tpl;
 }
