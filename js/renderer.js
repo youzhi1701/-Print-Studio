@@ -24,7 +24,7 @@ function cellHtml(v,imageFit="contain"){
 
 function renderTable(el,rootData,common){
   const layout=buildTableLayout(el,rootData,el.hideEmptyColumns===true);
-  const {rows,cols,cellRows,hasAny}=layout;
+  const {rows,cols,cellRows,hasAny,totalHeight}=layout;
   const bw=el.borderWidth??.5;
   if(!hasAny&&el.emptyBehavior==="hide")return"";
 
@@ -37,12 +37,13 @@ function renderTable(el,rootData,common){
       const pad=isImageValue(cell.value)?0:cell.cfg.padding;
       const rowspan=cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"";
       const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
-      return '<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'px;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'normal':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
+      return '<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'normal':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
     return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  return '<div style="'+common+'"><table style="width:100%;height:100%;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+head+'<tbody>'+body+'</tbody></table></div>';
+  const tableCommon=common.replace(/height:[^;]+;/,'height:'+totalHeight+'mm;');
+  return '<div style="'+tableCommon+'"><table style="width:100%;height:'+totalHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+head+'<tbody>'+body+'</tbody></table></div>';
 }
 
 export function renderTemplateToHtml(tpl,data={}){
