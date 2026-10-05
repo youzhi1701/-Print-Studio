@@ -5,7 +5,7 @@ import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
 
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0;let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
+let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -46,17 +46,33 @@ function validateRecord(rec){
   bar.className="preview-health ok";text.textContent="数据正常";
 }
 
-async function renderPreview(){
+function previewKey(rec,tpl){
+  try{return JSON.stringify({
+    rid:rec?.id||"",
+    data:rec?.data||{},
+    tid:tpl?.id||"",
+    updatedAt:tpl?.updatedAt||0,
+    elements:tpl?.elements||[],
+    page:tpl?.page||{},
+    index:currentIndex
+  })}catch{return String(Date.now())}
+}
+async function renderPreview(force=false){
   const rec=activeRecord(),tpl=activeTemplate();
   $("previewEmpty").classList.toggle("hidden",!!rec);
+  updateRecordMeta();validateRecord(rec);
   const host=$("previewHost");
-  host.innerHTML="";
-  if(!rec||!tpl){updateRecordMeta();validateRecord(rec);return}
-  host.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
+  if(!rec||!tpl){
+    if(force||lastPreviewKey!=="empty"){host.innerHTML="";lastPreviewKey="empty"}
+    return
+  }
+  const key=previewKey(rec,tpl);
+  if(!force&&key===lastPreviewKey)return;
+  lastPreviewKey=key;
+  const html=renderTemplateToHtml(tpl,rec.data||{});
+  if(host.innerHTML!==html)host.innerHTML=html;
   await hydrateCodes(host);
-  fitPreview();
-  updateRecordMeta();
-  validateRecord(rec);
+  requestAnimationFrame(fitPreview);
 }
 
 function applyPreviewTransform(){
@@ -244,7 +260,7 @@ async function init(){
   window.addEventListener("message",e=>{
     if(e.data?.type==="SUPER_PRINT_TEMPLATE_SAVE"&&e.data.template)applyDesignerTemplate(e.data.template);
   });
-  window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderPreview()});
+  window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderPreview(false)});
 
   await refresh();
   try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}
