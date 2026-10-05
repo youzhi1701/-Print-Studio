@@ -101,7 +101,15 @@ export function materializeTableRows(el,data={}){
   ensureTableModel(el,data);
   const source=sourceRowsForTable(el,data).slice(0,el.maxRows||5);
   const defs=el.rowDefs||[];
-  const dataDefs=defs.filter(r=>r.type==="data");
+  let dataDefs=defs.filter(r=>r.type==="data");
+  if(source.length>dataDefs.length){
+    let at=defs.reduce((last,r,i)=>r.type==="data"?i+1:last,0);
+    for(let n=dataDefs.length;n<source.length;n++){
+      const def={id:id("row"),type:"data",height:Number(el.rowHeight)||8};
+      defs.splice(at++,0,def);
+    }
+    dataDefs=defs.filter(r=>r.type==="data");
+  }
   const out=[];
   let si=0;
   for(const def of defs){
