@@ -663,7 +663,12 @@ function startMove(ev,e){
     let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;
     if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}
     ({dx,dy}=smartSnapDelta(start,dx,dy));
-    for(const a of start){const page=current().page||{width:215,height:140};a.x.x=Math.max(0,Math.min(a.ox+dx,Math.max(0,page.width-a.x.w)));a.x.y=Math.max(0,Math.min(a.oy+dy,Math.max(0,page.height-a.x.h)));updateElementNodeGeometry(a.x)}
+    const page=current().page||{width:215,height:140};
+    const groupLeft=Math.min(...start.map(a=>a.ox)),groupRight=Math.max(...start.map(a=>a.ox+a.x.w));
+    const groupTop=Math.min(...start.map(a=>a.oy)),groupBottom=Math.max(...start.map(a=>a.oy+a.x.h));
+    dx=Math.max(-groupLeft,Math.min(dx,page.width-groupRight));
+    dy=Math.max(-groupTop,Math.min(dy,page.height-groupBottom));
+    for(const a of start){a.x.x=a.ox+dx;a.x.y=a.oy+dy;updateElementNodeGeometry(a.x)}
     syncGeometryProps(selectedOne());
   };
   const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);renderElements();syncProps();pushHistory();autoSave()};
