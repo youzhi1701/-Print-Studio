@@ -3,11 +3,12 @@ const FIELD_TEMPLATE_NAME="模板名称";
 const FIELD_TEMPLATE_JSON="模板JSON";
 const FIELD_UPDATED_AT="更新时间";
 const FIELD_STATUS="状态";
-const BUILTIN_TEMPLATE_ID="tpl_shipping_215x140";
+const LEGACY_BUILTIN_TEMPLATE_ID="tpl_shipping_215x140";
 const STATUS_DELETED="deleted";
 const TEXT_FIELD_TYPE=1;
 
 function asNumber(v){const n=Number(v);return Number.isFinite(n)?n:0}
+function isBuiltinId(id){const s=String(id||"");return s===LEGACY_BUILTIN_TEMPLATE_ID||s.startsWith("tpl_builtin_")||["tpl_packing_a5","tpl_shipping_100x150","tpl_address_100x60","tpl_product_70x50","tpl_price_60x40","tpl_barcode_50x30","tpl_qr_50x50","tpl_jewelry_70x30"].includes(s)}
 function deepClone(v){return typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v))}
 function rowTime(row){return Math.max(asNumber(row?.updatedAt),asNumber(row?.template?.updatedAt))}
 function isDeleted(row){return String(row?.status||"").toLowerCase()===STATUS_DELETED}
@@ -161,7 +162,7 @@ async function writeDeletedRow(table,ids,rows,templateId,deletedAt=Date.now()){
 }
 
 export async function upsertCloudTemplate(bitable,template){
-  if(!template?.id||template.id===BUILTIN_TEMPLATE_ID)return{skipped:true};
+  if(!template?.id||isBuiltinId(template.id))return{skipped:true};
   const schema=await ensureCloudTable(bitable);
   const rows=await readCloudRowsFromSchema(schema);
   const same=rows.filter(r=>r.id===String(template.id));
@@ -188,7 +189,7 @@ export async function upsertCloudTemplate(bitable,template){
 }
 
 export async function deleteCloudTemplate(bitable,templateId,deletedAt=Date.now()){
-  if(!templateId||templateId===BUILTIN_TEMPLATE_ID)return{deleted:false,skipped:true};
+  if(!templateId||isBuiltinId(templateId))return{deleted:false,skipped:true};
   const schema=await ensureCloudTable(bitable);
   const rows=await readCloudRowsFromSchema(schema);
   const recordId=await writeDeletedRow(schema.table,schema.ids,rows,templateId,deletedAt);
@@ -196,7 +197,7 @@ export async function deleteCloudTemplate(bitable,templateId,deletedAt=Date.now(
 }
 
 export async function syncTemplatesWithCloud(bitable,localTemplates=[],deletedIds=[]){
-  const deletedSet=new Set((deletedIds||[]).filter(id=>id&&id!==BUILTIN_TEMPLATE_ID).map(String));
+  const deletedSet=new Set((deletedIds||[]).filter(id=>id&&!isBuiltinId(id)).map(String));
   const schema=await ensureCloudTable(bitable);
   let rows=await readCloudRowsFromSchema(schema);
 
@@ -213,12 +214,12 @@ export async function syncTemplatesWithCloud(bitable,localTemplates=[],deletedId
 
   const grouped=new Map();
   for(const row of rows){
-    if(row.id===BUILTIN_TEMPLATE_ID)continue;
+    if(isBuiltinId(row.id))continue;
     const arr=grouped.get(row.id)||[];
     arr.push(row);grouped.set(row.id,arr);
   }
 
-  const cloudById=latestById(rows.filter(r=>r.id!==BUILTIN_TEMPLATE_ID));
+  const cloudById=latestById(rows.filter(r=>!isBuiltinId(r.id)));
   for(const [id,arr] of grouped){
     const keep=cloudById.get(id);
     if(keep&&arr.length>1)await removeDuplicateRows(schema.table,arr,keep.recordId);
@@ -258,7 +259,7 @@ export async function syncTemplatesWithCloud(bitable,localTemplates=[],deletedId
   }
 
   for(const tpl of result){
-    if(!tpl?.id||tpl.id===BUILTIN_TEMPLATE_ID||deletedSet.has(String(tpl.id)))continue;
+    if(!tpl?.id||isBuiltinId(tpl.id)||deletedSet.has(String(tpl.id)))continue;
     const row=cloudById.get(String(tpl.id));
     const localTime=asNumber(tpl.updatedAt);
     const cloudTime=row?rowTime(row):0;
