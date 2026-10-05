@@ -141,6 +141,7 @@ function normalizeTemplate(t){
     tags:Array.isArray(t?.tags)?t.tags:[],
     status:t?.status||"draft",
     page:{width:215,height:140,orientation:"landscape",margin:5,safeArea:4,...(t?.page||{})},
+    printSettings:{scale:100,offsetX:0,offsetY:0,...(t?.printSettings||{})},
     elements:Array.isArray(t?.elements)?t.elements.map(el=>{
       if(el.type==="table"){
         const cols=Array.isArray(el.columns)?el.columns.map((col,i)=>typeof col==="string"?{id:uid("col"),title:col,field:col,width:null,align:i===0?"left":"center"}:{id:col.id||uid("col"),...col}):[];
@@ -192,7 +193,7 @@ export function saveTemplates(list){
   storageSet(STORAGE_KEYS.templates,JSON.stringify(list||[]))
 }
 export function createTemplate(name="未命名模板",p={width:215,height:140}){
-  return{id:uid("tpl"),schemaVersion:7,name,category:"自定义",description:"",tags:[],status:"draft",page:{...p,orientation:p.width>=p.height?"landscape":"portrait",margin:5,safeArea:4},elements:[],createdAt:Date.now(),updatedAt:Date.now()}
+  return{id:uid("tpl"),schemaVersion:7,name,category:"自定义",description:"",tags:[],status:"draft",page:{...p,orientation:p.width>=p.height?"landscape":"portrait",margin:5,safeArea:4},printSettings:{scale:100,offsetX:0,offsetY:0},elements:[],createdAt:Date.now(),updatedAt:Date.now()}
 }
 export function importTemplateObject(input,existing=[]){
   const raw=input?.template&&typeof input.template==="object"?input.template:input;
@@ -205,6 +206,7 @@ export function importTemplateObject(input,existing=[]){
   tpl.category=tpl.category||"自定义";
   tpl.status=tpl.status||"draft";
   tpl.page={width:215,height:140,orientation:"landscape",margin:5,safeArea:4,...(tpl.page||{})};
+  tpl.printSettings={scale:100,offsetX:0,offsetY:0,...(tpl.printSettings||{})};
   tpl.createdAt=Number(tpl.createdAt)||Date.now();
   tpl.updatedAt=Date.now();
   normalizeTemplateTables(tpl);
