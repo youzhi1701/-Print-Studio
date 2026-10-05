@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261006-02";
+} from "./table-model.js?v=20261006-03";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
@@ -67,7 +67,7 @@ export function renderTemplateToHtml(tpl,data={}){
     }
     if(el.type==="barcode"){
       const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
-      return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'" style="display:block;width:100%;flex:1 1 auto;min-height:0;max-height:100%"></svg>'+(el.showText===false?'':'<small style="display:block;flex:0 0 auto;font-size:'+(el.barcodeFontSize||8)+'px;line-height:1.15;white-space:nowrap">'+esc(v)+'</small>')+'</div>';
+      return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px"><svg class="barcode" data-value="'+esc(v)+'" data-field="'+esc(el.field||"")+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'" style="display:block;width:100%;flex:1 1 auto;min-height:0;max-height:100%"></svg>'+(el.showText===false?'':'<small style="display:block;flex:0 0 auto;font-size:'+(el.barcodeFontSize||8)+'px;line-height:1.15;white-space:nowrap">'+esc(v)+'</small>')+'</div>';
     }
     if(el.type==="qrcode"){
       const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
@@ -99,7 +99,19 @@ export async function hydrateCodes(root){
     ]);
     const JsBarcode=mod.default||mod;
     root.querySelectorAll("svg.barcode").forEach(svg=>{
-      try{JsBarcode(svg,svg.dataset.value||"",{format:svg.dataset.format||"CODE128",displayValue:false,margin:0,height:42});svg.dataset.hydrated="1"}catch{}
+      const value=String(svg.dataset.value||"");
+      const format=String(svg.dataset.format||"CODE128").toUpperCase();
+      delete svg.dataset.error;delete svg.dataset.hydrated;
+      if(format==="EAN13"&&!/^\d{12,13}$/.test(value)){
+        svg.dataset.error="EAN13 需要 12 或 13 位数字";
+        return;
+      }
+      try{
+        JsBarcode(svg,value,{format,displayValue:false,margin:0,height:42});
+        svg.dataset.hydrated="1";
+      }catch(err){
+        svg.dataset.error=err?.message||"条码数据无效";
+      }
     })
   }catch(err){console.warn("条码模块加载失败",err)}
   try{
