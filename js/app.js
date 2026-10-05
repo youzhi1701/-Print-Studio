@@ -59,6 +59,7 @@ function updateRecordMeta(){
   $("prevRecord").hidden=!multi;$("nextRecord").hidden=!multi;
   $("prevRecord").disabled=!multi||currentIndex<=0;
   $("nextRecord").disabled=!multi||currentIndex>=state.selectedRecords.length-1;
+  $("printCurrent").textContent=multi?("打印所选 "+state.selectedRecords.length+" 条"):"打印当前记录";
 }
 
 function validateRecord(rec){
