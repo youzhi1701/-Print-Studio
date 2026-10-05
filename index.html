@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>超级打印</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261006-01">
-  <link rel="stylesheet" href="./css/sidebar.css?v=20261006-01">
-  <link rel="stylesheet" href="./css/print.css?v=20261006-01" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261006-02">
+  <link rel="stylesheet" href="./css/sidebar.css?v=20261006-02">
+  <link rel="stylesheet" href="./css/print.css?v=20261006-02" media="print">
 </head>
 <body class="aurora-app">
   <div class="aurora-layer" aria-hidden="true"></div>
@@ -16,7 +16,7 @@
     <header class="quick-header glass-card">
       <div class="quick-brand">
         <div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div>
-        <div><h1>超级打印</h1><p>快速打印 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-01</span></p></div>
+        <div><h1>超级打印</h1><p>快速打印 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-02</span></p></div>
       </div>
       <div class="quick-header-actions">
         <button id="openDesigner" class="header-icon" title="设计模板">↗</button>
@@ -33,18 +33,21 @@
           <small id="recordSub">点击选择</small>
         </button>
       </div>
-      <div class="meta-row template-current-row">
-        <span class="meta-label">模板</span>
-        <select id="templateSelect" class="meta-select template-select-fallback" aria-label="当前模板"></select>
-      </div>
     </section>
 
     <section class="template-library glass-card" aria-label="模板库">
       <div class="template-library-head">
         <div><span class="mini-bars"><i></i><i></i><i></i></span><b>模板库</b><small id="templateLibraryCount">0 个模板</small><small id="templateLibraryState" data-state="">本地</small></div>
-        <button id="templateLibrarySync" type="button">同步</button>
+        <button id="templateLibrarySync" type="button" title="同步自定义模板到云端">同步</button>
+      </div>
+      <div class="template-library-tools">
+        <input id="templateLibrarySearch" type="search" placeholder="搜索模板、尺寸或用途" aria-label="搜索模板">
+        <select id="templateCategoryFilter" aria-label="模板分类">
+          <option value="全部">全部分类</option>
+        </select>
       </div>
       <div id="templateLibraryList" class="template-library-list"></div>
+      <div id="templateLibraryEmpty" class="template-library-empty hidden">没有匹配的模板</div>
     </section>
 
     <section class="preview-card glass-card">
@@ -91,12 +94,9 @@
 
   <div id="moreMenu" class="more-menu hidden">
     <button id="refreshData">重新同步数据</button>
-    <button id="chooseOne">选择记录</button>
-    <button id="syncCloudTemplates">立即同步云端模板</button>
     <button id="exportTemplate">导出当前模板</button>
     <button id="importTemplate">导入模板</button>
     <button id="deleteTemplate">删除当前模板</button>
-    <button id="openDesignerMenu">设计模板</button>
     <input id="importTemplateFile" type="file" accept="application/json,.json,.superprint.json" hidden>
   </div>
 
@@ -114,6 +114,6 @@
     </div>
   </div>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="./app.js?v=20261006-01"></script>
+  <script type="module" src="./app.js?v=20261006-02"></script>
 </body>
 </html>
