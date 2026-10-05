@@ -378,7 +378,7 @@ function clearSelectedTableCells(){
 }
 function copySelectedTableCells(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
-  const {rows,cols}=tableAxes(e),matrix=[];
+  const {rows,cols}=tableAxes(e),matrix=[],merges=[];
   for(let r=b.r0;r<=b.r1;r++){
     const line=[];
     for(let col=b.c0;col<=b.c1;col++){
@@ -387,18 +387,33 @@ function copySelectedTableCells(){
     }
     matrix.push(line)
   }
-  tableClipboard={rows:matrix.length,cols:matrix[0]?.length||0,matrix};
+  for(const m of e.merges||[]){
+    const ris=(m.rowIds||[]).map(id=>rows.findIndex(r=>r.id===id)).filter(i=>i>=0);
+    const cis=(m.colIds||[]).map(id=>cols.findIndex(col=>col.id===id)).filter(i=>i>=0);
+    if(!ris.length||!cis.length)continue;
+    const r0=Math.min(...ris),r1=Math.max(...ris),c0=Math.min(...cis),c1=Math.max(...cis);
+    if(r0>=b.r0&&r1<=b.r1&&c0>=b.c0&&c1<=b.c1)merges.push({r0:r0-b.r0,r1:r1-b.r0,c0:c0-b.c0,c1:c1-b.c0});
+  }
+  tableClipboard={rows:matrix.length,cols:matrix[0]?.length||0,matrix,merges};
   toast("已复制 "+tableClipboard.rows+"×"+tableClipboard.cols+" 单元格")
 }
 function pasteSelectedTableCells(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b||!tableClipboard)return;
   const {rows,cols}=tableAxes(e);
+  const target={r0:b.r0,r1:Math.min(rows.length-1,b.r0+tableClipboard.rows-1),c0:b.c0,c1:Math.min(cols.length-1,b.c0+tableClipboard.cols-1)};
+  unmergeVisualRange(e,rows,cols,target);
   for(let dr=0;dr<tableClipboard.rows;dr++)for(let dc=0;dc<tableClipboard.cols;dc++){
-    const row=rows[b.r0+dr],col=cols[b.c0+dc];if(!row||!col||tmIsCoveredCell(e,row.id,col.id))continue;
+    const row=rows[b.r0+dr],col=cols[b.c0+dc];if(!row||!col)continue;
     const value=tableClipboard.matrix[dr][dc];
     tmSetCellOverride(e,row.id,col.id,value?structuredClone(value):null);
   }
-  commitTableEdit("已粘贴单元格")
+  for(const m of tableClipboard.merges||[]){
+    const range={r0:b.r0+m.r0,r1:b.r0+m.r1,c0:b.c0+m.c0,c1:b.c0+m.c1};
+    if(range.r1<rows.length&&range.c1<cols.length)mergeVisualRange(e,rows,cols,range);
+  }
+  selectedCells=[];for(let r=target.r0;r<=target.r1;r++)for(let col=target.c0;col<=target.c1;col++)selectedCells.push({row:r,col});
+  tableSelectionAnchor={row:target.r0,col:target.c0};
+  commitTableEdit("已粘贴 "+tableClipboard.rows+"×"+tableClipboard.cols+" 单元格")
 }
 function selectionHasMerge(e){
   return tableSelectionModelCells(e).some(x=>tmMergeForCell(e,x.row.id,x.col.id))
