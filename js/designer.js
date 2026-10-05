@@ -178,7 +178,8 @@ function tableCellConfig(e,row,col,column){
 function tableCellValue(cfg,row,data,column){
   if(cfg.type==="text")return cfg.text||"";
   const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
-  return row?.[field]??data?.[field]??""
+  if(row?.__manualBlank&&cfg.type==="inherit")return "";
+  return row?.[field]??((cfg.type==="field"||cfg.type==="image")?data?.[field]:"")??""
 }
 function tableColumnsForPreview(e,rows,data){
   const cols=normalizeColumns(e.columns).map((col,i)=>({...col,_index:i}));
@@ -269,9 +270,9 @@ function content(n,e){
   if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
   if(e.type==="table"){
     const sourceRows=rowsForTable(e,data).slice(0,e.maxRows||5);
-    const rows=(sourceRows.length?sourceRows:[{}]).map(r=>r||{});
+    const rows=(sourceRows.length?sourceRows:[{}]).map(r=>({...((r&&typeof r==="object")?r:{}),__sourceRow:true}));
     const wanted=Math.max(rows.length,Number(e.designRowCount)||1);
-    while(rows.length<wanted)rows.push({});
+    while(rows.length<wanted)rows.push({__manualBlank:true});
     const cols=tableColumnsForPreview(e,rows,data);
     const configuredCols=normalizeColumns(e.columns);
     const hasAnyData=sourceRows.some(row=>configuredCols.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
@@ -379,6 +380,9 @@ function mergeSelectedCells(){
   if(!selectionIsRectangle()){toast("合并区域必须是连续矩形");return}
   e.merges=(e.merges||[]).filter(m=>!mergeIntersects(m,b));
   e.merges.push({row:b.r0,col:b.c0,rowSpan:b.r1-b.r0+1,colSpan:b.c1-b.c0+1});
+  e.cells={...(e.cells||{})};
+  const anchorKey=tableCellKey(b.r0,b.c0);
+  if(!e.cells[anchorKey])e.cells[anchorKey]={type:"text",text:"",align:"center",valign:"middle",padding:2,wrap:true,imageFit:e.tableImageFit||"contain",mergeDefault:true};
   selectedCells=[];for(let r=b.r0;r<=b.r1;r++)for(let col=b.c0;col<=b.c1;col++)selectedCells.push({row:r,col});
   tableSelectionAnchor={row:b.r0,col:b.c0};
   commitTableEdit("已合并 "+(b.r1-b.r0+1)+"×"+(b.c1-b.c0+1)+" 区域")
@@ -386,9 +390,27 @@ function mergeSelectedCells(){
 function unmergeSelectedCells(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
   const before=(e.merges||[]).length;
+  const removed=(e.merges||[]).filter(m=>mergeIntersects(m,b));
   e.merges=(e.merges||[]).filter(m=>!mergeIntersects(m,b));
+  e.cells={...(e.cells||{})};
+  for(const m of removed){
+    const k=tableCellKey(m.row,m.col);
+    if(e.cells[k]?.mergeDefault)delete e.cells[k];
+  }
   commitTableEdit(before===e.merges.length?"当前区域没有合并":"已取消合并")
 }
+function remapCellOverrides(e,mapper){
+  const next={};
+  for(const [key,value] of Object.entries(e.cells||{})){
+    const [r,c]=key.split(":").map(Number),mapped=mapper(r,c);
+    if(mapped)next[tableCellKey(mapped.row,mapped.col)]=value;
+  }
+  e.cells=next;
+}
+function shiftCellsRowInsert(e,index){remapCellOverrides(e,(r,c)=>({row:r>=index?r+1:r,col:c}))}
+function shiftCellsRowDelete(e,index){remapCellOverrides(e,(r,c)=>r===index?null:{row:r>index?r-1:r,col:c})}
+function shiftCellsColInsert(e,index){remapCellOverrides(e,(r,c)=>({row:r,col:c>=index?c+1:c}))}
+function shiftCellsColDelete(e,index){remapCellOverrides(e,(r,c)=>c===index?null:{row:r,col:c>index?c-1:c})}
 function shiftRowHeightsOnInsert(e,index){
   const src=e.rowHeights||{},next={};
   Object.entries(src).forEach(([k,v])=>{const r=Number(k);next[r>=index?r+1:r]=v});
@@ -420,7 +442,7 @@ function insertTableRowAt(where="below"){
   const b=tableSelectionBounds(),base=b?(where==="above"?b.r0:b.r1+1):Math.max(1,Number(e.designRowCount)||1);
   const currentRows=Math.max(Number(e.designRowCount)||1,(b?.r1??0)+1);
   const index=Math.max(0,Math.min(base,currentRows));
-  e.designRowCount=currentRows+1;shiftRowHeightsOnInsert(e,index);transformMergesRowInsert(e,index);
+  e.designRowCount=currentRows+1;shiftRowHeightsOnInsert(e,index);shiftCellsRowInsert(e,index);transformMergesRowInsert(e,index);
   selectedCells=normalizeColumns(e.columns).map((_,col)=>({row:index,col}));tableSelectionAnchor={row:index,col:0};
   commitTableEdit(where==="above"?"已在上方插入行":"已在下方插入行")
 }
@@ -429,7 +451,7 @@ function deleteSelectedRows(){
   let total=Math.max(Number(e.designRowCount)||1,b.r1+1),indexes=[];
   for(let r=b.r0;r<=b.r1;r++)indexes.push(r);
   if(indexes.length>=total){toast("表格至少保留一行");return}
-  indexes.sort((a,b)=>b-a).forEach(index=>{shiftRowHeightsOnDelete(e,index);transformMergesRowDelete(e,index);total--});
+  indexes.sort((a,b)=>b-a).forEach(index=>{shiftRowHeightsOnDelete(e,index);shiftCellsRowDelete(e,index);transformMergesRowDelete(e,index);total--});
   e.designRowCount=Math.max(1,total);
   const row=Math.min(b.r0,e.designRowCount-1),col=Math.min(b.c0,normalizeColumns(e.columns).length-1);
   selectedCells=[{row,col}];tableSelectionAnchor={row,col};commitTableEdit("已删除 "+indexes.length+" 行")
@@ -458,7 +480,7 @@ function insertTableColumnAt(where="right"){
   let nw=20;
   if(neighbor){nw=Math.max(8,Number(neighbor.width)/2);neighbor.width=Math.max(8,Number(neighbor.width)-nw)}
   cols.splice(index,0,{id:uid("col"),title:"新列",field:"",width:nw,align:"center"});
-  e.columns=cols;transformMergesColInsert(e,index);e.columns=normalizeColumns(e.columns);
+  e.columns=cols;shiftCellsColInsert(e,index);transformMergesColInsert(e,index);e.columns=normalizeColumns(e.columns);
   const row=b?.r0??0;selectedCells=[{row,col:index}];tableSelectionAnchor={row,col:index};
   commitTableEdit(where==="left"?"已在左侧插入列":"已在右侧插入列")
 }
@@ -466,7 +488,7 @@ function deleteSelectedColumns(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
   const cols=normalizeColumns(e.columns),indexes=[];for(let col=b.c0;col<=b.c1;col++)indexes.push(col);
   if(indexes.length>=cols.length){toast("表格至少保留一列");return}
-  indexes.sort((a,b)=>b-a).forEach(index=>{cols.splice(index,1);transformMergesColDelete(e,index)});
+  indexes.sort((a,b)=>b-a).forEach(index=>{cols.splice(index,1);shiftCellsColDelete(e,index);transformMergesColDelete(e,index)});
   e.columns=normalizeColumns(cols);
   const col=Math.min(b.c0,e.columns.length-1),row=b.r0;selectedCells=[{row,col}];tableSelectionAnchor={row,col};
   commitTableEdit("已删除 "+indexes.length+" 列")
