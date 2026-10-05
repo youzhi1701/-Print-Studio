@@ -181,10 +181,29 @@ function tableColumnsForPreview(e,rows,data){
   return visible.map(col=>({...col,_index:all.findIndex(c=>c.id===col.id)}))
 }
 function cellKey(row,col){return row+":"+col}
-function setCellRectSelection(a,b){
-  const r0=Math.min(a.row,b.row),r1=Math.max(a.row,b.row),c0=Math.min(a.col,b.col),c1=Math.max(a.col,b.col);
+function expandedTableRange(e,a,b){
+  let range={r0:Math.min(a.row,b.row),r1:Math.max(a.row,b.row),c0:Math.min(a.col,b.col),c1:Math.max(a.col,b.col)};
+  const {rows,cols}=tableAxes(e);
+  let changed=true,guard=0;
+  while(changed&&guard++<20){
+    changed=false;
+    for(const m of e.merges||[]){
+      const ris=(m.rowIds||[]).map(id=>rows.findIndex(r=>r.id===id)).filter(i=>i>=0);
+      const cis=(m.colIds||[]).map(id=>cols.findIndex(c=>c.id===id)).filter(i=>i>=0);
+      if(!ris.length||!cis.length)continue;
+      const mr0=Math.min(...ris),mr1=Math.max(...ris),mc0=Math.min(...cis),mc1=Math.max(...cis);
+      const intersects=!(mr1<range.r0||mr0>range.r1||mc1<range.c0||mc0>range.c1);
+      if(!intersects)continue;
+      const next={r0:Math.min(range.r0,mr0),r1:Math.max(range.r1,mr1),c0:Math.min(range.c0,mc0),c1:Math.max(range.c1,mc1)};
+      if(next.r0!==range.r0||next.r1!==range.r1||next.c0!==range.c0||next.c1!==range.c1){range=next;changed=true}
+    }
+  }
+  return range
+}
+function setCellRectSelection(a,b,e){
+  const range=e?expandedTableRange(e,a,b):{r0:Math.min(a.row,b.row),r1:Math.max(a.row,b.row),c0:Math.min(a.col,b.col),c1:Math.max(a.col,b.col)};
   selectedCells=[];
-  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)selectedCells.push({row:r,col:c});
+  for(let r=range.r0;r<=range.r1;r++)for(let c=range.c0;c<=range.c1;c++)selectedCells.push({row:r,col:c});
 }
 function tableSelectionBounds(){
   if(!selectedCells.length)return null;
@@ -196,14 +215,14 @@ function selectTableCell(ev,e,row,col){
   selected=new Set([e.id]);
   const cell={row,col};
   if(ev.shiftKey&&tableSelectionAnchor){
-    setCellRectSelection(tableSelectionAnchor,cell);
+    setCellRectSelection(tableSelectionAnchor,cell,e);
   }else if(ev.ctrlKey||ev.metaKey){
     const key=cellKey(row,col),exists=selectedCells.some(s=>cellKey(s.row,s.col)===key);
     selectedCells=exists?selectedCells.filter(s=>cellKey(s.row,s.col)!==key):[...selectedCells,cell];
     if(!tableSelectionAnchor)tableSelectionAnchor=cell;
   }else{
     tableSelectionAnchor=cell;
-    selectedCells=[cell];
+    setCellRectSelection(cell,cell,e);
   }
   renderElements();renderLayers();syncProps()
 }
@@ -213,13 +232,13 @@ function beginTableCellDrag(ev,e,row,col){
   selected=new Set([e.id]);
   tableSelecting=true;
   const cell={row,col};
-  if(ev.shiftKey&&tableSelectionAnchor)setCellRectSelection(tableSelectionAnchor,cell);
-  else{tableSelectionAnchor=cell;selectedCells=[cell]}
+  if(ev.shiftKey&&tableSelectionAnchor)setCellRectSelection(tableSelectionAnchor,cell,e);
+  else{tableSelectionAnchor=cell;setCellRectSelection(cell,cell,e)}
   renderElements();renderLayers();syncProps();
 }
 function extendTableCellDrag(e,row,col){
   if(!tableSelecting||!tableSelectionAnchor)return;
-  selected=new Set([e.id]);setCellRectSelection(tableSelectionAnchor,{row,col});
+  selected=new Set([e.id]);setCellRectSelection(tableSelectionAnchor,{row,col},e);
   renderElements();syncProps();
 }
 function endTableCellDrag(){tableSelecting=false}
