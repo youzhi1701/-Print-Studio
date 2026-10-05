@@ -384,7 +384,8 @@ function startTableColumnResize(ev,e,index,node){
   const move=m=>{
     const delta=(m.clientX-sx)/widthPx*100;
     left.width=Math.max(min,Math.min(total-min,a0+delta));right.width=total-left.width;e.columns=cols;
-    const table=node.querySelector("table"),heads=table?.querySelectorAll("th")||[];
+    const table=node.querySelector("table"),heads=table?.querySelectorAll("th")||[],colEls=table?.querySelectorAll("col")||[];
+    if(colEls[index])colEls[index].style.width=left.width+"%";if(colEls[index+1])colEls[index+1].style.width=right.width+"%";
     if(heads[index])heads[index].style.width=left.width+"%";if(heads[index+1])heads[index+1].style.width=right.width+"%";
   };
   const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);e.columns=normalizeColumns(cols);renderElements();renderTableColumnEditor(e);pushHistory();autoSave()};
