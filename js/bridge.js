@@ -19,14 +19,21 @@ function normalizePayload(payload){
   const list=selectedRecords.length?selectedRecords:(record?[record]:[]);
   const max=Math.max(0,list.length-1);
   const currentIndex=Math.max(0,Math.min(Number(p.currentIndex)||0,max));
+  const selection=p.selection&&typeof p.selection==="object"?{
+    tableId:p.selection.tableId||"",
+    viewId:p.selection.viewId||"",
+    recordId:p.selection.recordId||"",
+    fieldId:p.selection.fieldId||""
+  }:null;
   return{
-    ...p,
-    fields:Array.isArray(p.fields)?p.fields:[],
+    fields:Array.isArray(p.fields)?p.fields.map(f=>({id:f?.id||"",name:f?.name||"",type:f?.type??null})):[],
     selectedRecords:list,
     record:list[currentIndex]||record,
-    template:p.template||null,
+    template:p.template&&typeof p.template==="object"?p.template:null,
     activeTemplateId:p.activeTemplateId||p.template?.id||null,
-    currentIndex
+    currentIndex,
+    selection,
+    bridgeUpdatedAt:Number(p.bridgeUpdatedAt)||0
   };
 }
 
