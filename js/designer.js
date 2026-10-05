@@ -1,5 +1,5 @@
 import {mountBuildVersion} from "./version.js?v=20261006-01";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-01";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-01";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin} from "./bridge.js?v=20261006-01";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";import {printTemplateRecords} from "./print.js?v=20261006-01";import {
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-01";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-01";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-01";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";import {printTemplateRecords} from "./print.js?v=20261006-01";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
@@ -263,7 +263,7 @@ function content(n,e){
       img.style.objectFit=e.imageFit==="original"?"none":(e.imageFit||"contain");
       img.style.objectPosition=imagePosition(e);
       img.style.borderRadius=(e.radius||0)+"px";
-      img.onerror=()=>{n.innerHTML='<div class="image-placeholder">图片加载失败</div>'}
+      img.onerror=()=>{requestImageRefresh(state.record?.id||"");n.innerHTML='<div class="image-placeholder">图片加载失败 · 正在刷新</div>'}
     }
     return
   }
