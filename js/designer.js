@@ -1,5 +1,5 @@
 import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-3";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-3";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-3";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-3";import {printTemplateRecords} from "./print.js?v=20261005-3";
-const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
+const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
 function pushHistory(){const t=current();if(!t)return;history=history.slice(0,hIndex+1);history.push(JSON.stringify(t));if(history.length>60)history.shift();hIndex=history.length-1;updateUndo()}
@@ -169,16 +169,50 @@ function tableColumnsForPreview(e,rows,data){
 }
 function mergeAt(e,row,col){return (e.merges||[]).find(m=>m.row===row&&m.col===col)||null}
 function coveredByMerge(e,row,col){return (e.merges||[]).some(m=>!(m.row===row&&m.col===col)&&row>=m.row&&row<m.row+(m.rowSpan||1)&&col>=m.col&&col<m.col+(m.colSpan||1))}
+function cellKey(row,col){return row+":"+col}
+function setCellRectSelection(a,b){
+  const r0=Math.min(a.row,b.row),r1=Math.max(a.row,b.row),c0=Math.min(a.col,b.col),c1=Math.max(a.col,b.col);
+  selectedCells=[];
+  for(let r=r0;r<=r1;r++)for(let c=c0;c<=c1;c++)selectedCells.push({row:r,col:c});
+}
+function tableSelectionBounds(){
+  if(!selectedCells.length)return null;
+  const rs=selectedCells.map(s=>s.row),cs=selectedCells.map(s=>s.col);
+  return{r0:Math.min(...rs),r1:Math.max(...rs),c0:Math.min(...cs),c1:Math.max(...cs)}
+}
 function selectTableCell(ev,e,row,col){
   ev.stopPropagation();
-  if(!ev.shiftKey)selectedCells=[{row,col}];
-  else if(!selectedCells.length)selectedCells=[{row,col}];
-  else{
-    const a=selectedCells[0],r0=Math.min(a.row,row),r1=Math.max(a.row,row),c0=Math.min(a.col,col),c1=Math.max(a.col,col);
-    selectedCells=[];for(let r=r0;r<=r1;r++)for(let cc=c0;cc<=c1;cc++)selectedCells.push({row:r,col:cc});
+  selected=new Set([e.id]);
+  const cell={row,col};
+  if(ev.shiftKey&&tableSelectionAnchor){
+    setCellRectSelection(tableSelectionAnchor,cell);
+  }else if(ev.ctrlKey||ev.metaKey){
+    const key=cellKey(row,col),exists=selectedCells.some(s=>cellKey(s.row,s.col)===key);
+    selectedCells=exists?selectedCells.filter(s=>cellKey(s.row,s.col)!==key):[...selectedCells,cell];
+    if(!tableSelectionAnchor)tableSelectionAnchor=cell;
+  }else{
+    tableSelectionAnchor=cell;
+    selectedCells=[cell];
   }
-  selected=new Set([e.id]);renderElements();renderLayers();syncProps()
+  renderElements();renderLayers();syncProps()
 }
+function beginTableCellDrag(ev,e,row,col){
+  if(ev.button!==0)return;
+  ev.stopPropagation();ev.preventDefault();
+  selected=new Set([e.id]);
+  tableSelecting=true;
+  const cell={row,col};
+  if(ev.shiftKey&&tableSelectionAnchor)setCellRectSelection(tableSelectionAnchor,cell);
+  else{tableSelectionAnchor=cell;selectedCells=[cell]}
+  renderElements();renderLayers();syncProps();
+}
+function extendTableCellDrag(e,row,col){
+  if(!tableSelecting||!tableSelectionAnchor)return;
+  selected=new Set([e.id]);setCellRectSelection(tableSelectionAnchor,{row,col});
+  renderElements();syncProps();
+}
+function endTableCellDrag(){tableSelecting=false}
+window.addEventListener("pointerup",endTableCellDrag);
 function content(n,e){
   const data=state.record?.data||{};
   if(e.type==="text"){n.textContent=e.text||"";applyTextBehavior(n,e);return}
