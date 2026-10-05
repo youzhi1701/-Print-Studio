@@ -33,21 +33,13 @@
           <small id="recordSub">点击选择</small>
         </button>
       </div>
-    </section>
-
-    <section class="template-library glass-card" aria-label="模板库">
-      <div class="template-library-head">
-        <div><span class="mini-bars"><i></i><i></i><i></i></span><b>模板库</b><small id="templateLibraryCount">0 个模板</small><small id="templateLibraryState" data-state="">本地</small></div>
-        <button id="templateLibrarySync" type="button" title="同步自定义模板到云端">同步</button>
+      <div class="meta-row">
+        <span class="meta-label">模板</span>
+        <button id="templateChooser" class="meta-value">
+          <strong id="currentTemplateName">未选择模板</strong>
+          <small>切换模板</small>
+        </button>
       </div>
-      <div class="template-library-tools">
-        <input id="templateLibrarySearch" type="search" placeholder="搜索模板、尺寸或用途" aria-label="搜索模板">
-        <select id="templateCategoryFilter" aria-label="模板分类">
-          <option value="全部">全部分类</option>
-        </select>
-      </div>
-      <div id="templateLibraryList" class="template-library-list"></div>
-      <div id="templateLibraryEmpty" class="template-library-empty hidden">没有匹配的模板</div>
     </section>
 
     <section class="preview-card glass-card">
@@ -94,10 +86,37 @@
 
   <div id="moreMenu" class="more-menu hidden">
     <button id="refreshData">重新同步数据</button>
-    <button id="exportTemplate">导出当前模板</button>
-    <button id="importTemplate">导入模板</button>
-    <button id="deleteTemplate">删除当前模板</button>
-    <input id="importTemplateFile" type="file" accept="application/json,.json,.superprint.json" hidden>
+  </div>
+
+  <div id="templateLibraryModal" class="template-library-modal hidden" role="dialog" aria-modal="true" aria-label="模板库">
+    <section class="template-library-dialog glass-card">
+      <div class="template-library-head">
+        <div>
+          <span class="mini-bars"><i></i><i></i><i></i></span>
+          <b>模板库</b>
+          <small id="templateLibraryCount">0 个模板</small>
+          <small id="templateLibraryState" data-state="">本地</small>
+        </div>
+        <div class="template-library-head-actions">
+          <button id="templateLibrarySync" type="button" title="同步自定义模板到云端">同步</button>
+          <button id="templateLibraryClose" type="button" title="关闭模板库">×</button>
+        </div>
+      </div>
+      <div class="template-library-tools">
+        <input id="templateLibrarySearch" type="search" placeholder="搜索模板、尺寸或用途" aria-label="搜索模板">
+        <select id="templateCategoryFilter" aria-label="模板分类">
+          <option value="全部">全部分类</option>
+        </select>
+      </div>
+      <div id="templateLibraryList" class="template-library-list"></div>
+      <div id="templateLibraryEmpty" class="template-library-empty hidden">没有匹配的模板</div>
+      <div class="template-library-footer">
+        <button id="importTemplate" type="button">导入模板</button>
+        <button id="exportTemplate" type="button">导出当前模板</button>
+        <button id="deleteTemplate" type="button" class="danger">删除当前模板</button>
+      </div>
+      <input id="importTemplateFile" type="file" accept="application/json,.json,.superprint.json" hidden>
+    </section>
   </div>
 
   <div id="compatPanel" class="compat-panel hidden">
