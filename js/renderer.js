@@ -92,7 +92,7 @@ export async function hydrateCodes(root){
     ]);
     const JsBarcode=mod.default||mod;
     root.querySelectorAll("svg.barcode").forEach(svg=>{
-      try{JsBarcode(svg,svg.dataset.value||"",{format:svg.dataset.format||"CODE128",displayValue:false,margin:0,height:42})}catch{}
+      try{JsBarcode(svg,svg.dataset.value||"",{format:svg.dataset.format||"CODE128",displayValue:false,margin:0,height:42});svg.dataset.hydrated="1"}catch{}
     })
   }catch(err){console.warn("条码模块加载失败",err)}
   try{
@@ -101,7 +101,7 @@ export async function hydrateCodes(root){
       "https://esm.sh/qrcode@1.5.4"
     ]);const QR=q.default||q;
     for(const c of root.querySelectorAll("canvas.qrcode")){
-      try{await QR.toCanvas(c,c.dataset.value||"",{margin:Number(c.dataset.margin||0),width:120,errorCorrectionLevel:c.dataset.level||"M"})}catch{}
+      try{await QR.toCanvas(c,c.dataset.value||"",{margin:Number(c.dataset.margin||0),width:120,errorCorrectionLevel:c.dataset.level||"M"});c.dataset.hydrated="1"}catch{}
     }
   }catch(err){console.warn("二维码模块加载失败",err)}
 }
