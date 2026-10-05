@@ -126,6 +126,7 @@ function syncBridgeData(showToast=true,provided=null,{force=false}={}){
     const t=current();if(t)markTemplateEdited(t);
     saveTemplates(state.templates);
   }
+  if(templateChanged)pushHistory();
   const label=$("dataSyncState");
   if(label)label.textContent=state.fields.length?("已识别 "+state.fields.length+" 个字段"+(state.record?" · 已载入当前记录":"")):"未读取到飞书字段";
   if(showToast)toast(state.fields.length?("已同步 "+state.fields.length+" 个字段"):"未读取到字段，请先在快捷模式选择记录");
@@ -428,7 +429,7 @@ function addTableRowResizers(n,e,rows){
 }
 function updateTableRowGeometry(node,e,rows){
   const total=(e.showHeader===false?0:Number(e.headerHeight||e.rowHeight||8))+rows.reduce((sum,row)=>sum+tmRowHeight(row,e),0);
-  e.h=total;node.style.height=total*MM+"px";
+  node.style.height=total*MM+"px";
   const table=node.querySelector("table");if(table)table.style.height=total*MM+"px";
   const trs=node.querySelectorAll("tbody tr");
   rows.forEach((row,i)=>{const h=tmRowHeight(row,e)*MM;if(trs[i])trs[i].style.height=h+"px";trs[i]?.querySelectorAll("td").forEach(td=>td.style.height=h+"px")});
@@ -591,8 +592,9 @@ function deleteTableRow(){deleteSelectedRows()}
 
 function syncGeometryProps(e){
   if(!e||selected.size!==1)return;
+  const values={x:e.x,y:e.y,w:e.w,h:elementVisualHeight(e)};
   const map=[["propX","x"],["propY","y"],["propW","w"],["propH","h"]];
-  for(const [id,k] of map){const input=$(id);if(input)input.value=Math.round(Number(e[k]||0)*10)/10}
+  for(const [id,k] of map){const input=$(id);if(input)input.value=Math.round(Number(values[k]||0)*10)/10}
 }
 function clearAlignmentGuides(){
   document.querySelectorAll("#printPage .alignment-guide").forEach(n=>n.remove());
@@ -871,7 +873,7 @@ function syncProps(){
   $("noSelection").classList.toggle("hidden",!!e);$("props").classList.toggle("hidden",!e);
   $("multiTools")?.classList.toggle("hidden",selected.size<2);
   if(!e)return;
-  for(const [id,k] of [["propX","x"],["propY","y"],["propW","w"],["propH","h"]])$(id).value=Math.round(e[k]*10)/10;
+  for(const [id,k] of [["propX","x"],["propY","y"],["propW","w"]])$(id).value=Math.round(e[k]*10)/10;$("propH").value=Math.round(elementVisualHeight(e)*10)/10;
   $("propH").disabled=e.type==="table";$("propH").title=e.type==="table"?"表格高度由表头和各行高度自动计算":"";
   $("elementTypeBadge").textContent=elementTypeName(e.type);
   ["textProps","imageProps","tableProps","codeProps","shapeProps"].forEach(id=>$(id).classList.add("hidden"));
@@ -899,7 +901,7 @@ function syncProps(){
 function updateProps(ev){
   const e=selectedOne();if(!e)return;
   const targetId=ev?.target?.id||"";
-  e.x=Number($("propX").value)||0;e.y=Number($("propY").value)||0;e.w=Math.max(.5,Number($("propW").value)||1);e.h=Math.max(.5,Number($("propH").value)||1);
+  e.x=Number($("propX").value)||0;e.y=Number($("propY").value)||0;e.w=Math.max(.5,Number($("propW").value)||1);if(e.type!=="table")e.h=Math.max(.5,Number($("propH").value)||1);
 
   if(["text","field"].includes(e.type)){e.text=$("propText").value;e.field=$("propField").value;e.fontSize=Math.max(6,Number($("propFontSize").value)||11);e.fontWeight=$("propWeight").value;e.wrap=$("textWrap").value==="true";e.maxLines=Math.max(0,Number($("textMaxLines").value)||0);e.overflowMode=$("textOverflow").value;e.emptyBehavior=$("textEmptyBehavior").value;if(e.type==="field"&&e.field)e.text="{{"+e.field+"}}"}
   if(e.type==="image"){e.field=$("imageField").value;e.imageFit=$("imageFit").value;e.radius=Math.max(0,Number($("imageRadius").value)||0);e.aspectLock=$("imageAspectLock").value==="true";e.alignX=$("imageAlignX").value;e.alignY=$("imageAlignY").value;e.padding=Math.max(0,Number($("imagePadding").value)||0);e.emptyBehavior=$("imageEmptyBehavior").value}
