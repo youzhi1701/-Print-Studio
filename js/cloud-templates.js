@@ -1,14 +1,14 @@
+import {isBuiltinTemplate} from "./templates.js?v=20261006-03";
 const CLOUD_TABLE_NAME="超级打印_云端模板库";
 const FIELD_TEMPLATE_NAME="模板名称";
 const FIELD_TEMPLATE_JSON="模板JSON";
 const FIELD_UPDATED_AT="更新时间";
 const FIELD_STATUS="状态";
-const LEGACY_BUILTIN_TEMPLATE_ID="tpl_shipping_215x140";
 const STATUS_DELETED="deleted";
 const TEXT_FIELD_TYPE=1;
 
 function asNumber(v){const n=Number(v);return Number.isFinite(n)?n:0}
-function isBuiltinId(id){const s=String(id||"");return s===LEGACY_BUILTIN_TEMPLATE_ID||s.startsWith("tpl_builtin_")||["tpl_packing_a5","tpl_shipping_100x150","tpl_address_100x60","tpl_product_70x50","tpl_price_60x40","tpl_barcode_50x30","tpl_qr_50x50","tpl_jewelry_70x30","tpl_receipt_80x120","tpl_carton_100x100"].includes(s)}
+function isBuiltinId(id){return isBuiltinTemplate(id)}
 function deepClone(v){return typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v))}
 function rowTime(row){return Math.max(asNumber(row?.updatedAt),asNumber(row?.template?.updatedAt))}
 function isDeleted(row){return String(row?.status||"").toLowerCase()===STATUS_DELETED}
