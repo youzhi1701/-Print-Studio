@@ -3,10 +3,19 @@ import {STORAGE_KEYS,storageGet,storageSet} from "./state.js";
 let lastPayload=null;
 let listenerInstalled=false;
 
+function sanitizeRecord(record){
+  if(!record||typeof record!=="object")return null;
+  return{
+    id:record.id||"",
+    data:record.data&&typeof record.data==="object"?{...record.data}:{},
+    attachments:record.attachments&&typeof record.attachments==="object"?{...record.attachments}:{}
+  }
+}
+
 function normalizePayload(payload){
   const p=payload&&typeof payload==="object"?payload:{};
-  const selectedRecords=Array.isArray(p.selectedRecords)?p.selectedRecords.filter(Boolean):[];
-  const record=p.record||selectedRecords[0]||null;
+  const selectedRecords=Array.isArray(p.selectedRecords)?p.selectedRecords.map(sanitizeRecord).filter(Boolean):[];
+  const record=sanitizeRecord(p.record)||selectedRecords[0]||null;
   const list=selectedRecords.length?selectedRecords:(record?[record]:[]);
   const max=Math.max(0,list.length-1);
   const currentIndex=Math.max(0,Math.min(Number(p.currentIndex)||0,max));
@@ -38,7 +47,7 @@ function installOpenerResponder(){
 
 export function writeBridge(payload){
   lastPayload={...normalizePayload(payload),bridgeUpdatedAt:Date.now()};
-  storageSet(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))
+  try{storageSet(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))}catch(err){console.warn("bridge persistence failed",err)}
   installOpenerResponder();
 }
 
