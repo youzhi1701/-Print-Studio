@@ -30,6 +30,10 @@ function hideCompat(){$("compatPanel")?.classList.add("hidden")}
 
 function activeTemplate(){return state.templates.find(t=>t.id===state.activeTemplateId)||state.templates[0]}
 function fillTemplates(){const s=$("templateSelect");s.innerHTML="";state.templates.forEach(t=>{const o=document.createElement("option");o.value=t.id;o.textContent=t.name;s.appendChild(o)});if(state.activeTemplateId)s.value=state.activeTemplateId}
+function persistActiveTemplate(){
+  const currentSettings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
+  storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
+}
 function autoBind(){const tpl=activeTemplate();if(autoBindTemplateFields(tpl,state.fields))saveTemplates(state.templates)}
 
 function activeRecord(){
@@ -218,7 +222,7 @@ async function applyDesignerTemplate(template){
   if(!template?.id)return;
   const i=state.templates.findIndex(t=>t.id===template.id);
   if(i>=0)state.templates[i]=structuredClone(template);else state.templates.push(structuredClone(template));
-  state.activeTemplateId=template.id;
+  state.activeTemplateId=template.id;persistActiveTemplate();
   saveTemplates(state.templates);
   fillTemplates();
   autoBind();
@@ -237,7 +241,7 @@ async function init(){
   state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
   fillTemplates();
 
-  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;storageSet(STORAGE_KEYS.settings,JSON.stringify({...settings,activeTemplateId:state.activeTemplateId}));autoBind();syncBridge();await renderPreview()};
+  $("templateSelect").onchange=async e=>{state.activeTemplateId=e.target.value;persistActiveTemplate();autoBind();syncBridge();await renderPreview()};
   $("recordChooser").onclick=()=>chooseBatch(true);
   $("chooseBatch").onclick=()=>chooseBatch(false);
   $("prevRecord").onclick=async()=>{if(currentIndex>0){currentIndex--;syncBridge();await renderPreview()}};
@@ -282,7 +286,7 @@ async function init(){
       const parsed=JSON.parse(await file.text());
       const tpl=importTemplateObject(parsed,state.templates);
       state.templates.push(tpl);state.activeTemplateId=tpl.id;
-      storageSet(STORAGE_KEYS.settings,JSON.stringify({...settings,activeTemplateId:state.activeTemplateId}));saveTemplates(state.templates);fillTemplates();autoBind();syncBridge();await renderPreview(true);
+      persistActiveTemplate();saveTemplates(state.templates);fillTemplates();autoBind();syncBridge();await renderPreview(true);
       toast("模板已导入");
     }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
   };
