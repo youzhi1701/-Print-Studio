@@ -8,7 +8,7 @@ import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-05";import {loadTemp
   buildTableLayout,normalizeMergeContiguity
 } from "./table-model.js?v=20261006-05";
 mountBuildVersion();
-const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,lastBridgeIdentity="";
+const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="";
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
 function clearTableSelection(){selectedCells=[];tableSelectionAnchor=null;tableSelecting=false}
@@ -17,7 +17,8 @@ function selectElements(ids,{keepTable=false}={}){
   if(!keepTable)clearTableSelection();
 }
 function pushHistory(){const t=current();if(!t)return;const snap=JSON.stringify(t);if(history[hIndex]===snap){updateUndo();return}history=history.slice(0,hIndex+1);history.push(snap);if(history.length>60)history.shift();hIndex=history.length-1;updateUndo()}
-function restore(i){if(i<0||i>=history.length)return;const old=current();const parsed=JSON.parse(history[i]);const idx=state.templates.findIndex(t=>t.id===old.id);state.templates[idx]=parsed;hIndex=i;clearTableSelection();renderAll();updateUndo();autoSave()}
+function flushNudge(){if(nudgeTimer){clearTimeout(nudgeTimer);nudgeTimer=null;pushHistory();autoSave()}}
+function restore(i){flushNudge();if(i<0||i>=history.length)return;const old=current();const parsed=JSON.parse(history[i]);const idx=state.templates.findIndex(t=>t.id===old.id);state.templates[idx]=parsed;hIndex=i;clearTableSelection();renderAll();updateUndo();autoSave()}
 function updateUndo(){$("undoBtn").disabled=hIndex<=0;$("redoBtn").disabled=hIndex>=history.length-1}
 async function load(){state.templates=loadTemplates();const qs=new URLSearchParams(location.search).get("template");state.activeTemplateId=(qs&&state.templates.some(t=>t.id===qs))?qs:state.templates[0]?.id;const payload=await requestBridgeFromOpener();syncBridgeData(false,payload);renderAll();pushHistory()}
 function populateFields(){
@@ -631,7 +632,11 @@ function nudgeSelection(dx,dy){
     const ox=e.x,oy=e.y;e.x+=dx;e.y+=dy;clampElementToPage(e);
     if(e.x!==ox||e.y!==oy)changed=true;
   }
-  if(changed){for(const e of t.elements.filter(x=>selected.has(x.id)))updateElementNodeGeometry(e);syncProps();pushHistory();autoSave()}
+  if(!changed)return;
+  for(const e of t.elements.filter(x=>selected.has(x.id)))updateElementNodeGeometry(e);
+  syncProps();
+  clearTimeout(nudgeTimer);
+  nudgeTimer=setTimeout(()=>{nudgeTimer=null;pushHistory();autoSave()},180);
 }
 function beginMarqueeSelection(ev){
   if(preview||ev.button!==0||ev.target.closest(".design-element,.table-context-tools,.resize-handle"))return;
@@ -1026,6 +1031,6 @@ window.addEventListener("storage",e=>{if(e.key===STORAGE_KEYS.bridge){syncBridge
 onBridgeMessage(payload=>{const r=syncBridgeData(false,payload);if(!r.updated)return;if(r.templateChanged)renderAll();else{renderElements();syncProps()}});
 window.addEventListener("resize",()=>{clearTimeout(window.__spResize);window.__spResize=setTimeout(()=>{initResponsivePanels();if(zoomMode==="fit")fitCanvas()},100)});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},120));
-window.addEventListener("beforeunload",()=>{if(saveTimer){clearTimeout(saveTimer);autoSave(true)}});
+window.addEventListener("beforeunload",()=>{flushNudge();if(saveTimer){clearTimeout(saveTimer);autoSave(true)}});
 bind();
 load().then(()=>{initResponsivePanels();requestAnimationFrame(()=>fitCanvas())});
