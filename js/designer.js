@@ -1,4 +1,4 @@
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-1";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-1";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-1";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-1";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-1";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-1";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";import {printTemplateRecords} from "./print.js?v=20261005-2";
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
@@ -513,15 +513,8 @@ function initResponsivePanels(){
 function setPreview(v){preview=v;document.body.classList.toggle("preview-mode",v);$("previewBtn").textContent=v?"退出预览":"实际预览";renderElements()}
 async function testPrint(){
   const t=current();if(!t)return;
-  const p=t.page||{width:215,height:140};
-  const host=document.createElement("div");host.className="print-host";host.style.cssText="position:fixed;inset:0;z-index:9999;background:#fff";
-  host.innerHTML=renderTemplateToHtml(t,state.record?.data||{});
-  const style=document.createElement("style");style.id="designerPrintPage";
-  style.textContent="@media print{@page{size:"+p.width+"mm "+p.height+"mm;margin:0}.print-host .print-sheet{width:"+p.width+"mm!important;height:"+p.height+"mm!important}}";
-  document.head.appendChild(style);document.body.appendChild(host);
-  const cleanup=()=>{host.remove();style.remove();window.removeEventListener("afterprint",cleanup)};
-  window.addEventListener("afterprint",cleanup);
-  await hydrateCodes(host);setTimeout(()=>window.print(),120)
+  try{await printTemplateRecords(t,[state.record||{data:{}}])}
+  catch(err){console.error(err);toast(err?.message||"打印失败")}
 }
 function bind(){document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("componentsTab").classList.toggle("hidden",b.dataset.tab!=="components");$("fieldsTab").classList.toggle("hidden",b.dataset.tab!=="fields")});document.querySelectorAll(".rtab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".rtab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("propsTab").classList.toggle("hidden",b.dataset.rtab!=="props");$("layersTab").classList.toggle("hidden",b.dataset.rtab!=="layers")});
 document.querySelectorAll(".component-palette button").forEach(b=>{b.onclick=()=>addElement(b.dataset.type);b.ondragstart=e=>{dragType=b.dataset.type;e.dataTransfer.setData("text/plain",dragType)}});$("printPage").ondragover=e=>e.preventDefault();$("printPage").ondrop=e=>{e.preventDefault();const r=$("printPage").getBoundingClientRect(),type=e.dataTransfer.getData("text/plain")||dragType;let field="";let t=type;if(type.startsWith("field:")){t="field";field=type.slice(6)}addElement(t,(e.clientX-r.left)/(zoom/100)/MM,(e.clientY-r.top)/(zoom/100)/MM,field)};$("printPage").onclick=()=>{selected.clear();renderElements();renderLayers();syncProps()};
