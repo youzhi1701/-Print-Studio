@@ -485,23 +485,24 @@ function renderTableColumnEditor(e){
 
     const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();col.width=Math.max(1,Number(width.value)||1);e.columns=cols;renderElements();autoSave()};
     title.addEventListener("input",commit);field.addEventListener("change",commit);width.addEventListener("input",commit);
-    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;renderTableColumnEditor(e);renderElements();autoSave()};
-    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;renderTableColumnEditor(e);renderElements();autoSave()};
-    remove.onclick=()=>{if(cols.length<=1){toast("表格至少保留 1 列");return}cols.splice(index,1);e.columns=cols;renderTableColumnEditor(e);renderElements();autoSave()};
+    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();autoSave()};
+    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();autoSave()};
+    remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
     row.append(move,title,field,width,remove);list.appendChild(row);
   });
   $("tableColumns").value=columnConfigString(cols);
 }
 function addTableColumn(){
   const e=selectedOne();if(!e||e.type!=="table")return;
-  const cols=normalizeColumns(e.columns);cols.push({title:"新列",field:"",width:Math.round(100/(cols.length+1)),align:"center"});e.columns=cols;
-  normalizeTableWidths(false);renderTableColumnEditor(e);renderElements();autoSave()
+  const cols=tmNormalizeColumns(e);tmInsertColumn(e,cols.length);
+  selectedCells=[];tableSelectionAnchor=null;
+  normalizeTableWidths(false);renderTableColumnEditor(e);renderElements();pushHistory();autoSave()
 }
 function normalizeTableWidths(save=true){
   const e=selectedOne();if(!e||e.type!=="table")return;
-  const cols=normalizeColumns(e.columns);const base=Math.floor(100/cols.length);let rest=100-base*cols.length;
+  const cols=tmNormalizeColumns(e),base=Math.floor(100/cols.length);let rest=100-base*cols.length;
   cols.forEach((col,i)=>{col.width=base+(i<rest?1:0)});e.columns=cols;
-  renderTableColumnEditor(e);renderElements();if(save)autoSave()
+  renderTableColumnEditor(e);renderElements();if(save){pushHistory();autoSave()}
 }
 function syncTableCellInspector(e){
   const panel=$("tableCellInspector"),hint=$("tableSelectionHint"),b=tableSelectionBounds();
