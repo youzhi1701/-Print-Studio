@@ -545,6 +545,37 @@ function normalizeTableWidths(save=true){
   cols.forEach((col,i)=>{col.width=base+(i<rest?1:0)});e.columns=cols;
   renderTableColumnEditor(e);renderElements();if(save)autoSave()
 }
+function syncTableCellInspector(e){
+  const panel=$("tableCellInspector"),hint=$("tableSelectionHint"),b=tableSelectionBounds();
+  if(!panel)return;
+  panel.classList.toggle("hidden",!b);
+  if(hint)hint.textContent=b?("已选择 "+(b.r1-b.r0+1)+" 行 × "+(b.c1-b.c0+1)+" 列 · 可直接拖拽或使用悬浮工具栏"):("单击或拖拽选择格子，操作工具会悬浮在表格上方");
+  if(!b)return;
+  const raw=tableCellOverride(e,b.r0,b.c0)||{};
+  $("tableCellType").value=raw.type||"inherit";
+  $("tableCellField").value=raw.field||"";
+  $("tableCellText").value=raw.text||"";
+  $("tableCellAlign").value=raw.align||"";
+  $("tableCellVAlign").value=raw.valign||"middle";
+  $("tableCellPadding").value=raw.padding??2;
+  $("tableCellWrap").value=String(raw.wrap!==false);
+  $("tableCellImageFit").value=raw.imageFit||e.tableImageFit||"contain";
+}
+function applyTableCellInspector(e){
+  if(!selectedCells.length)return;
+  e.cells={...(e.cells||{})};
+  const cfg={
+    type:$("tableCellType").value||"inherit",
+    field:$("tableCellField").value||"",
+    text:$("tableCellText").value||"",
+    align:$("tableCellAlign").value||"",
+    valign:$("tableCellVAlign").value||"middle",
+    padding:Math.max(0,Number($("tableCellPadding").value)||0),
+    wrap:$("tableCellWrap").value==="true",
+    imageFit:$("tableCellImageFit").value||e.tableImageFit||"contain"
+  };
+  for(const s of selectedCells)e.cells[tableCellKey(s.row,s.col)]={...cfg};
+}
 function syncProps(){
   const e=selectedOne();
   $("noSelection").classList.toggle("hidden",!!e);$("props").classList.toggle("hidden",!e);
@@ -562,9 +593,9 @@ function syncProps(){
   }
   if(e.type==="table"){
     $("tableProps").classList.remove("hidden");$("tableDataField").value=e.dataField||"";renderTableColumnEditor(e);$("tableHeader").value=String(e.showHeader!==false);$("tableZebra").value=String(!!e.zebra);$("tableImageFit").value=e.tableImageFit||"contain";$("tableWrap").value=String(e.wrap!==false);$("tableHideEmptyColumns").value=String(e.hideEmptyColumns!==false);$("tableEmptyBehavior").value=e.emptyBehavior||"hide";$("tableRowHeight").value=e.rowHeight||8;$("tableMaxRows").value=e.maxRows||5;$("tableBorderWidth").value=e.borderWidth??.5;$("tableFontSize").value=e.fontSize||9;
-    const hint=$("tableSelectionHint"),b=tableSelectionBounds();
-    if(hint)hint.textContent=b?("已选择 "+(b.r1-b.r0+1)+" 行 × "+(b.c1-b.c0+1)+" 列 · 直接在表格上方操作"):("单击或拖拽选择格子，操作工具会悬浮在表格上方");
+    syncTableCellInspector(e);
   }
+  if(e.type!=="table")$("tableCellInspector")?.classList.add("hidden");
   if(["barcode","qrcode"].includes(e.type)){
     $("codeProps").classList.remove("hidden");$("codeField").value=e.field||"";$("barcodeOnly").classList.toggle("hidden",e.type!=="barcode");$("qrOnly").classList.toggle("hidden",e.type!=="qrcode");
     $("barcodeFormat").value=e.barcodeFormat||"CODE128";$("barcodeText").value=String(e.showText!==false);$("qrLevel").value=e.qrLevel||"M";$("qrMargin").value=e.qrMargin??0;
@@ -579,7 +610,7 @@ function updateProps(){
   e.x=Number($("propX").value)||0;e.y=Number($("propY").value)||0;e.w=Math.max(.5,Number($("propW").value)||1);e.h=Math.max(.5,Number($("propH").value)||1);
   if(["text","field"].includes(e.type)){e.text=$("propText").value;e.field=$("propField").value;e.fontSize=Math.max(6,Number($("propFontSize").value)||11);e.fontWeight=$("propWeight").value;e.wrap=$("textWrap").value==="true";e.maxLines=Math.max(0,Number($("textMaxLines").value)||0);e.overflowMode=$("textOverflow").value;e.emptyBehavior=$("textEmptyBehavior").value;if(e.type==="field"&&e.field)e.text="{{"+e.field+"}}"}
   if(e.type==="image"){e.field=$("imageField").value;e.imageFit=$("imageFit").value;e.radius=Math.max(0,Number($("imageRadius").value)||0);e.aspectLock=$("imageAspectLock").value==="true";e.alignX=$("imageAlignX").value;e.alignY=$("imageAlignY").value;e.padding=Math.max(0,Number($("imagePadding").value)||0);e.emptyBehavior=$("imageEmptyBehavior").value}
-  if(e.type==="table"){e.dataField=$("tableDataField").value;e.showHeader=$("tableHeader").value==="true";e.zebra=$("tableZebra").value==="true";e.tableImageFit=$("tableImageFit").value;e.wrap=$("tableWrap").value==="true";e.hideEmptyColumns=$("tableHideEmptyColumns").value==="true";e.emptyBehavior=$("tableEmptyBehavior").value;e.rowHeight=Math.max(4,Number($("tableRowHeight").value)||8);e.maxRows=Math.max(1,Number($("tableMaxRows").value)||5);e.borderWidth=Math.max(0,Number($("tableBorderWidth").value)||0);e.fontSize=Math.max(6,Number($("tableFontSize").value)||9)}
+  if(e.type==="table"){e.dataField=$("tableDataField").value;e.showHeader=$("tableHeader").value==="true";e.zebra=$("tableZebra").value==="true";e.tableImageFit=$("tableImageFit").value;e.wrap=$("tableWrap").value==="true";e.hideEmptyColumns=$("tableHideEmptyColumns").value==="true";e.emptyBehavior=$("tableEmptyBehavior").value;e.rowHeight=Math.max(4,Number($("tableRowHeight").value)||8);e.maxRows=Math.max(1,Number($("tableMaxRows").value)||5);e.borderWidth=Math.max(0,Number($("tableBorderWidth").value)||0);e.fontSize=Math.max(6,Number($("tableFontSize").value)||9);applyTableCellInspector(e)}
   if(e.type==="barcode"){e.field=$("codeField").value;e.barcodeFormat=$("barcodeFormat").value;e.showText=$("barcodeText").value==="true"}
   if(e.type==="qrcode"){e.field=$("codeField").value;e.qrLevel=$("qrLevel").value;e.qrMargin=Math.max(0,Number($("qrMargin").value)||0)}
   if(["line","container"].includes(e.type)){e.borderWidth=Math.max(0,Number($("shapeBorderWidth").value)||0);e.borderStyle=$("shapeBorderStyle").value;e.radius=Math.max(0,Number($("shapeRadius").value)||0)}
@@ -705,7 +736,7 @@ async function testPrint(){
 }
 function bind(){document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("componentsTab").classList.toggle("hidden",b.dataset.tab!=="components");$("fieldsTab").classList.toggle("hidden",b.dataset.tab!=="fields")});document.querySelectorAll(".rtab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".rtab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("propsTab").classList.toggle("hidden",b.dataset.rtab!=="props");$("layersTab").classList.toggle("hidden",b.dataset.rtab!=="layers")});
 document.querySelectorAll(".component-palette button").forEach(b=>{b.onclick=()=>addElement(b.dataset.type);b.ondragstart=e=>{dragType=b.dataset.type;e.dataTransfer.setData("text/plain",dragType)}});$("printPage").ondragover=e=>e.preventDefault();$("printPage").ondrop=e=>{e.preventDefault();const r=$("printPage").getBoundingClientRect(),type=e.dataTransfer.getData("text/plain")||dragType;let field="";let t=type;if(type.startsWith("field:")){t="field";field=type.slice(6)}addElement(t,(e.clientX-r.left)/(zoom/100)/MM,(e.clientY-r.top)/(zoom/100)/MM,field)};$("printPage").onclick=()=>{selected.clear();renderElements();renderLayers();syncProps()};
-for(const id of ["propX","propY","propW","propH","propText","propField","propFontSize","propWeight","imageField","imageFit","imageRadius","imageAspectLock","imageAlignX","imageAlignY","imagePadding","imageEmptyBehavior","textWrap","textMaxLines","textOverflow","textEmptyBehavior","tableDataField","tableColumns","tableHeader","tableZebra","tableImageFit","tableWrap","tableHideEmptyColumns","tableEmptyBehavior","tableRowHeight","tableMaxRows","tableBorderWidth","tableFontSize","codeField","barcodeFormat","barcodeText","qrLevel","qrMargin","shapeBorderWidth","shapeRadius","shapeBorderStyle"]){const el=$(id);if(!el)continue;el.addEventListener("input",updateProps);el.addEventListener("change",()=>{updateProps();pushHistory();autoSave()})}document.querySelectorAll("[data-align]").forEach(b=>b.onclick=()=>{const e=selectedOne();if(!e)return;e.align=b.dataset.align;renderElements();syncProps();pushHistory();autoSave()});
+for(const id of ["propX","propY","propW","propH","propText","propField","propFontSize","propWeight","imageField","imageFit","imageRadius","imageAspectLock","imageAlignX","imageAlignY","imagePadding","imageEmptyBehavior","textWrap","textMaxLines","textOverflow","textEmptyBehavior","tableDataField","tableColumns","tableHeader","tableZebra","tableImageFit","tableWrap","tableHideEmptyColumns","tableEmptyBehavior","tableRowHeight","tableMaxRows","tableBorderWidth","tableFontSize","tableCellType","tableCellField","tableCellText","tableCellAlign","tableCellVAlign","tableCellPadding","tableCellWrap","tableCellImageFit","codeField","barcodeFormat","barcodeText","qrLevel","qrMargin","shapeBorderWidth","shapeRadius","shapeBorderStyle"]){const el=$(id);if(!el)continue;el.addEventListener("input",updateProps);el.addEventListener("change",()=>{updateProps();pushHistory();autoSave()})}document.querySelectorAll("[data-align]").forEach(b=>b.onclick=()=>{const e=selectedOne();if(!e)return;e.align=b.dataset.align;renderElements();syncProps();pushHistory();autoSave()});
 document.querySelectorAll("[data-multi]").forEach(b=>b.onclick=()=>applyMulti(b.dataset.multi));$("duplicateBtn").onclick=duplicate;$("deleteBtn").onclick=del;$("lockBtn").onclick=()=>toggleKey("locked");$("hideBtn").onclick=()=>toggleKey("hidden");$("frontBtn").onclick=()=>moveLayer(true);$("backBtn").onclick=()=>moveLayer(false);$("applyPage").onclick=()=>applyPage(true);$("pagePreset").onchange=e=>{if(e.target.value!=="custom"){const [w,h]=e.target.value.split("x");$("pageW").value=w;$("pageH").value=h;applyPage(true)}};$("gridToggle").onchange=e=>{$("printPage").classList.toggle("grid-on",grid=e.target.checked)};$("snapToggle").onchange=e=>snap=e.target.checked;$("safeToggle").onchange=e=>$("safeGuide").classList.toggle("hidden",!e.target.checked);$("zoomRange").oninput=e=>setZoom(e.target.value,"manual");$("zoomOut").onclick=()=>setZoom(zoom-5,"manual");$("zoomIn").onclick=()=>setZoom(zoom+5,"manual");$("fitBtn").onclick=fitCanvas;$("previewBtn").onclick=()=>setPreview(!preview);$("printBtn").onclick=testPrint;$("saveBtn").onclick=()=>{autoSave();toast("模板已保存")};$("templateName").onchange=autoSave;$("undoBtn").onclick=()=>restore(hIndex-1);$("redoBtn").onclick=()=>restore(hIndex+1);$("fullBtn").onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},120)}catch{toast("浏览器未允许全屏")}};$("quickBtn").onclick=()=>{if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href="./index.html"}};
 $("leftToggle").onclick=()=>{
   const g=document.querySelector(".designer-grid");
