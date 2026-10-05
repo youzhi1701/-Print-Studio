@@ -144,7 +144,16 @@ async function refresh(){
   try{
     $("statusText").textContent="正在同步";
     const c=await connectFeishu();
-    if(!c.connected){state.connected=false;status("连接失败","error");$("statusText").textContent="未连接飞书";showCompat("这台电脑没有成功加载飞书 SDK，可能被网络、浏览器安全策略或第三方嵌入限制拦截。","reason="+(c.reason||"SDK unavailable"));await renderPreview();return}
+    if(!c.connected){
+      state.connected=false;$("statusText").textContent="未连接飞书";
+      if(window.self!==window.top){
+        status("连接失败","error");
+        showCompat("这台电脑没有成功加载飞书 SDK，可能被网络、浏览器安全策略或第三方嵌入限制拦截。","reason="+(c.reason||"SDK unavailable"));
+      }else{
+        status("独立模式","warn");hideCompat();
+      }
+      await renderPreview();return
+    }
     state.connected=true;state.sdk=c.bitable;status("已连接","success");hideCompat();
     const ctx=await readContext(c.bitable);
     state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
