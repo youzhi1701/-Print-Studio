@@ -1,5 +1,5 @@
 import {mountBuildVersion} from "./version.js?v=20261006-04";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-04";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-04";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-04";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-04";import {printTemplateRecords} from "./print.js?v=20261006-04";import {
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-04";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-04";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-04";import {renderTemplateToHtml,renderElementToHtml,hydrateCodes} from "./renderer.js?v=20261006-04";import {printTemplateRecords} from "./print.js?v=20261006-04";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
@@ -272,6 +272,29 @@ function endTableCellDrag(){
 window.addEventListener("pointerup",endTableCellDrag);
 function content(n,e){
   const data=state.record?.data||{};
+  if(e.type!=="table"){
+    const editorData={...data};
+    const hasRealValue=hasValue(editorData[e.field]);
+    if(e.type==="field"&&!hasRealValue)editorData[e.field]="{{"+(e.field||"字段")+"}}";
+    if(e.type==="barcode"&&!hasRealValue)editorData[e.field]=String(e.barcodeFormat||"CODE128").toUpperCase()==="EAN13"?"6901234567892":"1234567890";
+    if(e.type==="qrcode"&&!hasRealValue)editorData[e.field]="https://example.local/";
+    if(e.type==="image"&&!hasRealValue){
+      if(e.emptyBehavior==="blank"){n.innerHTML="";return}
+      n.innerHTML='<div class="image-placeholder">暂无图片'+(e.field?(" · "+htmlEsc(e.field)):"")+'</div>';
+      return
+    }
+    const html=renderElementToHtml({...e,hidden:false},editorData,false);
+    if(html){
+      n.innerHTML=html;
+      if(e.type==="barcode"&&!hasRealValue&&e.showText!==false){
+        const label=n.querySelector("small");if(label)label.textContent="{{"+(e.field||"字段")+"}}";
+      }
+      const img=n.querySelector("img");
+      if(img)img.onerror=()=>{requestImageRefresh(state.record?.id||"");n.innerHTML='<div class="image-placeholder">图片加载失败 · 正在刷新</div>'};
+      if(e.type==="barcode"||e.type==="qrcode")requestAnimationFrame(()=>hydrateCodes(n));
+      return
+    }
+  }
   if(e.type==="text"){n.textContent=e.text||"";applyTextBehavior(n,e);return}
   if(e.type==="field"){
     const actual=data[e.field];
