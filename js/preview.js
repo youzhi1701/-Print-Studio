@@ -1,5 +1,5 @@
-import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-1";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
+import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-2";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-2";
 import {printTemplateRecords} from "./print.js?v=20261005-2";
 
 const $=id=>document.getElementById(id);
