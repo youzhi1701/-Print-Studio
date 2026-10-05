@@ -1,4 +1,4 @@
-import {isBuiltinTemplate,isValidTemplateObject,normalizeTemplateObject} from "./templates.js?v=20261006-05";
+import {isBuiltinTemplate,isValidTemplateObject,normalizeTemplateObject} from "./templates.js?v=20261006-06";
 const CLOUD_TABLE_NAME="超级打印_云端模板库";
 const FIELD_TEMPLATE_NAME="模板名称";
 const FIELD_TEMPLATE_JSON="模板JSON";
