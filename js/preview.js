@@ -1,5 +1,6 @@
 import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-1";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
+import {printTemplateRecords} from "./print.js?v=20261005-2";
 
 const $=id=>document.getElementById(id);
 let payload=null,index=0,fitMode=true,lastRenderKey="";
@@ -50,27 +51,13 @@ function fit(){
 }
 async function printOne(){
   const tpl=template(),rec=currentRecord();if(!tpl||!rec)return;
-  const host=$("sheetHost"),old=host.innerHTML,p=tpl.page||{width:215,height:140};
-  host.innerHTML=renderTemplateToHtml(tpl,rec.data||{});
-  await hydrateCodes(host);host.style.zoom="1";
-  const style=document.createElement("style");style.id="previewPrintPage";
-  style.textContent="@media print{@page{size:"+p.width+"mm "+p.height+"mm;margin:0}.print-sheet{width:"+p.width+"mm!important;height:"+p.height+"mm!important}}";
-  document.head.appendChild(style);
-  const cleanup=async()=>{style.remove();window.removeEventListener("afterprint",cleanup);host.innerHTML=old;await hydrateCodes(host);if(fitMode)fit()};
-  window.addEventListener("afterprint",cleanup);
-  window.print();
+  try{await printTemplateRecords(tpl,[rec])}
+  catch(err){console.error(err);$("statusText").textContent=err?.message||"打印失败"}
 }
 async function printAll(){
   const tpl=template(),list=records();if(!tpl||!list.length)return;
-  const host=$("sheetHost"),old=host.innerHTML,p=tpl.page||{width:215,height:140};
-  host.innerHTML=list.map(r=>renderTemplateToHtml(tpl,r.data||{})).join("");
-  await hydrateCodes(host);host.style.zoom="1";
-  const style=document.createElement("style");style.id="previewPrintPage";
-  style.textContent="@media print{@page{size:"+p.width+"mm "+p.height+"mm;margin:0}.print-sheet{width:"+p.width+"mm!important;height:"+p.height+"mm!important}}";
-  document.head.appendChild(style);
-  const cleanup=async()=>{style.remove();window.removeEventListener("afterprint",cleanup);host.innerHTML=old;await hydrateCodes(host);if(fitMode)fit()};
-  window.addEventListener("afterprint",cleanup);
-  window.print();
+  try{await printTemplateRecords(tpl,list)}
+  catch(err){console.error(err);$("statusText").textContent=err?.message||"打印失败"}
 }
 function payloadIdentity(data){
   try{return JSON.stringify({
