@@ -1,5 +1,5 @@
-import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet} from "./state.js?v=20261006-02";
-import {ensureTableModel} from "./table-model.js?v=20261006-02";
+import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet} from "./state.js?v=20261006-03";
+import {ensureTableModel} from "./table-model.js?v=20261006-03";
 
 const BUILTIN_CREATED_AT=1760000000000;
 const page=(width,height,margin=4)=>({width,height,orientation:width>=height?"landscape":"portrait",margin,safeArea:Math.min(4,margin)});
@@ -68,7 +68,7 @@ export const BUILTIN_TEMPLATES=[
     field("f1",24,4,43,10,"","商品名称",10,700),
     field("f2",24,15,43,7,"","商品属性",8),
     field("f3",3,25,25,10,"¥ ","价格",14,800),
-    barcode("bc1",30,25,37,20,"商品名称",6)
+    barcode("bc1",30,25,37,20,"SKU编码",6)
   ],["商品","70×50","条码"]),
 
   builtin("tpl_price_60x40","价格标签 60×40","零售","门店价格牌/货架价签，突出商品名与售价。",page(60,40,3),[
@@ -79,7 +79,7 @@ export const BUILTIN_TEMPLATES=[
 
   builtin("tpl_barcode_50x30","条码标签 50×30","标签","紧凑条码贴，适合 SKU、资产或内部编码。",page(50,30,2),[
     field("f1",2,2,46,6,"","商品名称",7,600,"center"),
-    barcode("bc1",3,9,44,18,"订单编号",6)
+    barcode("bc1",3,9,44,18,"条码值",6)
   ],["条码","50×30","SKU"]),
 
   builtin("tpl_qr_50x50","二维码标签 50×50","标签","方形二维码贴，适合订单、资产或跳转信息。",page(50,50,3),[
@@ -91,7 +91,7 @@ export const BUILTIN_TEMPLATES=[
     field("f1",2,3,42,7,"","商品名称",8,700),
     field("f2",2,11,42,6,"","商品属性",7),
     field("f3",2,19,22,8,"¥ ","价格",10,800),
-    barcode("bc1",45,4,23,22,"订单编号",5)
+    barcode("bc1",45,4,23,22,"SKU编码",5)
   ],["珠宝","贵金属","70×30"]),
 
   builtin("tpl_receipt_80x120","订单小票 80×120","单据","适合热敏小票机打印订单摘要、商品明细和订单码。",page(80,120,4),[
@@ -229,7 +229,20 @@ const FIELD_ALIASES={
   "商品属性":["商品属性","规格","规格型号","属性","sku","型号"],
   "数量":["数量","件数","购买数量","商品数量"],
   "价格":["价格","单价","金额","成交价","售价","商品价格"],
-  "产品图片":["产品图片","商品图片","图片","主图","SKU图片","sku图片"]
+  "产品图片":["产品图片","商品图片","图片","主图","SKU图片","sku图片"],
+  "SKU编码":["SKU编码","sku编码","SKU","sku","商品编码","货号","商家编码","产品编码"],
+  "条码值":["条码值","商品条码","条形码","barcode","ean13","EAN13","UPC"],
+  "运单号":["运单号","物流单号","快递单号","面单号","tracking","trackingno"],
+  "发件人":["发件人","寄件人","发货人","商家名称","店铺名称"],
+  "发件电话":["发件电话","寄件电话","发货电话","商家电话"],
+  "发货地址":["发货地址","寄件地址","发件地址","仓库地址"],
+  "备注":["备注","订单备注","买家留言","卖家备注","说明"],
+  "总金额":["总金额","订单金额","实付金额","应付金额","合计","订单合计"],
+  "日期":["日期","下单日期","创建时间","订单时间","打印日期"],
+  "重量":["重量","毛重","净重","包裹重量","商品重量"],
+  "批次号":["批次号","批次","lot","LOT","批号"],
+  "品牌":["品牌","品牌名称","brand"],
+  "单位":["单位","计量单位","unit"]
 };
 
 function norm(s){return String(s||"").trim().toLowerCase().replace(/[\s_\-]/g,"")}
