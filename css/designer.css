@@ -527,3 +527,19 @@
 }
 .table-head-cell{cursor:pointer;user-select:none}
 .table-head-cell:hover{background:rgba(37,99,235,.06)!important}
+
+/* table editor v2 cell inspector */
+.table-cell-inspector{
+  display:grid;gap:6px;margin-top:7px;padding:7px;
+  border:1px solid rgba(37,99,235,.12);border-radius:9px;
+  background:rgba(255,255,255,.38)
+}
+.table-cell-inspector.hidden{display:none!important}
+.table-cell-inspector input,.table-cell-inspector select{
+  min-height:30px;padding:0 7px;border:1px solid rgba(84,104,145,.13);
+  border-radius:7px;background:rgba(255,255,255,.64);font-size:9px;color:var(--ink2)
+}
+/* contextual toolbar must be allowed to float outside the table box */
+.table-el.selected{overflow:visible!important}
+.table-el.selected>table{overflow:hidden}
+.table-el:not(.selected){overflow:hidden!important}
