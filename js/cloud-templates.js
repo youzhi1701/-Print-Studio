@@ -263,7 +263,7 @@ export async function syncTemplatesWithCloud(bitable,localTemplates=[],deletedId
     if(row&&isDeleted(row)&&cloudTime>=localTime)continue;
     if(!row||localTime>cloudTime||isDeleted(row)){
       const same=grouped.get(String(tpl.id))||[];
-      const latest=same.sort((a,b)=>rowTime(b)-rowTime(a))[0]||null;
+      const latest=row||same.sort((a,b)=>rowTime(b)-rowTime(a))[0]||null;
       const fields=templateFields(schema.ids,tpl);
       if(latest){
         await schema.table.setRecord(latest.recordId,{fields});
