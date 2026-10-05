@@ -477,3 +477,9 @@
 /* shared renderer inside editable elements */
 .design-element>.render-element{width:100%!important;height:100%!important;pointer-events:none!important}
 .design-element>.render-element *{pointer-events:none!important}
+
+/* inline text editing must override the editor's visual-only renderer layer */
+.design-element.inline-editing{user-select:text!important;cursor:text!important}
+.design-element.inline-editing>.render-element,
+.design-element.inline-editing>.render-element *{pointer-events:auto!important;user-select:text!important}
+.design-element.inline-editing>.render-text{cursor:text!important;outline:0!important}
