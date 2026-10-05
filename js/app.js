@@ -57,11 +57,14 @@ function populateTemplateCategories(){
   templateLibraryCategory=select.value;
 }
 async function renderTemplateThumbnails(){
-  const jobs=[...document.querySelectorAll(".template-thumb-inner[data-template-id]")];
+  const list=$("templateLibraryList");if(!list)return;
+  const jobs=[...list.querySelectorAll(".template-thumb-inner[data-template-id]")];
   for(const host of jobs){
-    const tpl=state.templates.find(t=>String(t.id)===host.dataset.templateId);if(!tpl)continue;
-    host.innerHTML=renderTemplateToHtml(tpl,TEMPLATE_SAMPLE_DATA);
-    try{await hydrateCodes(host)}catch{}
+    const tpl=state.templates.find(t=>String(t.id)===host.dataset.templateId);
+    if(tpl)host.innerHTML=renderTemplateToHtml(tpl,TEMPLATE_SAMPLE_DATA);
+  }
+  try{await hydrateCodes(list)}catch{}
+  for(const host of jobs){
     const stage=host.parentElement,sheet=host.querySelector(".print-sheet");
     if(!stage||!sheet)continue;
     const sw=sheet.offsetWidth||1,sh=sheet.offsetHeight||1;
@@ -400,7 +403,20 @@ async function init(){
   $("nextRecord").onclick=async()=>{if(currentIndex<state.selectedRecords.length-1){currentIndex++;syncBridge();await renderPreview()}};
   $("printCurrent").onclick=()=>{const records=state.selectedRecords.length>1?state.selectedRecords:(activeRecord()?[activeRecord()]:[]);records.length?printRecords(records):toast("请先选择记录")};
 
-  const openDesignerAction=()=>{syncBridge();const w=openDesigner(state.activeTemplateId);if(!w)toast("浏览器拦截了设计器窗口，请允许弹出窗口后重试")};
+  const openDesignerAction=()=>{
+    let tpl=activeTemplate();if(!tpl)return;
+    if(isBuiltinTemplate(tpl)){
+      const copy=importTemplateObject(tpl,state.templates);
+      copy.name=(tpl.name||"模板")+" · 自定义";
+      copy.category="自定义";copy.status="draft";copy.builtIn=false;copy.updatedAt=Date.now();
+      state.templates.push(copy);state.activeTemplateId=copy.id;
+      persistActiveTemplate();saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(copy);
+      tpl=copy;toast("已创建可编辑副本");
+    }
+    syncBridge();
+    const w=openDesigner(tpl.id);
+    if(!w)toast("浏览器拦截了设计器窗口，请允许弹出窗口后重试");
+  };
   $("openDesigner").onclick=openDesignerAction;
 
   const openPopupPreview=()=>{syncBridge();const w=openPreviewWindow();if(!w)toast("浏览器拦截了弹出窗口，请允许后重试")};
