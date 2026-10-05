@@ -67,7 +67,7 @@ export function renderTemplateToHtml(tpl,data={}){
     }
     if(el.type==="barcode"){
       const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
-      return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'"></svg>'+(el.showText===false?'':'<small>'+esc(v)+'</small>')+'</div>';
+      return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'"></svg>'+(el.showText===false?'':'<small style="font-size:'+(el.barcodeFontSize||8)+'px;line-height:1.15">'+esc(v)+'</small>')+'</div>';
     }
     if(el.type==="qrcode"){
       const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
