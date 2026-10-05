@@ -122,6 +122,8 @@ async function renderExactPdf(template,records){
       if(i>0)pdf.addPage([page.width,page.height],orientation);
       pdf.addImage(canvas.toDataURL("image/png"),"PNG",0,0,page.width,page.height,undefined,"FAST");
     }
+    try{pdf.setProperties({title:"超级打印",subject:"打印成品"})}catch{}
+    try{pdf.autoPrint?.()}catch{}
     return{blob:pdf.output("blob"),page};
   }finally{
     host.remove();
@@ -139,9 +141,8 @@ function openPdfForPrint(blob,popup){
   }
   target.location.replace(lastPdfUrl);
   target.focus?.();
-  // Chrome's PDF viewer owns its own print UI. A programmatic print attempt is safe;
-  // if blocked, the user already lands on the exact-size PDF and can press Print.
-  setTimeout(()=>{try{target.print()}catch{}},1200);
+  // The PDF carries an auto-print action when the viewer supports it.
+  // Otherwise the user lands on the exact-size PDF viewer with no webpage header/footer.
 }
 
 export async function printTemplateRecords(template,records,{beforePrint=null,afterPrint=null}={}){
