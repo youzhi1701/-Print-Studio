@@ -1,7 +1,7 @@
-import {mountBuildVersion} from "./version.js?v=20261005-18";
-import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-18";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-18";
-import {printTemplateRecords} from "./print.js?v=20261005-18";
+import {mountBuildVersion} from "./version.js?v=20261005-19";
+import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-19";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-19";
+import {printTemplateRecords} from "./print.js?v=20261005-19";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
