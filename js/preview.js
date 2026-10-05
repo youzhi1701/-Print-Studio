@@ -1,5 +1,5 @@
 import {mountBuildVersion} from "./version.js?v=20261006-01";
-import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261006-01";
+import {requestBridgeFromOpener,onBridgeMessage,requestImageRefresh} from "./bridge.js?v=20261006-01";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";
 import {printTemplateRecords} from "./print.js?v=20261006-01";
 
@@ -33,6 +33,9 @@ async function render(force=false){
   lastRenderKey=key;
   const html=renderTemplateToHtml(tpl,rec.data||{});
   if(host.innerHTML!==html)host.innerHTML=html;
+  for(const img of host.querySelectorAll("img")){
+    img.addEventListener("error",()=>{$("statusText").textContent="图片加载失败，正在重新获取";requestImageRefresh(rec.id)},{once:true});
+  }
   await hydrateCodes(host);
   $("counter").textContent=(index+1)+" / "+list.length;
   $("previewMeta").textContent=(tpl.name||"模板")+" · "+recordLabel(rec);
