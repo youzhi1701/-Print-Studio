@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261005-23";
+} from "./table-model.js?v=20261006-01";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
@@ -67,11 +67,11 @@ export function renderTemplateToHtml(tpl,data={}){
     }
     if(el.type==="barcode"){
       const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
-      return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'"></svg>'+(el.showText===false?'':'<small style="font-size:'+(el.barcodeFontSize||8)+'px;line-height:1.15">'+esc(v)+'</small>')+'</div>';
+      return '<div style="'+common+'display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px"><svg class="barcode" data-value="'+esc(v)+'" data-format="'+esc(el.barcodeFormat||"CODE128")+'" style="display:block;width:100%;flex:1 1 auto;min-height:0;max-height:100%"></svg>'+(el.showText===false?'':'<small style="display:block;flex:0 0 auto;font-size:'+(el.barcodeFontSize||8)+'px;line-height:1.15;white-space:nowrap">'+esc(v)+'</small>')+'</div>';
     }
     if(el.type==="qrcode"){
       const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";
-      return '<div style="'+common+'display:grid;place-items:center"><canvas class="qrcode" data-value="'+esc(v)+'" data-level="'+esc(el.qrLevel||"M")+'" data-margin="'+Number(el.qrMargin||0)+'"></canvas></div>';
+      return '<div style="'+common+'display:grid;place-items:center"><canvas class="qrcode" data-value="'+esc(v)+'" data-level="'+esc(el.qrLevel||"M")+'" data-margin="'+Number(el.qrMargin||0)+'" data-size="600" style="display:block;width:100%;height:100%;max-width:100%;max-height:100%"></canvas></div>';
     }
     if(el.type==="image"){
       const src=data?.[el.field]||"";
@@ -108,7 +108,7 @@ export async function hydrateCodes(root){
       "https://esm.sh/qrcode@1.5.4"
     ]);const QR=q.default||q;
     for(const c of root.querySelectorAll("canvas.qrcode")){
-      try{await QR.toCanvas(c,c.dataset.value||"",{margin:Number(c.dataset.margin||0),width:600,errorCorrectionLevel:c.dataset.level||"M"});c.dataset.hydrated="1"}catch{}
+      try{await QR.toCanvas(c,c.dataset.value||"",{margin:Number(c.dataset.margin||0),width:Math.max(120,Number(c.dataset.size||600)),errorCorrectionLevel:c.dataset.level||"M"});c.dataset.hydrated="1"}catch{}
     }
   }catch(err){console.warn("二维码模块加载失败",err)}
 }
