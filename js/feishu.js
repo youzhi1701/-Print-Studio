@@ -181,6 +181,7 @@ export async function resolveAttachmentUrls(table,record,fields,{force=false}={}
       next.data[f.name]=urls[0];
     }else if(force){
       delete next.attachments[f.name];
+      next.data[f.name]="";
     }
   }
   return next;
