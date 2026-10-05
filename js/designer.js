@@ -135,7 +135,7 @@ function defaults(type,field=""){
   if(type==="text"){b.text="双击或在右侧修改文字";b.w=58;b.wrap=true;b.maxLines=0;b.overflowMode="clip";b.emptyBehavior="blank"}
   if(type==="field"){b.text="{{"+(field||"字段")+"}}";b.field=field;b.w=50;b.wrap=true;b.maxLines=0;b.overflowMode="clip";b.emptyBehavior="hide"}
   if(type==="image"){b.w=30;b.h=25;b.field=field;b.imageFit="contain";b.radius=0;b.aspectLock=true;b.alignX="center";b.alignY="center";b.padding=0;b.emptyBehavior="hide"}
-  if(type==="table"){b.w=115;b.h=38;b.columns=normalizeColumns([]);b.showHeader=true;b.zebra=false;b.rowHeight=8;b.maxRows=5;b.borderWidth=.5;b.fontSize=9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=false;b.merges=[]}
+  if(type==="table"){b.w=115;b.h=38;b.columns=normalizeColumns([]);b.showHeader=true;b.zebra=false;b.rowHeight=8;b.maxRows=5;b.designRowCount=1;b.borderWidth=.5;b.fontSize=9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=false;b.merges=[]}
   if(type==="barcode"){b.w=62;b.h=20;b.field=field||"订单编号";b.showText=true;b.barcodeFormat="CODE128"}
   if(type==="qrcode"){b.w=25;b.h=25;b.field=field||"订单编号";b.qrLevel="M";b.qrMargin=0}
   if(type==="line"){b.w=70;b.h=.5;b.borderWidth=.5;b.borderStyle="solid"}
@@ -213,7 +213,10 @@ function content(n,e){
   }
   if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
   if(e.type==="table"){
-    const sourceRows=rowsForTable(e,data).slice(0,e.maxRows||5),rows=sourceRows.length?sourceRows:[{}];
+    const sourceRows=rowsForTable(e,data).slice(0,e.maxRows||5);
+    const rows=(sourceRows.length?sourceRows:[{}]).map(r=>r||{});
+    const wanted=Math.max(rows.length,Number(e.designRowCount)||1);
+    while(rows.length<wanted)rows.push({});
     const cols=tableColumnsForPreview(e,rows,data);
     const configuredCols=normalizeColumns(e.columns);
     const hasAnyData=sourceRows.some(row=>configuredCols.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
@@ -300,10 +303,19 @@ function unmergeSelectedCells(){
   renderElements();pushHistory();autoSave()
 }
 function insertTableRow(){
-  const e=selectedOne();if(!e||e.type!=="table")return;e.maxRows=Math.max(1,(e.maxRows||1)+1);$("tableMaxRows").value=e.maxRows;renderElements();autoSave()
+  const e=selectedOne();if(!e||e.type!=="table")return;
+  const currentRows=Math.max(1,Number(e.designRowCount)||1);
+  e.designRowCount=currentRows+1;
+  renderElements();pushHistory();autoSave();toast("已插入一行")
 }
 function deleteTableRow(){
-  const e=selectedOne();if(!e||e.type!=="table")return;e.maxRows=Math.max(1,(e.maxRows||1)-1);$("tableMaxRows").value=e.maxRows;renderElements();autoSave()
+  const e=selectedOne();if(!e||e.type!=="table")return;
+  const currentRows=Math.max(1,Number(e.designRowCount)||1);
+  if(currentRows<=1){toast("表格至少保留一行");return}
+  e.designRowCount=currentRows-1;
+  e.merges=(e.merges||[]).filter(m=>m.row<e.designRowCount);
+  selectedCells=selectedCells.filter(s=>s.row<e.designRowCount);
+  renderElements();pushHistory();autoSave();toast("已删除一行")
 }
 function addHandles(n,e){for(const d of ["nw","n","ne","e","se","s","sw","w"]){const h=document.createElement("span");h.className="resize-handle "+d;h.dataset.dir=d;h.addEventListener("pointerdown",ev=>startResize(ev,e,d));n.appendChild(h)}}
 function startMove(ev,e){if(preview||e.locked||ev.target.closest(".resize-handle,.table-col-resizer,.table-row-resizer,.table-edit-cell"))return;ev.preventDefault();ev.stopPropagation();if(!selected.has(e.id))selected=ev.shiftKey?new Set([...selected,e.id]):new Set([e.id]);const sx=ev.clientX,sy=ev.clientY,start=[...selected].map(id=>{const x=current().elements.find(v=>v.id===id);return{x,id,ox:x.x,oy:x.y}}),factor=zoom/100;const move=m=>{let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}for(const a of start){a.x.x=Math.max(0,a.ox+dx);a.x.y=Math.max(0,a.oy+dy)}renderElements();syncProps()};const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};addEventListener("pointermove",move);addEventListener("pointerup",up)}
