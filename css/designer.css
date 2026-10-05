@@ -453,3 +453,10 @@
 .table-el.selected{overflow:visible!important}
 .table-el.selected>table{overflow:hidden}
 .table-el:not(.selected){overflow:hidden!important}
+
+.table-cell-value-state{
+  padding:6px 7px;border-radius:7px;font-size:8px;line-height:1.35;
+  border:1px solid rgba(84,104,145,.12);background:rgba(255,255,255,.44);color:var(--muted)
+}
+.table-cell-value-state.ok{color:#0f766e;background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.15)}
+.table-cell-value-state.empty{color:#9a6700;background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.16)}
