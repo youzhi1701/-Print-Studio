@@ -283,11 +283,12 @@ function content(n,e){
       for(const col of cols){
         const ci=col._index;
         if(coveredByMerge(e,ri,ci))continue;
-        const merge=mergeAt(e,ri,ci),actual=row?.[col.field]??data?.[col.field];
-        const shown=hasValue(actual)?tableCellHtml(actual,col.field,e.tableImageFit||"contain"):"";
+        const merge=mergeAt(e,ri,ci),cfg=tableCellConfig(e,ri,ci,col),actual=tableCellValue(cfg,row,data,col);
+        const shown=hasValue(actual)?tableCellHtml(actual,cfg.field||col.field,cfg.imageFit):"";
         const sel=selectedCells.some(s=>s.row===ri&&s.col===ci);
         const rh=(e.rowHeights&&Number(e.rowHeights[ri]))||e.rowHeight||8;
-        cells+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+ci+'" '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="text-align:'+col.align+';height:'+rh*MM+'px">'+shown+"</td>";
+        const whiteSpace=cfg.wrap?"normal":"nowrap";
+        cells+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+ci+'" '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="text-align:'+cfg.align+';vertical-align:'+cfg.valign+';padding:'+cfg.padding*MM+'px;white-space:'+whiteSpace+';height:'+rh*MM+'px">'+shown+"</td>";
       }
       return "<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+cells+"</tr>";
     }).join("");
