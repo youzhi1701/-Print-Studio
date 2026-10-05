@@ -609,7 +609,10 @@ function renderTableColumnEditor(e){
     const remove=document.createElement("button");remove.type="button";remove.className="col-remove";remove.textContent="×";remove.title="删除列";
 
     const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();col.width=Math.max(1,Number(width.value)||1);e.columns=cols;renderElements();autoSave()};
-    title.addEventListener("input",commit);field.addEventListener("change",commit);width.addEventListener("input",commit);
+    const checkpoint=()=>{commit();pushHistory();autoSave()};
+    title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
+    field.addEventListener("change",checkpoint);
+    width.addEventListener("input",commit);width.addEventListener("change",checkpoint);
     up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
     down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
     remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
