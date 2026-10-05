@@ -86,25 +86,8 @@ function applyPage(save=true){
 }
 function drawRulers(w,h){const tr=$("topRuler"),lr=$("leftRuler");tr.innerHTML="";lr.innerHTML="";tr.style.width=w*MM+"px";lr.style.height=h*MM+"px";for(let m=0;m<=w;m+=10){const n=document.createElement("span");n.textContent=m;n.style.cssText="position:absolute;left:"+(m*MM)+"px;top:5px";tr.appendChild(n)}for(let m=0;m<=h;m+=10){const n=document.createElement("span");n.textContent=m;n.style.cssText="position:absolute;top:"+(m*MM)+"px;left:3px;transform:rotate(-90deg);transform-origin:left top";lr.appendChild(n)}}
 function normalizeColumns(cols){
-  let out;
-  if(!Array.isArray(cols)||!cols.length) out=[
-    {title:"商品名称",field:"商品名称",width:45,align:"left"},
-    {title:"商品属性",field:"商品属性",width:25,align:"center"},
-    {title:"数量",field:"数量",width:15,align:"center"},
-    {title:"价格",field:"价格",width:15,align:"right"}
-  ];
-  else out=cols.map((col,i)=>{
-    if(typeof col==="string")return{id:uid("col"),title:col,field:col,width:null,align:i===0?"left":"center"};
-    return{id:col.id||uid("col"),title:col.title||col.field||("列"+(i+1)),field:col.field||col.title||"",width:col.width??null,align:col.align||"center"};
-  });
-  const valid=out.every(x=>Number.isFinite(Number(x.width))&&Number(x.width)>0);
-  if(!valid){
-    const base=100/out.length;out.forEach(x=>x.width=base);
-  }else{
-    const sum=out.reduce((n,x)=>n+Number(x.width),0)||100;
-    out.forEach(x=>x.width=Number(x.width)*100/sum);
-  }
-  return out;
+  const holder={columns:Array.isArray(cols)?cols:[]};
+  return tmNormalizeColumns(holder)
 }
 function isImageValue(v){
   return typeof v==="string"&&(v.startsWith("data:image/")||/^https?:\/\//i.test(v));
