@@ -112,7 +112,7 @@ export function materializeTableRows(el,data={}){
   const sourceEntries=sourceEntriesForTable(el,data),source=sourceEntries.map(x=>x.data);
   const defs=el.rowDefs||[];
   let dataDefs=defs.filter(r=>r.type==="data");
-  if(source.length>dataDefs.length){
+  if(el.dataField&&source.length>dataDefs.length){
     let at=defs.reduce((last,r,i)=>r.type==="data"?i+1:last,0);
     for(let n=dataDefs.length;n<source.length;n++){
       const def={id:id("row"),type:"data",height:Number(el.rowHeight)||8};
@@ -131,7 +131,7 @@ export function materializeTableRows(el,data={}){
     }
   }
   // If data grows beyond saved data slots, append stable ephemeral rows after the last data slot.
-  while(si<source.length){
+  while(el.dataField&&si<source.length){
     const base=dataDefs[dataDefs.length-1]?.id||"data";
     out.push({id:base+"__auto_"+si,type:"data",height:Number(el.rowHeight)||8,data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si,ephemeral:true});
     si++;
