@@ -21,7 +21,7 @@
     </div>
   </header>
 
-  <main class="designer-grid">
+  <main id="designerGrid" class="designer-grid">
     <aside class="designer-left glass">
       <div class="tabs"><button class="tab active" data-tab="components">组件</button><button class="tab" data-tab="fields">数据</button></div>
       <section id="componentsTab" class="tab-body">
@@ -108,7 +108,6 @@
             <label class="stack">数据源<select id="tableDataField"><option value="">当前记录（单行）</option></select></label>
             <div class="stack"><span>列配置</span><div id="tableColumnList" class="table-column-list"></div></div>
             <div class="table-column-actions"><button id="addTableColumn" type="button">+ 添加列</button><button id="normalizeTableWidths" type="button">均分列宽</button></div>
-            <textarea id="tableColumns" class="hidden" rows="1"></textarea>
             <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>斑马纹<select id="tableZebra"><option value="false">关闭</option><option value="true">开启</option></select></label></div>
             <label class="stack">图片单元格<select id="tableImageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select></label>
             <div class="two"><label>文字换行<select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>空列<select id="tableHideEmptyColumns"><option value="true">自动隐藏</option><option value="false">保留</option></select></label></div>
