@@ -1,9 +1,16 @@
-import {STORAGE_KEYS,storageGet,storageSet} from "./state.js";
+import {STORAGE_KEYS,storageGet,storageSet} from "./state.js?v=20261006-01";
 
 let lastPayload=null;
 let listenerInstalled=false;
 const childWindows=new Set();
+const MESSAGE_ORIGIN=(location.origin&&location.origin!=="null")?location.origin:"*";
 
+function trustedEvent(event){
+  return MESSAGE_ORIGIN==="*"||event.origin===MESSAGE_ORIGIN;
+}
+function post(target,message){
+  try{target?.postMessage(message,MESSAGE_ORIGIN)}catch{}
+}
 function sanitizeRecord(record){
   if(!record||typeof record!=="object")return null;
   return{
@@ -12,7 +19,6 @@ function sanitizeRecord(record){
     attachments:record.attachments&&typeof record.attachments==="object"?{...record.attachments}:{}
   }
 }
-
 function normalizePayload(payload){
   const p=payload&&typeof payload==="object"?payload:{};
   const selectedRecords=Array.isArray(p.selectedRecords)?p.selectedRecords.map(sanitizeRecord).filter(Boolean):[];
@@ -37,7 +43,6 @@ function normalizePayload(payload){
     bridgeUpdatedAt:Number(p.bridgeUpdatedAt)||0
   };
 }
-
 function registerChild(win){
   if(!win)return win;
   childWindows.add(win);
@@ -47,70 +52,77 @@ function broadcastPayload(){
   if(!lastPayload)return;
   for(const win of [...childWindows]){
     if(!win||win.closed){childWindows.delete(win);continue}
-    try{win.postMessage({type:"SUPER_PRINT_DATA",payload:lastPayload},"*")}catch{}
+    post(win,{type:"SUPER_PRINT_DATA",payload:lastPayload});
   }
 }
-
 function installOpenerResponder(){
-  if(listenerInstalled) return;
+  if(listenerInstalled)return;
   listenerInstalled=true;
   window.addEventListener("message",event=>{
+    if(!trustedEvent(event))return;
     const msg=event.data;
-    if(!msg||typeof msg!=="object") return;
+    if(!msg||typeof msg!=="object")return;
     if(msg.type==="SUPER_PRINT_READY"&&lastPayload){
-      try{event.source?.postMessage({type:"SUPER_PRINT_DATA",payload:lastPayload},"*")}catch{}
+      post(event.source,{type:"SUPER_PRINT_DATA",payload:lastPayload});
     }
     if(msg.type==="SUPER_PRINT_REQUEST_DATA"&&lastPayload){
-      try{event.source?.postMessage({type:"SUPER_PRINT_DATA",payload:lastPayload},"*")}catch{}
+      post(event.source,{type:"SUPER_PRINT_DATA",payload:lastPayload});
     }
   });
 }
 
 export function writeBridge(payload){
   lastPayload={...normalizePayload(payload),bridgeUpdatedAt:Date.now()};
-  try{storageSet(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))}catch(err){console.warn("bridge persistence failed",err)}
-  installOpenerResponder();broadcastPayload();
+  try{storageSet(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))}
+  catch(err){console.warn("bridge persistence failed",err)}
+  installOpenerResponder();
+  broadcastPayload();
 }
-
 export function readBridge(){
   try{
     const raw=JSON.parse(storageGet(STORAGE_KEYS.bridge)||"null");
     return raw?normalizePayload(raw):null
   }catch{return null}
 }
-
 export function requestBridgeFromOpener(timeout=1400){
   return new Promise(resolve=>{
-    let settled=false;
-    const done=v=>{if(settled)return;settled=true;window.removeEventListener("message",onMsg);resolve(v||readBridge())};
+    let settled=false,timer=null;
+    const done=v=>{
+      if(settled)return;
+      settled=true;
+      clearTimeout(timer);
+      window.removeEventListener("message",onMsg);
+      resolve(v||readBridge());
+    };
     const onMsg=event=>{
+      if(!trustedEvent(event))return;
       const msg=event.data;
-      if(msg?.type==="SUPER_PRINT_DATA") done(normalizePayload(msg.payload));
+      if(msg?.type==="SUPER_PRINT_DATA")done(normalizePayload(msg.payload));
     };
     window.addEventListener("message",onMsg);
     try{
       if(window.opener&&!window.opener.closed){
-        window.opener.postMessage({type:"SUPER_PRINT_READY"},"*");
-        window.opener.postMessage({type:"SUPER_PRINT_REQUEST_DATA"},"*");
+        post(window.opener,{type:"SUPER_PRINT_READY"});
+        post(window.opener,{type:"SUPER_PRINT_REQUEST_DATA"});
       }
     }catch{}
-    setTimeout(()=>done(readBridge()),timeout);
+    timer=setTimeout(()=>done(readBridge()),timeout);
   });
 }
-
 export function onBridgeMessage(callback){
   const handler=event=>{
+    if(!trustedEvent(event))return;
     const msg=event.data;
-    if(msg?.type==="SUPER_PRINT_DATA") callback(normalizePayload(msg.payload));
+    if(msg?.type==="SUPER_PRINT_DATA")callback(normalizePayload(msg.payload));
   };
   window.addEventListener("message",handler);
-  return ()=>window.removeEventListener("message",handler);
+  return()=>window.removeEventListener("message",handler);
 }
-
 export function pushBridgeToDesigner(targetWindow){
   if(!lastPayload||!targetWindow)return;
-  try{targetWindow.postMessage({type:"SUPER_PRINT_DATA",payload:lastPayload},"*")}catch{}
+  post(targetWindow,{type:"SUPER_PRINT_DATA",payload:lastPayload});
 }
+export function bridgeTargetOrigin(){return MESSAGE_ORIGIN}
 
 export function openDesigner(templateId){
   installOpenerResponder();
@@ -132,7 +144,6 @@ export function openDesigner(templateId){
   }
   return w;
 }
-
 
 export function openPreviewWindow(){
   installOpenerResponder();
