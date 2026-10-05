@@ -7,7 +7,7 @@ const seed={id:"tpl_shipping_215x140",schemaVersion:7,name:"发货单 215×140",
 {id:"f3",type:"field",x:12,y:34,w:174,h:12,label:"收货地址：",field:"收货地址",fontSize:10},
 {id:"f4",type:"field",x:12,y:47,w:90,h:8,label:"订单编号：",field:"订单编号",fontSize:10},
 {id:"tbl",type:"table",x:12,y:59,w:191,h:42,columns:[{title:"产品图",field:"产品图片",width:20,align:"center"},{title:"商品名称",field:"商品名称",width:32,align:"left"},{title:"商品属性",field:"商品属性",width:30,align:"center"},{title:"价格",field:"价格",width:18,align:"right"}],fontSize:9,showHeader:true,zebra:false,rowHeight:8,maxRows:5,designRowCount:1,borderWidth:.5,dataField:"",tableImageFit:"cover",wrap:true,hideEmptyColumns:true,emptyBehavior:"hide",merges:[],rowHeights:{},cells:{},tableEditorVersion:2},
-{id:"bc1",type:"barcode",x:120,y:111,w:70,h:18,field:"订单编号",showText:true}
+{id:"bc1",type:"barcode",x:120,y:111,w:70,h:18,field:"订单编号",showText:true,barcodeFontSize:8}
 ],createdAt:Date.now(),updatedAt:Date.now()};
 export function loadTemplates(){
   const raw=storageGet(STORAGE_KEYS.templates);
@@ -37,7 +37,7 @@ export function loadTemplates(){
         imageFit:"contain",radius:0,aspectLock:true,alignX:"center",alignY:"center",padding:0,emptyBehavior:"hide",
         ...el,...(legacy?{imageFit:"cover"}:{})
       }
-      if(el.type==="barcode")return{barcodeFormat:"CODE128",showText:true,...el}
+      if(el.type==="barcode")return{barcodeFormat:"CODE128",showText:true,barcodeFontSize:8,...el}
       if(el.type==="qrcode")return{qrLevel:"M",qrMargin:0,...el}
       if(el.type==="line"||el.type==="container")return{borderWidth:.5,borderStyle:"solid",radius:0,...el}
       if(el.type==="field")return{wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"hide",...el}
