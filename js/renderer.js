@@ -36,6 +36,26 @@ function textCss(el){
   return s
 }
 function imagePosition(el){return (el.alignX||"center")+" "+(el.alignY||"center")}
+function tableCellKey(row,col){return row+":"+col}
+function tableCellOverride(el,row,col){return el.cells?.[tableCellKey(row,col)]||null}
+function tableCellConfig(el,row,col,column){
+  const o=tableCellOverride(el,row,col)||{};
+  return{
+    type:o.type||"inherit",
+    field:o.field??"",
+    text:o.text??"",
+    align:o.align||column?.align||"center",
+    valign:o.valign||"middle",
+    padding:Number.isFinite(Number(o.padding))?Number(o.padding):2,
+    wrap:o.wrap!==undefined?o.wrap:el.wrap!==false,
+    imageFit:o.imageFit||el.tableImageFit||"contain"
+  }
+}
+function tableCellValue(cfg,row,data,column){
+  if(cfg.type==="text")return cfg.text||"";
+  const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
+  return row?.[field]??data?.[field]??""
+}
 function visibleColumns(el,rows,data){
   const cols=normalizeColumns(el.columns).map((c,i)=>({...c,_index:i}));
   const structural=Array.isArray(el.merges)&&el.merges.length>0;
@@ -95,9 +115,10 @@ export function renderTemplateToHtml(tpl,data={}){
         let cells="";
         for(const col of cols){
           const ci=col._index;if(covered(el,ri,ci))continue;
-          const merge=mergeAt(el,ri,ci),value=row?.[col.field]??data?.[col.field]??"";
+          const merge=mergeAt(el,ri,ci),cfg=tableCellConfig(el,ri,ci,col),value=tableCellValue(cfg,row,data,col);
           const rh=(el.rowHeights&&Number(el.rowHeights[ri]))||el.rowHeight||8;
-          cells+='<td '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="position:relative;border:'+bw+'px solid #cbd2df;padding:'+(isImageValue(value)?'0':'2px')+';text-align:'+col.align+';height:'+rh+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere;word-break:'+(el.wrap===false?'normal':'break-word')+';vertical-align:middle">'+cellHtml(value,el.tableImageFit||"contain")+'</td>';
+          const pad=isImageValue(value)?0:cfg.padding;
+          cells+='<td '+(merge&&merge.colSpan>1?'colspan="'+merge.colSpan+'" ':'')+(merge&&merge.rowSpan>1?'rowspan="'+merge.rowSpan+'" ':'')+'style="position:relative;border:'+bw+'px solid #cbd2df;padding:'+pad+'px;text-align:'+cfg.align+';height:'+rh+'mm;white-space:'+(cfg.wrap?'normal':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cfg.wrap?'break-word':'normal')+';vertical-align:'+cfg.valign+'">'+cellHtml(value,cfg.imageFit)+'</td>';
         }
         return '<tr style="'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+cells+'</tr>';
       }).join("");
