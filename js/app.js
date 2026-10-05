@@ -1,15 +1,15 @@
-import {mountBuildVersion} from "./version.js?v=20261006-02";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-02";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-02";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-02";
-import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-02";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-02";
-import {printTemplateRecords} from "./print.js?v=20261006-02";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-02";
+import {mountBuildVersion} from "./version.js?v=20261006-03";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-03";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-03";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-03";
+import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-03";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-03";
+import {printTemplateRecords} from "./print.js?v=20261006-03";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-03";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();let templateLibraryQuery="",templateLibraryCategory="全部";
+let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();let templateLibraryQuery="",templateLibraryCategory="全部";let templateThumbObserver=null;const templateThumbCache=new Map();let templateSearchTimer=null;
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -56,21 +56,39 @@ function populateTemplateCategories(){
   select.value=cats.includes(current)?current:"全部";
   templateLibraryCategory=select.value;
 }
-async function renderTemplateThumbnails(){
-  const list=$("templateLibraryList");if(!list)return;
-  const jobs=[...list.querySelectorAll(".template-thumb-inner[data-template-id]")];
-  for(const host of jobs){
-    const tpl=state.templates.find(t=>String(t.id)===host.dataset.templateId);
-    if(tpl)host.innerHTML=renderTemplateToHtml(tpl,TEMPLATE_SAMPLE_DATA);
-  }
-  try{await hydrateCodes(list)}catch{}
-  for(const host of jobs){
-    const stage=host.parentElement,sheet=host.querySelector(".print-sheet");
-    if(!stage||!sheet)continue;
+function thumbnailCacheKey(tpl){return String(tpl?.id||"")+"@"+String(tpl?.updatedAt||0)}
+async function renderOneTemplateThumbnail(host){
+  if(!host||host.dataset.rendered==="1")return;
+  const tpl=state.templates.find(t=>String(t.id)===host.dataset.templateId);if(!tpl)return;
+  const key=thumbnailCacheKey(tpl);
+  const cached=templateThumbCache.get(key);
+  host.innerHTML=cached||renderTemplateToHtml(tpl,TEMPLATE_SAMPLE_DATA);
+  try{await hydrateCodes(host)}catch{}
+  const stage=host.parentElement,sheet=host.querySelector(".print-sheet");
+  if(stage&&sheet){
     const sw=sheet.offsetWidth||1,sh=sheet.offsetHeight||1;
     const scale=Math.min((stage.clientWidth-8)/sw,(stage.clientHeight-8)/sh,1);
     host.style.transform="translate(-50%,-50%) scale("+Math.max(.05,scale)+")";
   }
+  host.dataset.rendered="1";
+  if(!cached&&!host.querySelector("canvas.qrcode"))templateThumbCache.set(key,host.innerHTML);
+}
+function renderTemplateThumbnails(){
+  const list=$("templateLibraryList");if(!list)return;
+  templateThumbObserver?.disconnect?.();
+  const jobs=[...list.querySelectorAll(".template-thumb-inner[data-template-id]")];
+  if(!("IntersectionObserver" in window)){
+    jobs.forEach(host=>renderOneTemplateThumbnail(host));
+    return;
+  }
+  templateThumbObserver=new IntersectionObserver(entries=>{
+    for(const entry of entries){
+      if(!entry.isIntersecting)continue;
+      templateThumbObserver.unobserve(entry.target);
+      renderOneTemplateThumbnail(entry.target);
+    }
+  },{root:list,rootMargin:"100px"});
+  jobs.forEach(host=>templateThumbObserver.observe(host));
 }
 function renderTemplateLibrary(){
   const list=$("templateLibraryList"),count=$("templateLibraryCount"),empty=$("templateLibraryEmpty");
@@ -89,7 +107,7 @@ function renderTemplateLibrary(){
       +(t.description?'<span class="template-card-desc">'+escHtml(t.description)+'</span>':"")+'</span></button>';
   }).join("");
   if(empty)empty.classList.toggle("hidden",shown.length>0);
-  requestAnimationFrame(()=>renderTemplateThumbnails());
+  requestAnimationFrame(renderTemplateThumbnails);
 }
 function fillTemplates(){renderTemplateLibrary()}
 function persistActiveTemplate(){
@@ -149,6 +167,7 @@ async function syncCloudTemplates(force=false){
     const previous=state.activeTemplateId;
     const result=await runCloudOperation(()=>syncTemplatesWithCloud(state.sdk,state.templates,loadTemplateTombstones()));
     state.templates=result.templates;
+    templateThumbCache.clear();
     saveTemplates(state.templates);
     for(const id of result.clearedDeletedIds||[])clearTemplateDeleted(id);
     state.activeTemplateId=state.templates.some(t=>t.id===previous)?previous:(state.templates[0]?.id||null);
@@ -363,8 +382,22 @@ async function chooseBatch(single=false){
 
 async function printRecords(records){
   const tpl=activeTemplate();if(!tpl)return;
-  try{await printTemplateRecords(tpl,records)}
-  catch(err){console.error(err);toast(err?.message||"打印失败")}
+  let list=(Array.isArray(records)?records:[records]).filter(Boolean);
+  if(!list.length)return;
+  try{
+    if(state.connected&&state.table&&state.fields.length){
+      $("statusText").textContent="正在检查打印图片";
+      list=await resolveAttachmentUrlsForRecords(state.table,list,state.fields,{force:true});
+      const freshById=new Map(list.map(r=>[r.id,r]));
+      state.selectedRecords=state.selectedRecords.map(r=>freshById.get(r.id)||r);
+      if(state.record?.id&&freshById.has(state.record.id))state.record=freshById.get(state.record.id);
+      syncBridge();
+    }
+    await printTemplateRecords(tpl,list);
+    $("statusText").textContent="已发送到打印";
+  }catch(err){
+    console.error(err);$("statusText").textContent="打印准备失败";toast(err?.message||"打印失败");
+  }
 }
 async function applyDesignerTemplate(template){
   if(!template?.id)return;
@@ -372,6 +405,7 @@ async function applyDesignerTemplate(template){
   if(i>=0)state.templates[i]=structuredClone(template);else state.templates.push(structuredClone(template));
   state.activeTemplateId=template.id;persistActiveTemplate();
   saveTemplates(state.templates);
+  templateThumbCache.clear();
   fillTemplates();
   queueCloudTemplateSave(template);
   autoBind();
@@ -394,7 +428,7 @@ async function init(){
     const item=e.target.closest("[data-template-id]");if(!item)return;
     state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();fillTemplates();autoBind();syncBridge();await renderPreview(true);
   });
-  if($("templateLibrarySearch"))$("templateLibrarySearch").oninput=e=>{templateLibraryQuery=e.target.value||"";renderTemplateLibrary()};
+  if($("templateLibrarySearch"))$("templateLibrarySearch").oninput=e=>{templateLibraryQuery=e.target.value||"";clearTimeout(templateSearchTimer);templateSearchTimer=setTimeout(renderTemplateLibrary,120)};
   if($("templateCategoryFilter"))$("templateCategoryFilter").onchange=e=>{templateLibraryCategory=e.target.value||"全部";renderTemplateLibrary()};
   if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);fillTemplates();if(!r)toast("模板库同步失败")};
   $("recordChooser").onclick=()=>chooseBatch(true);
@@ -452,7 +486,7 @@ async function init(){
       const parsed=JSON.parse(await file.text());
       const tpl=importTemplateObject(parsed,state.templates);
       state.templates.push(tpl);state.activeTemplateId=tpl.id;
-      persistActiveTemplate();saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);
+      templateThumbCache.clear();persistActiveTemplate();saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);
       toast("模板已导入并加入云端同步");
     }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
   };
@@ -463,7 +497,7 @@ async function init(){
     const deletedAt=Date.now();
     markTemplateDeleted(tpl.id);
     clearTimeout(cloudSaveTimers.get(tpl.id));cloudSaveTimers.delete(tpl.id);
-    state.templates=state.templates.filter(t=>t.id!==tpl.id);
+    state.templates=state.templates.filter(t=>t.id!==tpl.id);templateThumbCache.clear();
     state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
     if(state.connected&&state.sdk){
       try{
