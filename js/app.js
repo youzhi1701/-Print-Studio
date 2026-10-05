@@ -1,4 +1,4 @@
-import {state,storageAvailable,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-6";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-6";
 import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-6";
 import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-6";
 import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-6";
@@ -15,7 +15,7 @@ function compatInfo(extra=""){
     "URL="+location.href,
     "UA="+navigator.userAgent,
     "iframe="+String(window.self!==window.top),
-    "storage="+String(storageAvailable()),
+    "storage="+storageMode()+" / available="+String(storageAvailable()),
     "online="+String(navigator.onLine),
     extra
   ].filter(Boolean).join("\n");
