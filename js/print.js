@@ -118,8 +118,11 @@ async function preparePrintMarkup(template,records,onProgress=()=>{}){
   }
 }
 
-function printDocumentHtml(page,markup){
+function printDocumentHtml(page,markup,printSettings={}){
   const w=Number(page.width)||215,h=Number(page.height)||140;
+  const scale=Math.max(.9,Math.min(1.1,(Number(printSettings.scale)||100)/100));
+  const offsetX=Math.max(-20,Math.min(20,Number(printSettings.offsetX)||0));
+  const offsetY=Math.max(-20,Math.min(20,Number(printSettings.offsetY)||0));
   return `<!doctype html>
 <html lang="zh-CN">
 <head>
@@ -145,6 +148,8 @@ body{
   padding:0!important;
   overflow:hidden!important;
   background:#fff!important;
+  transform:translate(${offsetX}mm,${offsetY}mm) scale(${scale});
+  transform-origin:top left;
   break-after:page;
   page-break-after:always;
 }
@@ -230,7 +235,7 @@ export async function printTemplateRecords(template,records,{beforePrint=null,af
     const {page,markup}=await preparePrintMarkup(template,list,(title,detail)=>updatePreparingPopup(popup,title,detail));
     if(popup.closed)throw new Error("打印窗口已关闭");
     popup.document.open();
-    popup.document.write(printDocumentHtml(page,markup));
+    popup.document.write(printDocumentHtml(page,markup,template.printSettings||{}));
     popup.document.close();
   }catch(err){
     try{popup.close()}catch{}
