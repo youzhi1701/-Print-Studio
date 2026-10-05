@@ -1,4 +1,4 @@
-import {isBuiltinTemplate} from "./templates.js?v=20261006-03";
+import {isBuiltinTemplate,isValidTemplateObject,normalizeTemplateObject} from "./templates.js?v=20261006-03";
 const CLOUD_TABLE_NAME="超级打印_云端模板库";
 const FIELD_TEMPLATE_NAME="模板名称";
 const FIELD_TEMPLATE_JSON="模板JSON";
@@ -91,7 +91,10 @@ async function readCloudRowsFromSchema(schema){
       ]);
       if(!id)continue;
       let template=null;
-      try{template=JSON.parse(json||"null")}catch{}
+      try{
+        const parsed=JSON.parse(json||"null");
+        if(isValidTemplateObject(parsed))template=normalizeTemplateObject(parsed);
+      }catch{}
       rows.push({
         recordId,
         id:String(id),
@@ -243,7 +246,7 @@ export async function syncTemplatesWithCloud(bitable,localTemplates=[],deletedId
       continue;
     }
 
-    if(!row.template?.elements)continue;
+    if(!isValidTemplateObject(row.template))continue;
     if(!local){
       result.push(deepClone(row.template));
       localById.set(id,{template:result[result.length-1],index:result.length-1});
