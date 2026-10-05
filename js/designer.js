@@ -142,7 +142,7 @@ function defaults(type,field=""){
   if(type==="text"){b.text="双击或在右侧修改文字";b.w=58;b.wrap=true;b.maxLines=0;b.overflowMode="clip";b.emptyBehavior="blank"}
   if(type==="field"){b.text="{{"+(field||"字段")+"}}";b.field=field;b.w=50;b.wrap=true;b.maxLines=0;b.overflowMode="clip";b.emptyBehavior="hide"}
   if(type==="image"){b.w=30;b.h=25;b.field=field;b.imageFit="contain";b.radius=0;b.aspectLock=true;b.alignX="center";b.alignY="center";b.padding=0;b.emptyBehavior="hide"}
-  if(type==="table"){b.w=115;b.h=38;b.columns=normalizeColumns([]);b.showHeader=true;b.zebra=false;b.rowHeight=8;b.maxRows=5;b.designRowCount=1;b.borderWidth=.5;b.fontSize=9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=false;b.merges=[]}
+  if(type==="table"){b.w=115;b.h=38;b.columns=normalizeColumns([]);b.showHeader=true;b.zebra=false;b.rowHeight=8;b.maxRows=5;b.borderWidth=.5;b.fontSize=9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=false;b.merges=[];b.rowDefs=[{id:uid("row"),type:"data",height:8}];b.cellMap={};b.tableModelVersion=3}
   if(type==="barcode"){b.w=62;b.h=20;b.field=field||"订单编号";b.showText=true;b.barcodeFormat="CODE128"}
   if(type==="qrcode"){b.w=25;b.h=25;b.field=field||"订单编号";b.qrLevel="M";b.qrMargin=0}
   if(type==="line"){b.w=70;b.h=.5;b.borderWidth=.5;b.borderStyle="solid"}
@@ -490,7 +490,8 @@ function syncTableCellInspector(e){
   panel.classList.toggle("hidden",!b);
   if(hint)hint.textContent=b?("已选择 "+(b.r1-b.r0+1)+" 行 × "+(b.c1-b.c0+1)+" 列 · 可直接拖拽或使用悬浮工具栏"):("单击或拖拽选择格子，操作工具会悬浮在表格上方");
   if(!b)return;
-  const raw=tableCellOverride(e,b.r0,b.c0)||{};
+  const {rows,cols}=tableAxes(e),row=rows[b.r0],col=cols[b.c0];
+  const raw=row&&col?tmGetCellOverride(e,row.id,col.id)||{}:{};
   $("tableCellType").value=raw.type||"inherit";
   $("tableCellField").value=raw.field||"";
   $("tableCellText").value=raw.text||"";
@@ -502,7 +503,7 @@ function syncTableCellInspector(e){
 }
 function applyTableCellInspector(e){
   if(!selectedCells.length)return;
-  e.cells={...(e.cells||{})};
+  const {rows,cols}=tableAxes(e);
   const cfg={
     type:$("tableCellType").value||"inherit",
     field:$("tableCellField").value||"",
@@ -513,7 +514,9 @@ function applyTableCellInspector(e){
     wrap:$("tableCellWrap").value==="true",
     imageFit:$("tableCellImageFit").value||e.tableImageFit||"contain"
   };
-  for(const s of selectedCells)e.cells[tableCellKey(s.row,s.col)]={...cfg};
+  for(const s of selectedCells){
+    const row=rows[s.row],col=cols[s.col];if(row&&col)tmSetCellOverride(e,row.id,col.id,cfg);
+  }
 }
 function syncProps(){
   const e=selectedOne();
