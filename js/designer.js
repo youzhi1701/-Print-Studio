@@ -5,7 +5,7 @@ import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-6";import {loadTempl
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight,
-  buildTableLayout
+  buildTableLayout,normalizeMergeContiguity
 } from "./table-model.js?v=20261005-7";
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -528,8 +528,8 @@ function renderTableColumnEditor(e){
 
     const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();col.width=Math.max(1,Number(width.value)||1);e.columns=cols;renderElements();autoSave()};
     title.addEventListener("input",commit);field.addEventListener("change",commit);width.addEventListener("input",commit);
-    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();autoSave()};
-    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();autoSave()};
+    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
+    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
     remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
     row.append(move,title,field,width,remove);list.appendChild(row);
   });
