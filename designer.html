@@ -43,6 +43,11 @@
           <div class="two"><label>宽<input id="pageW" type="number" step=".1"></label><label>高<input id="pageH" type="number" step=".1"></label></div>
           <label>安全区<input id="safeArea" type="number" step=".5" min="0"></label>
           <button id="applyPage" class="wide-btn">应用页面尺寸</button>
+          <div class="section-sep"></div>
+          <h4 class="sub-title">打印校准</h4>
+          <div class="two"><label>横向偏移 mm<input id="printOffsetX" type="number" step=".1"></label><label>纵向偏移 mm<input id="printOffsetY" type="number" step=".1"></label></div>
+          <label>输出缩放 %<input id="printScale" type="number" min="90" max="110" step=".1"></label>
+          <button id="applyPrintCalibration" class="wide-btn">应用打印校准</button>
         </div>
       </section>
       <section id="fieldsTab" class="tab-body hidden">
