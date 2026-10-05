@@ -124,3 +124,9 @@
 .compat-actions{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:7px}
 .compat-card small{display:block;margin-top:12px;color:var(--muted);font-size:9px;line-height:1.5;word-break:break-all}
 @media(max-width:520px){.compat-actions{grid-template-columns:1fr}.compat-card{padding:18px}}
+
+/* contextual record navigation */
+.print-secondary{display:flex!important;grid-template-columns:none!important;align-items:center}
+.print-secondary #chooseBatch{flex:1}
+.print-secondary #prevRecord,.print-secondary #nextRecord{flex:0 0 72px}
+.print-secondary button[hidden]{display:none!important}
