@@ -1,14 +1,15 @@
-import {mountBuildVersion} from "./version.js?v=20261005-16";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-16";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-16";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-16";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-16";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-16";
-import {printTemplateRecords} from "./print.js?v=20261005-16";
+import {mountBuildVersion} from "./version.js?v=20261005-17";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-17";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-17";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-17";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-17";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-17";
+import {printTemplateRecords} from "./print.js?v=20261005-17";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261005-17";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
+let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -35,6 +36,49 @@ function fillTemplates(){const s=$("templateSelect");s.innerHTML="";state.templa
 function persistActiveTemplate(){
   const currentSettings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
   storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
+}
+function loadTemplateTombstones(){
+  const list=safeJson(storageGet(STORAGE_KEYS.templateTombstones),[]);
+  return Array.isArray(list)?list.filter(Boolean):[];
+}
+function saveTemplateTombstones(ids){
+  storageSet(STORAGE_KEYS.templateTombstones,JSON.stringify([...new Set((ids||[]).filter(Boolean))]));
+}
+function markTemplateDeleted(id){
+  const ids=loadTemplateTombstones();if(id&&!ids.includes(id))ids.push(id);saveTemplateTombstones(ids);
+}
+function clearTemplateDeleted(id){
+  saveTemplateTombstones(loadTemplateTombstones().filter(x=>x!==id));
+}
+function queueCloudTemplateSave(template){
+  if(!state.connected||!state.sdk||!template?.id)return;
+  const snapshot=structuredClone(template);
+  clearTimeout(cloudSaveTimers.get(snapshot.id));
+  cloudSaveTimers.set(snapshot.id,setTimeout(async()=>{
+    cloudSaveTimers.delete(snapshot.id);
+    try{await upsertCloudTemplate(state.sdk,snapshot);clearTemplateDeleted(snapshot.id)}
+    catch(err){console.warn("云端模板自动保存失败",err)}
+  },900));
+}
+async function syncCloudTemplates(force=false){
+  if(!state.connected||!state.sdk||cloudSyncBusy)return null;
+  if(!force&&Date.now()-lastCloudSyncAt<60000)return null;
+  cloudSyncBusy=true;
+  try{
+    const previous=state.activeTemplateId;
+    const result=await syncTemplatesWithCloud(state.sdk,state.templates,loadTemplateTombstones());
+    state.templates=result.templates;
+    saveTemplates(state.templates);
+    for(const id of result.clearedDeletedIds||[])clearTemplateDeleted(id);
+    state.activeTemplateId=state.templates.some(t=>t.id===previous)?previous:(state.templates[0]?.id||null);
+    persistActiveTemplate();fillTemplates();
+    lastCloudSyncAt=Date.now();
+    if(result.uploaded||result.downloaded)toast("云端模板已同步 · 上传 "+result.uploaded+" / 下载 "+result.downloaded);
+    return result;
+  }catch(err){
+    console.warn("云端模板同步失败",err);
+    return null;
+  }finally{cloudSyncBusy=false}
 }
 function autoBind(){const tpl=activeTemplate();if(autoBindTemplateFields(tpl,state.fields))saveTemplates(state.templates)}
 
@@ -168,6 +212,7 @@ async function refresh(){
     state.connected=true;state.sdk=c.bitable;status("已连接","success");hideCompat();
     const ctx=await readContext(c.bitable);
     state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
+    await syncCloudTemplates(false);
     state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
     state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);
     state.selectedRecords=await Promise.all(state.selectedRecords.map(r=>resolveAttachmentUrls(ctx.table,r,ctx.fields)));
@@ -212,6 +257,7 @@ async function applyDesignerTemplate(template){
   state.activeTemplateId=template.id;persistActiveTemplate();
   saveTemplates(state.templates);
   fillTemplates();
+  queueCloudTemplateSave(template);
   autoBind();
   syncBridge();
   await renderPreview();
@@ -263,7 +309,7 @@ async function init(){
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
-  $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
+  $("refreshData").onclick=refresh;$("chooseOne").onclick=()=>chooseBatch(true);if($("syncCloudTemplates"))$("syncCloudTemplates").onclick=async()=>{const r=await syncCloudTemplates(true);toast(r?"云端模板同步完成":"云端模板同步失败")};$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
   $("importTemplate").onclick=()=>$("importTemplateFile").click();
   $("importTemplateFile").onchange=async e=>{
     const file=e.target.files?.[0];e.target.value="";if(!file)return;
@@ -271,16 +317,21 @@ async function init(){
       const parsed=JSON.parse(await file.text());
       const tpl=importTemplateObject(parsed,state.templates);
       state.templates.push(tpl);state.activeTemplateId=tpl.id;
-      persistActiveTemplate();saveTemplates(state.templates);fillTemplates();autoBind();syncBridge();await renderPreview(true);
-      toast("模板已导入");
+      persistActiveTemplate();saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);
+      toast("模板已导入并加入云端同步");
     }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
   };
   $("deleteTemplate").onclick=async()=>{
     const tpl=activeTemplate();if(!tpl)return;
     if(tpl.id==="tpl_shipping_215x140"){toast("内置发货单模板不可删除");return}
     if(state.templates.length<=1){toast("至少保留一个模板");return}
+    markTemplateDeleted(tpl.id);
     state.templates=state.templates.filter(t=>t.id!==tpl.id);
     state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
+    if(state.connected&&state.sdk){
+      try{await deleteCloudTemplate(state.sdk,tpl.id);clearTemplateDeleted(tpl.id)}
+      catch(err){console.warn("云端模板删除失败，已保留待同步删除标记",err)}
+    }
     toast("模板已删除");
   };
 
