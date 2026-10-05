@@ -3,6 +3,7 @@ import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttac
 import {loadTemplates,saveTemplates,exportTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-1";
 import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-1";
 import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-1";
+import {printTemplateRecords} from "./print.js?v=20261005-2";
 
 const $=id=>document.getElementById(id);
 let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
@@ -158,31 +159,11 @@ async function chooseBatch(single=false){
   }catch(err){console.error(err);toast("选择记录失败")}
 }
 
-function printRecords(records){
+async function printRecords(records){
   const tpl=activeTemplate();if(!tpl)return;
-  const page=tpl.page||{width:215,height:140};
-  const host=document.createElement("div");
-  host.className="print-host";
-  host.style.cssText="position:fixed;inset:0;z-index:9999;background:#fff;overflow:auto";
-  host.innerHTML=records.map(r=>renderTemplateToHtml(tpl,r.data||{})).join("");
-
-  const pageStyle=document.createElement("style");
-  pageStyle.id="dynamicPrintPage";
-  pageStyle.textContent="@media print{@page{size:"+page.width+"mm "+page.height+"mm;margin:0}.print-host .print-sheet{width:"+page.width+"mm!important;height:"+page.height+"mm!important}}";
-
-  document.head.appendChild(pageStyle);
-  document.body.appendChild(host);
-
-  const cleanup=()=>{
-    host.remove();
-    pageStyle.remove();
-    window.removeEventListener("afterprint",cleanup);
-  };
-  window.addEventListener("afterprint",cleanup);
-
-  hydrateCodes(host).finally(()=>setTimeout(()=>window.print(),180));
+  try{await printTemplateRecords(tpl,records)}
+  catch(err){console.error(err);toast(err?.message||"打印失败")}
 }
-
 function fitPreviewModal(){
   const body=$("previewModalBody"),sheet=body?.querySelector(".print-sheet");
   if(!body||!sheet)return;
