@@ -33,18 +33,25 @@ function renderTable(el,rootData,common){
     '<th style="box-sizing:border-box;border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   ).join("")+'</tr></thead>';
 
-  const body=cellRows.map((cells,ri)=>{
+  const printableRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri]})).filter(({cells,row})=>{
+    const hasRenderedValue=cells.some(cell=>hasValue(cell.value));
+    const spansMultiple=(el.merges||[]).some(m=>m.rowIds?.includes(row.id)&&(m.rowIds?.length||0)>1);
+    return el.emptyBehavior!=="hide"||hasRenderedValue||spansMultiple;
+  });
+  const renderedHeight=(el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8))+printableRows.reduce((sum,x)=>sum+Number(x.row?.height||el.rowHeight||8),0);
+
+  const body=printableRows.map(({cells,ri,row})=>{
     const html=cells.map(cell=>{
       const pad=isImageValue(cell.value)?0:cell.cfg.padding;
       const rowspan=cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"";
       const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
       return '<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
-    return '<tr style="height:'+rows[ri].height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
+    return '<tr style="height:'+row.height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const tableCommon=common.replace(/height:[^;]+;/,'height:'+totalHeight+'mm;');
-  return '<div style="'+tableCommon+'"><table style="width:100%;height:'+totalHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+colgroup+head+'<tbody>'+body+'</tbody></table></div>';
+  const tableCommon=common.replace(/height:[^;]+;/,'height:'+renderedHeight+'mm;');
+  return '<div style="'+tableCommon+'"><table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+colgroup+head+'<tbody>'+body+'</tbody></table></div>';
 }
 
 export function renderTemplateToHtml(tpl,data={}){
