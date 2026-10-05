@@ -584,6 +584,10 @@ function startResize(ev,e,dir){
     if(e.type==="image"&&e.aspectLock!==false&&(dir.length===2)){
       if(Math.abs(dx)>=Math.abs(dy)){e.h=Math.max(.5,e.w/ratio);if(dir.includes("n"))e.y=o.y+(o.h-e.h)}
       else{e.w=Math.max(2,e.h*ratio);if(dir.includes("w"))e.x=o.x+(o.w-e.w)}
+      e.x=Math.max(0,e.x);e.y=Math.max(0,e.y);
+      const maxW=Math.max(2,page.width-e.x),maxH=Math.max(.5,page.height-e.y);
+      const scale=Math.min(1,maxW/e.w,maxH/e.h);
+      if(scale<1){e.w*=scale;e.h*=scale}
     }
     updateElementNodeGeometry(e);syncGeometryProps(e);
   };
