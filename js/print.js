@@ -78,6 +78,11 @@ async function prepareRenderedSheets(template,records){
     host.remove();
     throw new Error("有 "+failed.length+" 张图片加载失败，请重新同步数据后再打印");
   }
+  const failedCodes=[...host.querySelectorAll("svg.barcode[data-value],canvas.qrcode[data-value]")].filter(node=>node.dataset.value&&!node.dataset.hydrated);
+  if(failedCodes.length){
+    host.remove();
+    throw new Error("条码或二维码生成失败，请检查网络后重试");
+  }
   return{host,page,sheets:[...host.querySelectorAll(".print-sheet")]};
 }
 
