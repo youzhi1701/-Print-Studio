@@ -17,13 +17,18 @@ function setCachedAttachmentUrls(key,urls){
 
 async function loadSdk(){
   if(sdkModule) return sdkModule;
-  try{
-    sdkModule=await import("https://cdn.jsdelivr.net/npm/@lark-base-open/js-sdk/+esm");
-    return sdkModule;
-  }catch(err){
-    console.warn("飞书 SDK 加载失败",err);
-    return null;
+  const sources=[
+    "https://cdn.jsdelivr.net/npm/@lark-base-open/js-sdk/+esm",
+    "https://esm.sh/@lark-base-open/js-sdk"
+  ];
+  for(const src of sources){
+    try{
+      sdkModule=await import(src);
+      if(sdkModule?.bitable)return sdkModule;
+    }catch(err){console.warn("飞书 SDK 源加载失败",src,err)}
   }
+  console.warn("飞书 SDK 全部加载失败");
+  return null;
 }
 
 function cellToText(v){
@@ -58,18 +63,13 @@ async function readRecord(table,fields,recordId){
   if(!recordId) return null;
   let raw=null;
   try{raw=await table.getRecordById(recordId)}catch{}
-  const data={};
-  for(const f of fields){
+  const entries=await Promise.all(fields.map(async f=>{
     let value="";
-    try{
-      if(table.getCellString) value=await table.getCellString(f.id,recordId);
-    }catch{}
-    if(value==null||value===""){
-      value=cellToText(raw?.fields?.[f.id]);
-    }
-    data[f.name]=value??"";
-  }
-  return {id:recordId,data,raw};
+    try{if(table.getCellString)value=await table.getCellString(f.id,recordId)}catch{}
+    if(value==null||value==="")value=cellToText(raw?.fields?.[f.id]);
+    return[f.name,value??""]
+  }));
+  return {id:recordId,data:Object.fromEntries(entries),raw};
 }
 
 export async function connectFeishu(){
@@ -95,12 +95,8 @@ export async function readContext(bitable){
 }
 
 export async function readRecordsByIds(table,fields,ids=[]){
-  const rows=[];
-  for(const id of ids){
-    const rec=await readRecord(table,fields,id);
-    if(rec) rows.push(rec);
-  }
-  return rows;
+  const rows=await Promise.all((ids||[]).map(id=>readRecord(table,fields,id)));
+  return rows.filter(Boolean);
 }
 
 export async function chooseRecords(bitable,table,fields,selection){
