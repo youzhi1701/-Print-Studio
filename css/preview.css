@@ -12,3 +12,13 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden}.preview-window{displa
 .sheet-host .print-sheet{pointer-events:none}
 #zoomText{min-width:36px;text-align:center;font-size:9px;color:var(--muted);font-variant-numeric:tabular-nums}
 @media(max-width:760px){#resetBtn,#zoomOutBtn,#zoomInBtn,#zoomText{display:none}}
+
+@media print{
+  .sheet-stage{display:block!important;overflow:visible!important}
+  .sheet-host{
+    position:static!important;left:auto!important;top:auto!important;
+    transform:none!important;transform-origin:initial!important;
+    width:auto!important;height:auto!important;will-change:auto!important;
+  }
+  .sheet-host .print-sheet{pointer-events:auto!important;margin:0!important}
+}
