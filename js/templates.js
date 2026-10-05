@@ -218,8 +218,13 @@ export function loadTemplates(){
   return list;
 }
 export function saveTemplates(list){
-  for(const tpl of list||[])normalizeTemplateTables(tpl);
-  storageSet(STORAGE_KEYS.templates,JSON.stringify(list||[]))
+  for(let i=0;i<(list||[]).length;i++){
+    const tpl=list[i];if(!tpl)continue;
+    const normalized=normalizeTemplateObject(tpl);
+    Object.keys(tpl).forEach(k=>delete tpl[k]);
+    Object.assign(tpl,normalized);
+  }
+  return storageSet(STORAGE_KEYS.templates,JSON.stringify(list||[]))
 }
 export function createTemplate(name="未命名模板",p={width:215,height:140}){
   return{id:uid("tpl"),schemaVersion:7,name,category:"自定义",description:"",tags:[],status:"draft",page:{...p,orientation:p.width>=p.height?"landscape":"portrait",margin:5,safeArea:4},printSettings:{scale:100,offsetX:0,offsetY:0},elements:[],createdAt:Date.now(),updatedAt:Date.now()}
