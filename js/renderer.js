@@ -25,36 +25,49 @@ function cellHtml(v,imageFit="contain"){
   return esc(v);
 }
 
-function renderTable(el,rootData,common){
-  const layout=buildTableLayout(el,rootData,el.hideEmptyColumns===true);
-  const {rows,cols,cellRows,hasAny,totalHeight}=layout;
+export function renderTableMarkup(el,rootData={},options={}){
+  const editable=options.editable===true;
+  const selectedKeys=new Set((options.selectedCells||[]).map(s=>String(s.row)+":"+String(s.col)));
+  const layout=buildTableLayout(el,rootData,editable?false:el.hideEmptyColumns===true);
+  const {rows,cols,allCols,cellRows,hasAny}=layout;
   const bw=el.borderWidth??.5;
-  if(!hasAny&&el.emptyBehavior==="hide")return"";
+  if(!hasAny&&el.emptyBehavior==="hide"&&!editable)return{html:"",layout,renderedHeight:0};
 
   const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
-  const head=el.showHeader===false?"":'<thead><tr>'+cols.map(c=>
-    '<th style="box-sizing:border-box;border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
-  ).join("")+'</tr></thead>';
+  const head=el.showHeader===false?"":'<thead><tr>'+cols.map((c,ci)=>{
+    const cls=editable?' class="table-head-cell" data-col="'+(c.index??ci)+'"':"";
+    return '<th'+cls+' style="box-sizing:border-box;border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
+  }).join("")+'</tr></thead>';
 
-  const printableRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri]})).filter(({cells,row})=>{
+  const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri]})).filter(({cells,row})=>{
+    if(editable)return true;
     const hasRenderedValue=cells.some(cell=>hasValue(cell.value));
     const spansMultiple=(el.merges||[]).some(m=>m.rowIds?.includes(row.id)&&(m.rowIds?.length||0)>1);
     return el.emptyBehavior!=="hide"||hasRenderedValue||spansMultiple;
   });
-  const renderedHeight=(el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8))+printableRows.reduce((sum,x)=>sum+Number(x.row?.height||el.rowHeight||8),0);
 
-  const body=printableRows.map(({cells,ri,row})=>{
+  const renderedHeight=(el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8))+visibleRows.reduce((sum,x)=>sum+Number(x.row?.height||el.rowHeight||8),0);
+  const body=visibleRows.map(({cells,ri,row})=>{
     const html=cells.map(cell=>{
       const pad=isImageValue(cell.value)?0:cell.cfg.padding;
       const rowspan=cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"";
       const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
-      return '<td '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
+      const selected=editable&&selectedKeys.has(String(ri)+":"+String(cell.colIndex));
+      const cls=editable?(' class="table-edit-cell'+(selected?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'"'):"";
+      return '<td'+cls+' '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
     return '<tr style="height:'+row.height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const tableCommon=common.replace(/height:[^;]+;/,'height:'+renderedHeight+'mm;');
-  return '<div style="'+tableCommon+'"><table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+colgroup+head+'<tbody>'+body+'</tbody></table></div>';
+  const html='<table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
+  return{html,layout,renderedHeight,allCols}
+}
+
+function renderTable(el,rootData,common){
+  const rendered=renderTableMarkup(el,rootData,{editable:false});
+  if(!rendered.html)return"";
+  const tableCommon=common.replace(/height:[^;]+;/,'height:'+rendered.renderedHeight+'mm;');
+  return '<div style="'+tableCommon+'">'+rendered.html+'</div>';
 }
 
 export function renderElementToHtml(el,data={},positioned=true){
