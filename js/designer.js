@@ -15,7 +15,7 @@ function selectElements(ids,{keepTable=false}={}){
   selected=new Set(Array.isArray(ids)?ids:[ids].filter(Boolean));
   if(!keepTable)clearTableSelection();
 }
-function pushHistory(){const t=current();if(!t)return;history=history.slice(0,hIndex+1);history.push(JSON.stringify(t));if(history.length>60)history.shift();hIndex=history.length-1;updateUndo()}
+function pushHistory(){const t=current();if(!t)return;const snap=JSON.stringify(t);if(history[hIndex]===snap){updateUndo();return}history=history.slice(0,hIndex+1);history.push(snap);if(history.length>60)history.shift();hIndex=history.length-1;updateUndo()}
 function restore(i){if(i<0||i>=history.length)return;const old=current();const parsed=JSON.parse(history[i]);const idx=state.templates.findIndex(t=>t.id===old.id);state.templates[idx]=parsed;hIndex=i;clearTableSelection();renderAll();updateUndo();autoSave()}
 function updateUndo(){$("undoBtn").disabled=hIndex<=0;$("redoBtn").disabled=hIndex>=history.length-1}
 async function load(){state.templates=loadTemplates();const qs=new URLSearchParams(location.search).get("template");state.activeTemplateId=(qs&&state.templates.some(t=>t.id===qs))?qs:state.templates[0]?.id;const payload=await requestBridgeFromOpener();syncBridgeData(false,payload);renderAll();pushHistory()}
