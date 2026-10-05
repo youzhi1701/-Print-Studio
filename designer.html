@@ -119,6 +119,15 @@
               <b>单元格编辑</b>
               <span id="tableSelectionHint">单击或拖拽选择格子，操作工具会悬浮在表格上方</span>
             </div>
+            <div id="tableCellInspector" class="table-cell-inspector hidden">
+              <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>选中单元格</div>
+              <label class="stack">内容类型<select id="tableCellType"><option value="inherit">跟随列</option><option value="field">绑定字段</option><option value="text">固定文本</option><option value="image">图片字段</option></select></label>
+              <label class="stack">字段<select id="tableCellField"><option value="">未绑定</option></select></label>
+              <label class="stack">固定文本<input id="tableCellText" type="text" placeholder="仅固定文本模式使用"></label>
+              <div class="two"><label>水平<select id="tableCellAlign"><option value="">跟随列</option><option value="left">左</option><option value="center">中</option><option value="right">右</option></select></label><label>垂直<select id="tableCellVAlign"><option value="top">上</option><option value="middle">中</option><option value="bottom">下</option></select></label></div>
+              <div class="two"><label>内边距<input id="tableCellPadding" type="number" min="0" step=".5" value="2"></label><label>换行<select id="tableCellWrap"><option value="true">开启</option><option value="false">关闭</option></select></label></div>
+              <label class="stack">图片适配<select id="tableCellImageFit"><option value="cover">铺满裁切</option><option value="contain">完整显示</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select></label>
+            </div>
           </div>
           <div id="codeProps" class="prop-group hidden">
             <label class="stack">数据字段<select id="codeField"><option value="">未绑定</option></select></label>
@@ -148,7 +157,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261005-4"></script>
+  <script type="module" src="./js/designer.js?v=20261005-5"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>
