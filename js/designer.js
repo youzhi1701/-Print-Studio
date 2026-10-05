@@ -256,7 +256,7 @@ function content(n,e){
     const hasAnyData=sourceRows.some(row=>configuredCols.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
     if(!hasAnyData&&e.emptyBehavior==="hide"&&!selected.has(e.id)){n.style.display="none";return}
     n.classList.toggle("wrap-on",e.wrap!==false);n.classList.toggle("wrap-off",e.wrap===false);
-    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th style="width:'+col.width+'%;text-align:'+col.align+'">'+col.title+"</th>").join("")+"</tr></thead>");
+    const head=e.showHeader===false?"":("<thead><tr>"+cols.map(col=>'<th class="table-head-cell" data-col="'+col._index+'" style="width:'+col.width+'%;text-align:'+col.align+'">'+col.title+"</th>").join("")+"</tr></thead>");
     const bodyRows=rows.map((row,ri)=>{
       let cells="";
       for(const col of cols){
@@ -274,8 +274,25 @@ function content(n,e){
     n.querySelectorAll("th").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px";cell.style.height=(e.headerHeight||e.rowHeight||8)*MM+"px"});
     n.querySelectorAll("td").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px"});
     n.querySelectorAll(".table-cell-image").forEach(img=>{img.style.objectFit=img.dataset.fit==="original"?"none":(img.dataset.fit||"contain");img.style.width="100%";img.style.height="100%"});
-    n.querySelectorAll("td.table-edit-cell").forEach(cell=>cell.addEventListener("click",ev=>selectTableCell(ev,e,Number(cell.dataset.row),Number(cell.dataset.col))));
-    if(selected.has(e.id)&&!preview&&!e.locked){addTableColumnResizers(n,e,normalizeColumns(e.columns));addTableRowResizers(n,e,rows.length)}
+    n.querySelectorAll("td.table-edit-cell").forEach(cell=>{
+      const row=Number(cell.dataset.row),col=Number(cell.dataset.col);
+      cell.addEventListener("pointerdown",ev=>beginTableCellDrag(ev,e,row,col));
+      cell.addEventListener("pointerenter",()=>extendTableCellDrag(e,row,col));
+      cell.addEventListener("click",ev=>ev.stopPropagation());
+    });
+    n.querySelectorAll("th.table-head-cell").forEach(cell=>{
+      cell.addEventListener("pointerdown",ev=>{
+        ev.stopPropagation();ev.preventDefault();
+        const col=Number(cell.dataset.col),rowCount=Math.max(rows.length,Number(e.designRowCount)||1);
+        selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
+        for(let r=0;r<rowCount;r++)selectedCells.push({row:r,col});
+        renderElements();renderLayers();syncProps();
+      });
+    });
+    if(selected.has(e.id)&&!preview&&!e.locked){
+      addTableColumnResizers(n,e,normalizeColumns(e.columns));addTableRowResizers(n,e,rows.length);
+      if(selectedCells.length)addTableCellToolbar(n,e);
+    }
     return
   }
 }
@@ -324,35 +341,147 @@ function startTableRowResize(ev,e,rowIndex){
   const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
+function selectionIsRectangle(){
+  const b=tableSelectionBounds();if(!b)return false;
+  return (b.r1-b.r0+1)*(b.c1-b.c0+1)===selectedCells.length
+}
+function mergeIntersects(m,b){
+  return !(m.row+(m.rowSpan||1)-1<b.r0||m.row>b.r1||m.col+(m.colSpan||1)-1<b.c0||m.col>b.c1)
+}
+function commitTableEdit(message){
+  renderElements();renderTableColumnEditor(selectedOne());syncProps();pushHistory();autoSave();if(message)toast(message)
+}
 function mergeSelectedCells(){
-  const e=selectedOne();if(!e||e.type!=="table"||selectedCells.length<2){toast("先在表格内 Shift 选择连续单元格");return}
-  const rs=selectedCells.map(s=>s.row),cs=selectedCells.map(s=>s.col),r0=Math.min(...rs),r1=Math.max(...rs),c0=Math.min(...cs),c1=Math.max(...cs);
-  if((r1-r0+1)*(c1-c0+1)!==selectedCells.length){toast("只能合并连续矩形区域");return}
-  e.merges=(e.merges||[]).filter(m=>m.row<r0||m.row>r1||m.col<c0||m.col>c1);e.merges.push({row:r0,col:c0,rowSpan:r1-r0+1,colSpan:c1-c0+1});
-  selectedCells=[{row:r0,col:c0}];renderElements();pushHistory();autoSave()
+  const e=selectedOne(),b=tableSelectionBounds();
+  if(!e||e.type!=="table"||!b||selectedCells.length<2){toast("拖拽选择至少两个连续格子");return}
+  if(!selectionIsRectangle()){toast("合并区域必须是连续矩形");return}
+  e.merges=(e.merges||[]).filter(m=>!mergeIntersects(m,b));
+  e.merges.push({row:b.r0,col:b.c0,rowSpan:b.r1-b.r0+1,colSpan:b.c1-b.c0+1});
+  selectedCells=[];for(let r=b.r0;r<=b.r1;r++)for(let col=b.c0;col<=b.c1;col++)selectedCells.push({row:r,col});
+  tableSelectionAnchor={row:b.r0,col:b.c0};
+  commitTableEdit("已合并 "+(b.r1-b.r0+1)+"×"+(b.c1-b.c0+1)+" 区域")
 }
 function unmergeSelectedCells(){
-  const e=selectedOne();if(!e||e.type!=="table"||!selectedCells.length)return;const s=selectedCells[0];
-  e.merges=(e.merges||[]).filter(m=>!(s.row>=m.row&&s.row<m.row+(m.rowSpan||1)&&s.col>=m.col&&s.col<m.col+(m.colSpan||1)));
-  renderElements();pushHistory();autoSave()
+  const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
+  const before=(e.merges||[]).length;
+  e.merges=(e.merges||[]).filter(m=>!mergeIntersects(m,b));
+  commitTableEdit(before===e.merges.length?"当前区域没有合并":"已取消合并")
 }
-function insertTableRow(){
+function shiftRowHeightsOnInsert(e,index){
+  const src=e.rowHeights||{},next={};
+  Object.entries(src).forEach(([k,v])=>{const r=Number(k);next[r>=index?r+1:r]=v});
+  e.rowHeights=next;
+}
+function shiftRowHeightsOnDelete(e,index){
+  const src=e.rowHeights||{},next={};
+  Object.entries(src).forEach(([k,v])=>{const r=Number(k);if(r===index)return;next[r>index?r-1:r]=v});
+  e.rowHeights=next;
+}
+function transformMergesRowInsert(e,index){
+  e.merges=(e.merges||[]).map(m=>{
+    m={...m};
+    if(index<=m.row)m.row++;
+    else if(index<m.row+(m.rowSpan||1))m.rowSpan=(m.rowSpan||1)+1;
+    return m
+  })
+}
+function transformMergesRowDelete(e,index){
+  e.merges=(e.merges||[]).map(m=>{
+    m={...m};const end=m.row+(m.rowSpan||1)-1;
+    if(index<m.row)m.row--;
+    else if(index<=end)m.rowSpan=(m.rowSpan||1)-1;
+    return m
+  }).filter(m=>(m.rowSpan||1)>0)
+}
+function insertTableRowAt(where="below"){
   const e=selectedOne();if(!e||e.type!=="table")return;
-  const currentRows=Math.max(1,Number(e.designRowCount)||1);
-  e.designRowCount=currentRows+1;
-  renderElements();pushHistory();autoSave();toast("已插入一行")
+  const b=tableSelectionBounds(),base=b?(where==="above"?b.r0:b.r1+1):Math.max(1,Number(e.designRowCount)||1);
+  const currentRows=Math.max(Number(e.designRowCount)||1,(b?.r1??0)+1);
+  const index=Math.max(0,Math.min(base,currentRows));
+  e.designRowCount=currentRows+1;shiftRowHeightsOnInsert(e,index);transformMergesRowInsert(e,index);
+  selectedCells=normalizeColumns(e.columns).map((_,col)=>({row:index,col}));tableSelectionAnchor={row:index,col:0};
+  commitTableEdit(where==="above"?"已在上方插入行":"已在下方插入行")
 }
-function deleteTableRow(){
+function deleteSelectedRows(){
+  const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
+  let total=Math.max(Number(e.designRowCount)||1,b.r1+1),indexes=[];
+  for(let r=b.r0;r<=b.r1;r++)indexes.push(r);
+  if(indexes.length>=total){toast("表格至少保留一行");return}
+  indexes.sort((a,b)=>b-a).forEach(index=>{shiftRowHeightsOnDelete(e,index);transformMergesRowDelete(e,index);total--});
+  e.designRowCount=Math.max(1,total);
+  const row=Math.min(b.r0,e.designRowCount-1),col=Math.min(b.c0,normalizeColumns(e.columns).length-1);
+  selectedCells=[{row,col}];tableSelectionAnchor={row,col};commitTableEdit("已删除 "+indexes.length+" 行")
+}
+function transformMergesColInsert(e,index){
+  e.merges=(e.merges||[]).map(m=>{
+    m={...m};
+    if(index<=m.col)m.col++;
+    else if(index<m.col+(m.colSpan||1))m.colSpan=(m.colSpan||1)+1;
+    return m
+  })
+}
+function transformMergesColDelete(e,index){
+  e.merges=(e.merges||[]).map(m=>{
+    m={...m};const end=m.col+(m.colSpan||1)-1;
+    if(index<m.col)m.col--;
+    else if(index<=end)m.colSpan=(m.colSpan||1)-1;
+    return m
+  }).filter(m=>(m.colSpan||1)>0)
+}
+function insertTableColumnAt(where="right"){
   const e=selectedOne();if(!e||e.type!=="table")return;
-  const currentRows=Math.max(1,Number(e.designRowCount)||1);
-  if(currentRows<=1){toast("表格至少保留一行");return}
-  e.designRowCount=currentRows-1;
-  e.merges=(e.merges||[]).filter(m=>m.row<e.designRowCount);
-  selectedCells=selectedCells.filter(s=>s.row<e.designRowCount);
-  renderElements();pushHistory();autoSave();toast("已删除一行")
+  const cols=normalizeColumns(e.columns),b=tableSelectionBounds();
+  const index=Math.max(0,Math.min(where==="left"?(b?.c0??0):(b?b.c1+1:cols.length),cols.length));
+  const neighbor=cols[Math.min(index,cols.length-1)]||cols[cols.length-1];
+  let nw=20;
+  if(neighbor){nw=Math.max(8,Number(neighbor.width)/2);neighbor.width=Math.max(8,Number(neighbor.width)-nw)}
+  cols.splice(index,0,{id:uid("col"),title:"新列",field:"",width:nw,align:"center"});
+  e.columns=cols;transformMergesColInsert(e,index);e.columns=normalizeColumns(e.columns);
+  const row=b?.r0??0;selectedCells=[{row,col:index}];tableSelectionAnchor={row,col:index};
+  commitTableEdit(where==="left"?"已在左侧插入列":"已在右侧插入列")
 }
+function deleteSelectedColumns(){
+  const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b)return;
+  const cols=normalizeColumns(e.columns),indexes=[];for(let col=b.c0;col<=b.c1;col++)indexes.push(col);
+  if(indexes.length>=cols.length){toast("表格至少保留一列");return}
+  indexes.sort((a,b)=>b-a).forEach(index=>{cols.splice(index,1);transformMergesColDelete(e,index)});
+  e.columns=normalizeColumns(cols);
+  const col=Math.min(b.c0,e.columns.length-1),row=b.r0;selectedCells=[{row,col}];tableSelectionAnchor={row,col};
+  commitTableEdit("已删除 "+indexes.length+" 列")
+}
+function addTableCellToolbar(n,e){
+  const b=tableSelectionBounds();if(!b)return;
+  const bar=document.createElement("div");bar.className="table-context-tools";bar.dataset.role="table-tools";
+  const defs=[
+    ["merge","合并"],["unmerge","拆分"],["rowAbove","上插行"],["rowBelow","下插行"],
+    ["colLeft","左插列"],["colRight","右插列"],["delRow","删行"],["delCol","删列"]
+  ];
+  for(const [cmd,label] of defs){
+    const btn=document.createElement("button");btn.type="button";btn.dataset.cmd=cmd;btn.textContent=label;
+    if(cmd==="merge")btn.disabled=selectedCells.length<2||!selectionIsRectangle();
+    btn.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation()});
+    btn.onclick=ev=>{
+      ev.stopPropagation();
+      if(cmd==="merge")mergeSelectedCells();
+      if(cmd==="unmerge")unmergeSelectedCells();
+      if(cmd==="rowAbove")insertTableRowAt("above");
+      if(cmd==="rowBelow")insertTableRowAt("below");
+      if(cmd==="colLeft")insertTableColumnAt("left");
+      if(cmd==="colRight")insertTableColumnAt("right");
+      if(cmd==="delRow")deleteSelectedRows();
+      if(cmd==="delCol")deleteSelectedColumns();
+    };
+    bar.appendChild(btn)
+  }
+  const meta=document.createElement("span");meta.className="table-context-meta";
+  meta.textContent=(b.r1-b.r0+1)+"行 × "+(b.c1-b.c0+1)+"列";bar.appendChild(meta);
+  n.appendChild(bar)
+}
+function insertTableRow(){insertTableRowAt("below")}
+function deleteTableRow(){deleteSelectedRows()}
+
 function addHandles(n,e){for(const d of ["nw","n","ne","e","se","s","sw","w"]){const h=document.createElement("span");h.className="resize-handle "+d;h.dataset.dir=d;h.addEventListener("pointerdown",ev=>startResize(ev,e,d));n.appendChild(h)}}
-function startMove(ev,e){if(preview||e.locked||ev.target.closest(".resize-handle,.table-col-resizer,.table-row-resizer,.table-edit-cell"))return;ev.preventDefault();ev.stopPropagation();if(!selected.has(e.id))selected=ev.shiftKey?new Set([...selected,e.id]):new Set([e.id]);const sx=ev.clientX,sy=ev.clientY,start=[...selected].map(id=>{const x=current().elements.find(v=>v.id===id);return{x,id,ox:x.x,oy:x.y}}),factor=zoom/100;const move=m=>{let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}for(const a of start){a.x.x=Math.max(0,a.ox+dx);a.x.y=Math.max(0,a.oy+dy)}renderElements();syncProps()};const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};addEventListener("pointermove",move);addEventListener("pointerup",up)}
+function startMove(ev,e){if(preview||e.locked||ev.target.closest(".resize-handle,.table-col-resizer,.table-row-resizer,.table-edit-cell,.table-context-tools"))return;ev.preventDefault();ev.stopPropagation();if(!selected.has(e.id))selected=ev.shiftKey?new Set([...selected,e.id]):new Set([e.id]);const sx=ev.clientX,sy=ev.clientY,start=[...selected].map(id=>{const x=current().elements.find(v=>v.id===id);return{x,id,ox:x.x,oy:x.y}}),factor=zoom/100;const move=m=>{let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}for(const a of start){a.x.x=Math.max(0,a.ox+dx);a.x.y=Math.max(0,a.oy+dy)}renderElements();syncProps()};const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};addEventListener("pointermove",move);addEventListener("pointerup",up)}
 function startResize(ev,e,dir){ev.preventDefault();ev.stopPropagation();const sx=ev.clientX,sy=ev.clientY,o={x:e.x,y:e.y,w:e.w,h:e.h},factor=zoom/100,ratio=o.w/Math.max(.1,o.h);const move=m=>{let dx=(m.clientX-sx)/factor/MM,dy=(m.clientY-sy)/factor/MM;if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}if(dir.includes("e"))e.w=Math.max(2,o.w+dx);if(dir.includes("s"))e.h=Math.max(.5,o.h+dy);if(dir.includes("w")){e.x=o.x+dx;e.w=Math.max(2,o.w-dx)}if(dir.includes("n")){e.y=o.y+dy;e.h=Math.max(.5,o.h-dy)}if(e.type==="image"&&e.aspectLock!==false&&(dir.length===2)){if(Math.abs(dx)>=Math.abs(dy)){e.h=Math.max(.5,e.w/ratio);if(dir.includes("n"))e.y=o.y+(o.h-e.h)}else{e.w=Math.max(2,e.h*ratio);if(dir.includes("w"))e.x=o.x+(o.w-e.w)}}renderElements();syncProps()};const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);pushHistory();autoSave()};addEventListener("pointermove",move);addEventListener("pointerup",up)}
 function selectedOne(){if(selected.size!==1)return null;return current().elements.find(e=>selected.has(e.id))}
 function renderTableColumnEditor(e){
