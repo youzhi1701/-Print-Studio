@@ -269,7 +269,7 @@ function content(n,e){
   if(e.type==="container"){n.style.border=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" rgba(80,100,140,.35)";n.style.borderRadius=(e.radius||0)+"px";return}
   if(e.type==="line"){n.style.borderTop=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" #17223c";return}
   if(e.type==="barcode"){
-    n.innerHTML='<div class="barcode-bars"></div>'+(e.showText?'<div class="barcode-label">'+htmlEsc(preview?(data[e.field]??""):"{{"+(e.field||"字段")+"}}")+'</div>':"");
+    n.innerHTML='<div class="barcode-bars"></div>'+(e.showText?'<div class="barcode-label" style="font-size:'+(e.barcodeFontSize||8)+'px">'+htmlEsc(preview?(data[e.field]??""):"{{"+(e.field||"字段")+"}}")+'</div>':"");
     return
   }
   if(e.type==="qrcode"){n.innerHTML='<div class="qr-placeholder"></div>';return}
