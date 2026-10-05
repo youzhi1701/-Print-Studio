@@ -1,4 +1,19 @@
 let sdkModule=null;
+const attachmentUrlCache=new Map();
+const ATTACHMENT_CACHE_TTL=20*60*1000;
+
+function attachmentCacheKey(recordId,fieldId,tokens=[]){
+  return String(recordId||"")+"|"+String(fieldId||"")+"|"+tokens.join(",");
+}
+function getCachedAttachmentUrls(key){
+  const hit=attachmentUrlCache.get(key);
+  if(!hit)return null;
+  if(Date.now()-hit.time>ATTACHMENT_CACHE_TTL){attachmentUrlCache.delete(key);return null}
+  return hit.urls;
+}
+function setCachedAttachmentUrls(key,urls){
+  if(urls?.length)attachmentUrlCache.set(key,{time:Date.now(),urls:[...urls]});
+}
 
 async function loadSdk(){
   if(sdkModule) return sdkModule;
@@ -126,21 +141,26 @@ export async function resolveAttachmentUrls(table,record,fields){
     const tokens=raw.map(v=>v?.token).filter(Boolean);
     if(!tokens.length) continue;
 
-    let urls=[];
-    // Preferred SDK path: attachment field resolves all URLs for a record.
-    try{
-      const field=await table.getFieldById(f.id);
-      if(field?.getAttachmentUrls) urls=(await field.getAttachmentUrls(record.id))||[];
-    }catch(err){console.warn("attachmentField.getAttachmentUrls failed",f.name,err)}
+    const cacheKey=attachmentCacheKey(record.id,f.id,tokens);
+    let urls=getCachedAttachmentUrls(cacheKey)||[];
 
-    // Fallback: table cell attachment API.
-    if(!urls.length&&table.getCellAttachmentUrls){
-      try{urls=(await table.getCellAttachmentUrls(tokens,f.id,record.id))||[]}catch(err){console.warn("getCellAttachmentUrls failed",f.name,err)}
-    }
+    if(!urls.length){
+      // Preferred SDK path: attachment field resolves all URLs for a record.
+      try{
+        const field=await table.getFieldById(f.id);
+        if(field?.getAttachmentUrls) urls=(await field.getAttachmentUrls(record.id))||[];
+      }catch(err){console.warn("attachmentField.getAttachmentUrls failed",f.name,err)}
 
-    // Final fallback for preview: base64 thumbnails are directly renderable in <img>.
-    if(!urls.length&&table.getCellThumbnailUrls){
-      try{urls=(await table.getCellThumbnailUrls(tokens,f.id,record.id,720))||[]}catch(err){console.warn("getCellThumbnailUrls failed",f.name,err)}
+      // Fallback: table cell attachment API.
+      if(!urls.length&&table.getCellAttachmentUrls){
+        try{urls=(await table.getCellAttachmentUrls(tokens,f.id,record.id))||[]}catch(err){console.warn("getCellAttachmentUrls failed",f.name,err)}
+      }
+
+      // Final fallback for preview: base64 thumbnails are directly renderable in <img>.
+      if(!urls.length&&table.getCellThumbnailUrls){
+        try{urls=(await table.getCellThumbnailUrls(tokens,f.id,record.id,720))||[]}catch(err){console.warn("getCellThumbnailUrls failed",f.name,err)}
+      }
+      setCachedAttachmentUrls(cacheKey,urls);
     }
 
     if(urls.length){
