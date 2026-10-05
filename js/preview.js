@@ -3,7 +3,7 @@ import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-6";
 import {printTemplateRecords} from "./print.js?v=20261005-6";
 
 const $=id=>document.getElementById(id);
-let payload=null,index=0,fitMode=true,lastRenderKey="";
+let payload=null,index=0,fitMode=true,lastRenderKey="",previewScale=1,fitScale=1,panX=0,panY=0,panning=false,pointer=null;
 
 function records(){
   const arr=payload?.selectedRecords?.length?payload.selectedRecords:(payload?.record?[payload.record]:[]);
@@ -40,15 +40,38 @@ async function render(force=false){
   $("statusText").textContent="已载入 "+list.length+" 条记录";
   if(fitMode)requestAnimationFrame(fit);
 }
+function applyTransform(){
+  const host=$("sheetHost");if(!host)return;
+  host.style.setProperty("--popup-scale",String(previewScale));
+  host.style.setProperty("--popup-pan-x",panX+"px");
+  host.style.setProperty("--popup-pan-y",panY+"px");
+  $("zoomText").textContent=Math.round(previewScale*100)+"%";
+}
+function clampPan(){
+  const stage=$("sheetStage"),sheet=$("sheetHost")?.querySelector(".print-sheet");
+  if(!stage||!sheet)return;
+  const sw=sheet.offsetWidth*previewScale,sh=sheet.offsetHeight*previewScale,keep=48;
+  const maxX=Math.max(0,(stage.clientWidth+sw)/2-keep),maxY=Math.max(0,(stage.clientHeight+sh)/2-keep);
+  panX=Math.max(-maxX,Math.min(maxX,panX));panY=Math.max(-maxY,Math.min(maxY,panY));
+}
+function setScale(next,anchorX=null,anchorY=null){
+  const stage=$("sheetStage"),old=previewScale;if(!stage)return;
+  next=Math.max(.2,Math.min(4,Number(next)||1));
+  if(anchorX!=null&&anchorY!=null&&old>0){
+    const rect=stage.getBoundingClientRect(),ox=anchorX-rect.left-stage.clientWidth/2,oy=anchorY-rect.top-stage.clientHeight/2;
+    panX=ox-next*(ox-panX)/old;panY=oy-next*(oy-panY)/old;
+  }
+  previewScale=next;fitMode=false;clampPan();applyTransform();$("fitBtn").textContent="适配";
+}
 function fit(){
   const stage=$("sheetStage"),host=$("sheetHost"),sheet=host.querySelector(".print-sheet");
   if(!stage||!sheet)return;
-  host.style.zoom="1";
   const sw=sheet.offsetWidth,sh=sheet.offsetHeight;
   const sx=(stage.clientWidth-24)/Math.max(1,sw),sy=(stage.clientHeight-24)/Math.max(1,sh);
-  host.style.zoom=String(Math.max(.2,Math.min(sx,sy,1.35)));
-  fitMode=true;$("fitBtn").textContent="适配 ✓";
+  fitScale=Math.max(.2,Math.min(sx,sy,1.35));previewScale=fitScale;panX=0;panY=0;fitMode=true;
+  applyTransform();$("fitBtn").textContent="适配 ✓";
 }
+function resetView(){previewScale=1;panX=0;panY=0;fitMode=false;applyTransform();$("fitBtn").textContent="适配"}
 async function printOne(){
   const tpl=template(),rec=currentRecord();if(!tpl||!rec)return;
   try{await printTemplateRecords(tpl,[rec])}
@@ -77,7 +100,22 @@ function applyPayload(data){
   render(false)
 }
 
-$("fitBtn").onclick=fit;
+$("fitBtn").onclick=fit;$("resetBtn").onclick=resetView;
+$("zoomOutBtn").onclick=()=>setScale(previewScale/1.15);
+$("zoomInBtn").onclick=()=>setScale(previewScale*1.15);
+const stage=$("sheetStage");
+stage.addEventListener("wheel",e=>{e.preventDefault();setScale(previewScale*(e.deltaY<0?1.12:1/1.12),e.clientX,e.clientY)},{passive:false});
+stage.addEventListener("pointerdown",e=>{
+  if(e.button!==0||e.target.closest(".preview-actions"))return;
+  panning=true;pointer={id:e.pointerId,x:e.clientX,y:e.clientY,px:panX,py:panY};stage.classList.add("is-panning");stage.setPointerCapture?.(e.pointerId);e.preventDefault();
+});
+stage.addEventListener("pointermove",e=>{
+  if(!panning||!pointer||pointer.id!==e.pointerId)return;
+  panX=pointer.px+(e.clientX-pointer.x);panY=pointer.py+(e.clientY-pointer.y);clampPan();applyTransform();
+});
+const stopPan=e=>{if(!panning)return;panning=false;pointer=null;stage.classList.remove("is-panning");try{stage.releasePointerCapture?.(e.pointerId)}catch{}};
+stage.addEventListener("pointerup",stopPan);stage.addEventListener("pointercancel",stopPan);
+stage.addEventListener("dblclick",()=>fit());
 $("prevBtn").onclick=()=>{if(index>0){index--;render()}};
 $("nextBtn").onclick=()=>{if(index<records().length-1){index++;render()}};
 $("printCurrentBtn").onclick=printOne;
