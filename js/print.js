@@ -73,6 +73,11 @@ async function prepareRenderedSheets(template,records){
   await inlineRemoteImages(host);
   await waitForImages(host);
   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  const failed=[...host.querySelectorAll("img")].filter(img=>img.src&&img.complete&&img.naturalWidth===0);
+  if(failed.length){
+    host.remove();
+    throw new Error("有 "+failed.length+" 张图片加载失败，请重新同步数据后再打印");
+  }
   return{host,page,sheets:[...host.querySelectorAll(".print-sheet")]};
 }
 
