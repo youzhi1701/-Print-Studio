@@ -290,7 +290,7 @@ function extendTableCellDrag(e,row,col){
 }
 function endTableCellDrag(){
   if(!tableSelecting)return;
-  tableSelecting=false;renderElements();renderLayers();syncProps();
+  tableSelecting=false;const e=selectedOne();if(e?.type==="table")refreshElementNode(e);renderLayers();syncProps();
 }
 window.addEventListener("pointerup",endTableCellDrag);
 function content(n,e){
@@ -350,7 +350,7 @@ function content(n,e){
         const col=Number(cell.dataset.col);
         selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
         for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
-        renderElements();renderLayers();syncProps();
+        refreshElementNode(e);renderLayers();syncProps();
       });
     });
     if(selected.has(e.id)&&!preview&&!e.locked){
@@ -384,7 +384,7 @@ function startTableColumnResize(ev,e,index,node){
     if(colEls[index])colEls[index].style.width=left.width+"%";if(colEls[index+1])colEls[index+1].style.width=right.width+"%";
     if(heads[index])heads[index].style.width=left.width+"%";if(heads[index+1])heads[index+1].style.width=right.width+"%";
   };
-  const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);e.columns=normalizeColumns(cols);renderElements();renderTableColumnEditor(e);pushHistory();autoSave()};
+  const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);e.columns=normalizeColumns(cols);refreshElementNode(e);renderTableColumnEditor(e);pushHistory();autoSave()};
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
 function addTableRowResizers(n,e,rows){
@@ -412,7 +412,7 @@ function startTableRowResize(ev,e,rowIndex,rows,node){
   const def=(e.rowDefs||[]).find(r=>r.id===row.id);if(!def)return;
   const sy=ev.clientY,factor=zoom/100,start=Number(def.height)||Number(e.rowHeight)||8;
   const move=m=>{def.height=Math.max(4,start+(m.clientY-sy)/factor/MM);row.height=def.height;updateTableRowGeometry(node,e,rows)};
-  const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);clearAlignmentGuides();renderElements();syncProps();pushHistory();autoSave()};
+  const up=()=>{removeEventListener("pointermove",move);removeEventListener("pointerup",up);refreshElementNode(e);syncProps();pushHistory();autoSave()};
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
 
@@ -475,7 +475,7 @@ function selectionHasMerge(e){
   return tableSelectionModelCells(e).some(x=>tmMergeForCell(e,x.row.id,x.col.id))
 }
 function commitTableEdit(message){
-  renderElements();renderTableColumnEditor(selectedOne());syncProps();pushHistory();autoSave();if(message)toast(message)
+  const e=selectedOne();if(e?.type==="table")refreshElementNode(e);renderTableColumnEditor(e);syncProps();pushHistory();autoSave();if(message)toast(message)
 }
 function mergeSelectedCells(){
   const e=selectedOne(),b=tableSelectionBounds();
@@ -741,14 +741,14 @@ function renderTableColumnEditor(e){
     const width=document.createElement("input");width.type="number";width.min="1";width.max="100";width.step="1";width.value=col.width??Math.round(100/Math.max(1,cols.length));width.title="宽度%";
     const remove=document.createElement("button");remove.type="button";remove.className="col-remove";remove.textContent="×";remove.title="删除列";
 
-    const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();col.width=Math.max(1,Number(width.value)||1);e.columns=cols;renderElements();autoSave()};
+    const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();col.width=Math.max(1,Number(width.value)||1);e.columns=cols;refreshElementNode(e);autoSave()};
     const checkpoint=()=>{commit();pushHistory();autoSave()};
     title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
     field.addEventListener("change",checkpoint);
     width.addEventListener("input",commit);width.addEventListener("change",checkpoint);
-    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
-    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
-    remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);renderElements();pushHistory();autoSave()};
+    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);refreshElementNode(e);pushHistory();autoSave()};
+    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);refreshElementNode(e);pushHistory();autoSave()};
+    remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);refreshElementNode(e);pushHistory();autoSave()};
     row.append(move,title,field,width,remove);list.appendChild(row);
   });
 }
@@ -756,13 +756,13 @@ function addTableColumn(){
   const e=selectedOne();if(!e||e.type!=="table")return;
   const cols=tmNormalizeColumns(e);tmInsertColumn(e,cols.length);
   selectedCells=[];tableSelectionAnchor=null;
-  normalizeTableWidths(false);renderTableColumnEditor(e);renderElements();pushHistory();autoSave()
+  normalizeTableWidths(false);renderTableColumnEditor(e);refreshElementNode(e);pushHistory();autoSave()
 }
 function normalizeTableWidths(save=true){
   const e=selectedOne();if(!e||e.type!=="table")return;
   const cols=tmNormalizeColumns(e),base=Math.floor(100/cols.length);let rest=100-base*cols.length;
   cols.forEach((col,i)=>{col.width=base+(i<rest?1:0)});e.columns=cols;
-  renderTableColumnEditor(e);renderElements();if(save){pushHistory();autoSave()}
+  renderTableColumnEditor(e);refreshElementNode(e);if(save){pushHistory();autoSave()}
 }
 function syncTableCellInspector(e){
   const panel=$("tableCellInspector"),hint=$("tableSelectionHint"),b=tableSelectionBounds();
@@ -1006,7 +1006,7 @@ async function testPrint(){
 }
 function bind(){document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("componentsTab").classList.toggle("hidden",b.dataset.tab!=="components");$("fieldsTab").classList.toggle("hidden",b.dataset.tab!=="fields")});document.querySelectorAll(".rtab").forEach(b=>b.onclick=()=>{document.querySelectorAll(".rtab").forEach(x=>x.classList.remove("active"));b.classList.add("active");$("propsTab").classList.toggle("hidden",b.dataset.rtab!=="props");$("layersTab").classList.toggle("hidden",b.dataset.rtab!=="layers")});
 document.querySelectorAll(".component-palette button").forEach(b=>{b.onclick=()=>addElement(b.dataset.type);b.ondragstart=e=>{dragType=b.dataset.type;e.dataTransfer.setData("text/plain",dragType)}});$("printPage").ondragover=e=>e.preventDefault();$("printPage").addEventListener("pointerdown",beginMarqueeSelection);$("printPage").ondrop=e=>{e.preventDefault();const r=$("printPage").getBoundingClientRect(),type=e.dataTransfer.getData("text/plain")||dragType;let field="";let t=type;if(type.startsWith("field:")){t="field";field=type.slice(6)}addElement(t,(e.clientX-r.left)/(zoom/100)/MM,(e.clientY-r.top)/(zoom/100)/MM,field)};
-for(const id of ["propX","propY","propW","propH","propText","propField","propFontSize","propWeight","imageField","imageFit","imageRadius","imageAspectLock","imageAlignX","imageAlignY","imagePadding","imageEmptyBehavior","textWrap","textMaxLines","textOverflow","textEmptyBehavior","tableDataField","tableHeader","tableZebra","tableImageFit","tableWrap","tableHideEmptyColumns","tableEmptyBehavior","tableRowHeight","tableMaxRows","tableBorderWidth","tableFontSize","tableCellType","tableCellField","tableCellText","tableCellAlign","tableCellVAlign","tableCellPadding","tableCellWrap","tableCellImageFit","codeField","barcodeFormat","barcodeText","barcodeFontSize","qrLevel","qrMargin","shapeBorderWidth","shapeRadius","shapeBorderStyle"]){const el=$(id);if(!el)continue;el.addEventListener("input",updateProps);el.addEventListener("change",e=>{updateProps(e);pushHistory();autoSave()})}document.querySelectorAll("[data-align]").forEach(b=>b.onclick=()=>{const e=selectedOne();if(!e)return;e.align=b.dataset.align;renderElements();syncProps();pushHistory();autoSave()});
+for(const id of ["propX","propY","propW","propH","propText","propField","propFontSize","propWeight","imageField","imageFit","imageRadius","imageAspectLock","imageAlignX","imageAlignY","imagePadding","imageEmptyBehavior","textWrap","textMaxLines","textOverflow","textEmptyBehavior","tableDataField","tableHeader","tableZebra","tableImageFit","tableWrap","tableHideEmptyColumns","tableEmptyBehavior","tableRowHeight","tableMaxRows","tableBorderWidth","tableFontSize","tableCellType","tableCellField","tableCellText","tableCellAlign","tableCellVAlign","tableCellPadding","tableCellWrap","tableCellImageFit","codeField","barcodeFormat","barcodeText","barcodeFontSize","qrLevel","qrMargin","shapeBorderWidth","shapeRadius","shapeBorderStyle"]){const el=$(id);if(!el)continue;el.addEventListener("input",updateProps);el.addEventListener("change",e=>{updateProps(e);pushHistory();autoSave()})}document.querySelectorAll("[data-align]").forEach(b=>b.onclick=()=>{const e=selectedOne();if(!e)return;e.align=b.dataset.align;refreshElementNode(e);syncProps();pushHistory();autoSave()});
 document.querySelectorAll("[data-multi]").forEach(b=>b.onclick=()=>applyMulti(b.dataset.multi));$("duplicateBtn").onclick=duplicate;$("deleteBtn").onclick=del;$("applyPrintCalibration").onclick=applyPrintCalibration;$("lockBtn").onclick=()=>toggleKey("locked");$("hideBtn").onclick=()=>toggleKey("hidden");$("frontBtn").onclick=()=>moveLayer(true);$("backBtn").onclick=()=>moveLayer(false);$("applyPage").onclick=()=>applyPage(true);$("pagePreset").onchange=e=>{if(e.target.value!=="custom"){const [w,h]=e.target.value.split("x");$("pageW").value=w;$("pageH").value=h;applyPage(true)}};$("gridToggle").onchange=e=>{$("printPage").classList.toggle("grid-on",grid=e.target.checked)};$("snapToggle").onchange=e=>snap=e.target.checked;$("safeToggle").onchange=e=>$("safeGuide").classList.toggle("hidden",!e.target.checked);$("zoomRange").oninput=e=>setZoom(e.target.value,"manual");$("zoomOut").onclick=()=>setZoom(zoom-5,"manual");$("zoomIn").onclick=()=>setZoom(zoom+5,"manual");$("fitBtn").onclick=fitCanvas;$("previewBtn").onclick=()=>setPreview(!preview);$("printBtn").onclick=testPrint;$("templateName").onchange=autoSave;$("undoBtn").onclick=()=>restore(hIndex-1);$("redoBtn").onclick=()=>restore(hIndex+1);$("fullBtn").onclick=async()=>{try{if(!document.fullscreenElement)await document.documentElement.requestFullscreen();else await document.exitFullscreen();setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},120)}catch{toast("浏览器未允许全屏")}};$("quickBtn").onclick=()=>{if(window.opener&&!window.opener.closed){window.opener.focus();window.close()}else{location.href="./index.html"}};
 $("leftToggle").onclick=()=>{
   const g=document.querySelector(".designer-grid");
