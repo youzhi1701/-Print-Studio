@@ -53,7 +53,7 @@ function updateRecordMeta(){
   $("recordTitle").textContent=rec?recordName(rec):"未选择记录";
   $("recordSub").textContent=rec?(state.selectedRecords.length>1?("第 "+(currentIndex+1)+" / "+state.selectedRecords.length+" 条"):"点击切换"):"点击选择";
   $("selectionText").textContent=state.selectedRecords.length>1?("已选择 "+state.selectedRecords.length+" 条记录"):(rec?"已选择 1 条记录":"未选择记录");
-  $("previewCounter").textContent=state.selectedRecords.length>1?((currentIndex+1)+" / "+state.selectedRecords.length):"1 / 1";
+  $("previewCounter").textContent=!rec?"0 / 0":(state.selectedRecords.length>1?((currentIndex+1)+" / "+state.selectedRecords.length):"1 / 1");
   const multi=state.selectedRecords.length>1;
   $("prevRecord").hidden=!multi;$("nextRecord").hidden=!multi;
   $("prevRecord").disabled=!multi||currentIndex<=0;
@@ -62,9 +62,12 @@ function updateRecordMeta(){
 }
 
 function validateRecord(rec){
-  const data=rec?.data||{};
-  const required=["收件人","电话","手机号","收货地址"];
-  const missing=required.filter(k=>k in data && !data[k]);
+  const data=rec?.data||{},missing=[];
+  const has=k=>Object.prototype.hasOwnProperty.call(data,k);
+  if(has("收件人")&&!data["收件人"])missing.push("收件人");
+  if(has("收货地址")&&!data["收货地址"])missing.push("收货地址");
+  const phoneKeys=["手机号","电话","联系电话"].filter(has);
+  if(phoneKeys.length&&!phoneKeys.some(k=>data[k]))missing.push("联系电话");
   const bar=$("issueBar"),text=$("issueText");
   if(!rec){bar.className="preview-health warn";text.textContent="未选择";return}
   if(missing.length){bar.className="preview-health warn";text.textContent="缺 "+missing.length+" 项";return}
