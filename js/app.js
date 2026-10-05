@@ -1,10 +1,10 @@
-import {mountBuildVersion} from "./version.js?v=20261005-15";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-15";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-15";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-15";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-15";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-15";
-import {printTemplateRecords} from "./print.js?v=20261005-15";
+import {mountBuildVersion} from "./version.js?v=20261005-16";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-16";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-16";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-16";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-16";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-16";
+import {printTemplateRecords} from "./print.js?v=20261005-16";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
