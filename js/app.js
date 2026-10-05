@@ -1,9 +1,9 @@
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-10";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-10";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-10";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-10";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-10";
-import {printTemplateRecords} from "./print.js?v=20261005-10";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-11";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-11";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-11";
+import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-11";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-11";
+import {printTemplateRecords} from "./print.js?v=20261005-11";
 
 const $=id=>document.getElementById(id);
 let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;
