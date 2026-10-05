@@ -21,6 +21,13 @@ input,select,textarea{color:var(--ink);background:rgba(255,255,255,.55);border:1
   font-weight:500;letter-spacing:.1px;white-space:nowrap;vertical-align:baseline
 }
 .build-version-inline{margin-left:5px}
+.build-version-anchor{
+  display:inline-flex!important;align-items:center!important;flex:0 0 auto!important;
+  margin-left:5px!important;padding:2px 4px!important;border-radius:4px!important;
+  background:rgba(255,255,255,.48)!important;border:1px solid rgba(78,98,138,.10)!important;
+  color:rgba(23,34,60,.58)!important;font-size:8px!important;line-height:1!important;
+  white-space:nowrap!important;opacity:1!important;visibility:visible!important
+}
 .build-version-fallback{
   position:fixed;right:5px;bottom:3px;z-index:2147483000;
   padding:2px 4px;border-radius:4px;background:rgba(255,255,255,.28);
