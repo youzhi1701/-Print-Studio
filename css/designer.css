@@ -473,3 +473,7 @@
 .alignment-guide.vertical{top:0;bottom:0;width:1px}
 .alignment-guide.horizontal{left:0;right:0;height:1px}
 .marquee-selection{position:absolute;z-index:90;pointer-events:none;border:1px solid rgba(37,99,235,.8);background:rgba(37,99,235,.08);box-shadow:inset 0 0 0 1px rgba(255,255,255,.55)}
+
+/* shared renderer inside editable elements */
+.design-element>.render-element{width:100%!important;height:100%!important;pointer-events:none!important}
+.design-element>.render-element *{pointer-events:none!important}
