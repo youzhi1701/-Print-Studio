@@ -15,11 +15,16 @@ radial-gradient(circle at 88% 98%,rgba(126,34,206,.13),transparent 28%)}
 .toast{position:fixed;z-index:1000;top:18px;right:18px;max-width:320px;padding:10px 14px;border-radius:12px;background:rgba(255,255,255,.85);border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow);backdrop-filter:blur(20px);color:var(--ink);font-size:12px;font-weight:700;opacity:0;transform:translateY(-8px);pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:none}
 input,select,textarea{color:var(--ink);background:rgba(255,255,255,.55);border:1px solid var(--border);border-radius:9px;outline:none}input:focus,select:focus,textarea:focus{border-color:rgba(37,99,235,.4);box-shadow:0 0 0 3px rgba(37,99,235,.07)}
 
+
 .build-version-badge{
+  font-size:8px;line-height:1;color:rgba(23,34,60,.38);
+  font-weight:500;letter-spacing:.1px;white-space:nowrap;vertical-align:baseline
+}
+.build-version-inline{margin-left:4px}
+.build-version-fallback{
   position:fixed;right:5px;bottom:3px;z-index:2147483000;
-  font-size:8px;line-height:1;padding:2px 4px;border-radius:4px;
-  color:rgba(23,34,60,.34);background:rgba(255,255,255,.28);
+  padding:2px 4px;border-radius:4px;background:rgba(255,255,255,.28);
   border:1px solid rgba(78,98,138,.06);backdrop-filter:blur(6px);
-  pointer-events:none;user-select:none;letter-spacing:.1px
+  pointer-events:none;user-select:none
 }
 @media print{.build-version-badge{display:none!important}}
