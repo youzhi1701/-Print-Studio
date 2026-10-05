@@ -1,6 +1,6 @@
-import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-6";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-6";
-import {printTemplateRecords} from "./print.js?v=20261005-6";
+import {requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-9";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-9";
+import {printTemplateRecords} from "./print.js?v=20261005-9";
 
 const $=id=>document.getElementById(id);
 let payload=null,index=0,fitMode=true,lastRenderKey="",previewScale=1,fitScale=1,panX=0,panY=0,panning=false,pointer=null;
