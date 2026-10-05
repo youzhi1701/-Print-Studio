@@ -295,45 +295,6 @@ function content(n,e){
       return
     }
   }
-  if(e.type==="text"){n.textContent=e.text||"";applyTextBehavior(n,e);return}
-  if(e.type==="field"){
-    const actual=data[e.field];
-    if(hasValue(actual))n.textContent=(e.label||"")+actual;
-    else if(e.emptyBehavior==="hide"){n.style.display="none";return}
-    else if(e.emptyBehavior==="blank")n.textContent="";
-    else n.textContent=e.text||"{{"+(e.field||"字段")+"}}";
-    applyTextBehavior(n,e);return
-  }
-  if(e.type==="image"){
-    const src=data[e.field]||"";
-    if(!src&&e.emptyBehavior==="hide"){n.style.display="none";return}
-    n.style.padding=(e.padding||0)*MM+"px";
-    n.innerHTML=src?'<img alt="" src="'+htmlEsc(src)+'" referrerpolicy="no-referrer">':(e.emptyBehavior==="blank"?"":'<div class="image-placeholder">暂无图片'+(e.field?(" · "+htmlEsc(e.field)):"")+'</div>');
-    const img=n.querySelector("img");
-    if(img){
-      img.style.width="100%";img.style.height="100%";img.style.display="block";
-      img.style.objectFit=e.imageFit==="original"?"none":(e.imageFit||"contain");
-      img.style.objectPosition=imagePosition(e);
-      img.style.borderRadius=(e.radius||0)+"px";
-      img.onerror=()=>{requestImageRefresh(state.record?.id||"");n.innerHTML='<div class="image-placeholder">图片加载失败 · 正在刷新</div>'}
-    }
-    return
-  }
-  if(e.type==="container"){n.style.border=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" rgba(80,100,140,.35)";n.style.borderRadius=(e.radius||0)+"px";return}
-  if(e.type==="line"){n.style.borderTop=(e.borderWidth??.5)+"px "+(e.borderStyle||"solid")+" #17223c";return}
-  if(e.type==="barcode"){
-    const actual=hasValue(data[e.field])?String(data[e.field]):"1234567890";
-    const label=hasValue(data[e.field])?actual:"{{"+(e.field||"字段")+"}}";
-    n.style.display="flex";n.style.flexDirection="column";n.style.alignItems="center";n.style.justifyContent="center";n.style.gap="1px";
-    n.innerHTML='<svg class="barcode" data-value="'+htmlEsc(actual)+'" data-format="'+htmlEsc(e.barcodeFormat||"CODE128")+'" style="display:block;width:100%;flex:1 1 auto;min-height:0;max-height:100%"></svg>'+(e.showText?'<div class="barcode-label" style="position:static;display:block;flex:0 0 auto;font-size:'+(e.barcodeFontSize||8)+'px;line-height:1.15;white-space:nowrap">'+htmlEsc(label)+'</div>':"");
-    return
-  }
-  if(e.type==="qrcode"){
-    const actual=hasValue(data[e.field])?String(data[e.field]):"https://example.local/";
-    n.style.background="none";
-    n.innerHTML='<canvas class="qrcode" data-value="'+htmlEsc(actual)+'" data-level="'+htmlEsc(e.qrLevel||"M")+'" data-margin="'+Number(e.qrMargin||0)+'" data-size="240" style="display:block;width:100%;height:100%;max-width:100%;max-height:100%"></canvas>';
-    return
-  }
   if(e.type==="table"){
     const layout=buildTableLayout(e,data,preview&&e.hideEmptyColumns===true);
     const {rows,cols,allCols,cellRows,hasAny}=layout;
