@@ -336,7 +336,7 @@ function content(n,e){
         const sel=selectedCells.some(s=>s.row===ri&&s.col===cell.colIndex);
         html+='<td class="table-edit-cell'+(sel?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'" '+(cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"")+(cell.colspan>1?'colspan="'+cell.colspan+'" ':"")+'style="text-align:'+cell.cfg.align+';vertical-align:'+cell.cfg.valign+';padding:'+cell.cfg.padding*MM+'px;white-space:'+(cell.cfg.wrap?"normal":"nowrap")+';height:'+cell.height*MM+'px">'+shown+"</td>";
       }
-      return "<tr"+(e.zebra&&ri%2?' class="zebra"':"")+">"+html+"</tr>";
+      return '<tr'+(e.zebra&&ri%2?' class="zebra"':"")+' style="height:'+tmRowHeight(rows[ri],e)*MM+'px">'+html+"</tr>";
     }).join("");
     n.innerHTML='<table style="font-size:'+(e.fontSize||9)+'px">'+colgroup+head+"<tbody>"+bodyRows+"</tbody></table>";
     n.querySelectorAll("th").forEach(cell=>{cell.style.borderWidth=(e.borderWidth??.5)+"px";cell.style.height=(e.headerHeight||e.rowHeight||8)*MM+"px"});
@@ -406,7 +406,7 @@ function updateTableRowGeometry(node,e,rows){
   e.h=total;node.style.height=total*MM+"px";
   const table=node.querySelector("table");if(table)table.style.height=total*MM+"px";
   const trs=node.querySelectorAll("tbody tr");
-  rows.forEach((row,i)=>{const h=tmRowHeight(row,e)*MM;trs[i]?.querySelectorAll("td").forEach(td=>td.style.height=h+"px")});
+  rows.forEach((row,i)=>{const h=tmRowHeight(row,e)*MM;if(trs[i])trs[i].style.height=h+"px";trs[i]?.querySelectorAll("td").forEach(td=>td.style.height=h+"px")});
   let y=e.showHeader===false?0:(e.headerHeight||e.rowHeight||8);
   node.querySelectorAll(".table-row-resizer").forEach((handle,i)=>{y+=tmRowHeight(rows[i],e);handle.style.top=y*MM+"px"});
 }
