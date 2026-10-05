@@ -1,4 +1,4 @@
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-02";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-03";
 
 let activeJob=null;
 
@@ -86,10 +86,12 @@ function rasterizeOnlyQrCanvases(root){
   }
 }
 
-async function preparePrintMarkup(template,records){
+async function preparePrintMarkup(template,records,onProgress=()=>{}){
   const {host,page}=makeRenderHost(template,records);
   try{
+    onProgress("正在生成条码和二维码","共 "+records.length+" 条记录");
     await hydrateCodes(host);
+    onProgress("正在检查图片","读取并固定打印图片");
     await waitForImages(host);
     await inlineRemoteImages(host);
     await waitForImages(host);
@@ -100,10 +102,16 @@ async function preparePrintMarkup(template,records){
     if(failed.length)throw new Error("有 "+failed.length+" 张图片加载失败，请重新同步数据后再打印");
 
     const failedBarcodes=[...host.querySelectorAll("svg.barcode[data-value]")].filter(node=>node.dataset.value&&!node.dataset.hydrated);
-    if(failedBarcodes.length)throw new Error("条码生成失败，请检查网络后重试");
+    if(failedBarcodes.length){
+      const first=failedBarcodes[0];
+      const field=first.dataset.field?("字段「"+first.dataset.field+"」"):"条码";
+      const reason=first.dataset.error||"数据或条码格式不合法";
+      throw new Error(field+"生成失败："+reason+(failedBarcodes.length>1?("；另有 "+(failedBarcodes.length-1)+" 个条码异常"):""));
+    }
 
     const sheets=[...host.querySelectorAll(".print-sheet")];
     if(!sheets.length)throw new Error("打印内容为空");
+    onProgress("内容检查完成","正在打开系统打印");
     return{page,markup:sheets.map(sheet=>sheet.outerHTML).join("")};
   }finally{
     host.remove();
@@ -183,12 +191,21 @@ window.addEventListener("load",async()=>{
 </script></body></html>`;
 }
 
+function updatePreparingPopup(popup,title,detail=""){
+  try{
+    if(!popup||popup.closed)return;
+    const t=popup.document.getElementById("prepTitle"),d=popup.document.getElementById("prepDetail");
+    if(t)t.textContent=title||"正在准备高清打印";
+    if(d)d.textContent=detail||"";
+  }catch{}
+}
+
 function openPreparingPopup(){
   const popup=window.open("about:blank","super-print-direct","popup=yes,resizable=yes,scrollbars=yes,width=1100,height=820");
   if(!popup)return null;
   try{
     popup.document.open();
-    popup.document.write('<!doctype html><meta charset="utf-8"><title>正在准备打印</title><style>body{font-family:Microsoft YaHei,Arial,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#f4f7fb;color:#17223c}div{text-align:center}b{display:block;font-size:20px;margin-bottom:8px}small{color:#6b7a9a}</style><div><b>正在准备高清打印</b><small>文字、表格和条码将使用浏览器原生矢量打印，不再整页截图。</small></div>');
+    popup.document.write('<!doctype html><meta charset="utf-8"><title>正在准备打印</title><style>body{font-family:Microsoft YaHei,Arial,sans-serif;display:grid;place-items:center;height:100vh;margin:0;background:#f4f7fb;color:#17223c}div{text-align:center;max-width:560px;padding:24px}b{display:block;font-size:20px;margin-bottom:8px}small{display:block;color:#6b7a9a;line-height:1.6}</style><div><b id="prepTitle">正在准备高清打印</b><small id="prepDetail">文字、表格和条码将使用浏览器原生矢量打印，不再整页截图。</small></div>');
     popup.document.close();
   }catch{}
   return popup;
@@ -209,7 +226,8 @@ export async function printTemplateRecords(template,records,{beforePrint=null,af
 
   try{
     beforePrint?.();
-    const {page,markup}=await preparePrintMarkup(template,list);
+    updatePreparingPopup(popup,"正在准备打印","共 "+list.length+" 条记录");
+    const {page,markup}=await preparePrintMarkup(template,list,(title,detail)=>updatePreparingPopup(popup,title,detail));
     if(popup.closed)throw new Error("打印窗口已关闭");
     popup.document.open();
     popup.document.write(printDocumentHtml(page,markup));
