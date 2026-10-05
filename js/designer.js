@@ -480,6 +480,9 @@ function deleteSelectedColumns(){
 function addTableCellToolbar(n,e){
   const b=tableSelectionBounds();if(!b)return;
   const bar=document.createElement("div");bar.className="table-context-tools";bar.dataset.role="table-tools";
+  const pageH=current()?.page?.height||140;
+  if(e.y<10)bar.style.top=(e.h+1.5)*MM+"px";
+  else if(e.y+e.h+10>pageH)bar.style.top="4px";
   const defs=[
     ["merge","合并"],["unmerge","拆分"],["rowAbove","上插行"],["rowBelow","下插行"],
     ["colLeft","左插列"],["colRight","右插列"],["delRow","删行"],["delCol","删列"]
