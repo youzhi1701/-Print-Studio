@@ -1,15 +1,15 @@
-import {mountBuildVersion} from "./version.js?v=20261005-23";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261005-23";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls} from "./feishu.js?v=20261005-23";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261005-23";
-import {writeBridge,openDesigner,openPreviewWindow} from "./bridge.js?v=20261005-23";
-import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-23";
-import {printTemplateRecords} from "./print.js?v=20261005-23";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261005-23";
+import {mountBuildVersion} from "./version.js?v=20261006-01";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-01";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-01";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields} from "./templates.js?v=20261006-01";
+import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-01";
+import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261006-01";
+import {printTemplateRecords} from "./print.js?v=20261006-01";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-01";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();
+let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -70,37 +70,68 @@ function markTemplateDeleted(id){
 function clearTemplateDeleted(id){
   saveTemplateTombstones(loadTemplateTombstones().filter(x=>x!==id));
 }
+function updateCloudState(text,stateName=""){
+  const n=$("templateLibraryState");if(!n)return;
+  n.textContent=text;n.dataset.state=stateName;
+}
+function runCloudOperation(task){
+  const op=cloudOperation.then(task,task);
+  cloudOperation=op.catch(()=>{});
+  return op;
+}
 function queueCloudTemplateSave(template){
   if(!state.connected||!state.sdk||!template?.id)return;
   const snapshot=structuredClone(template);
   clearTimeout(cloudSaveTimers.get(snapshot.id));
   cloudSaveTimers.set(snapshot.id,setTimeout(async()=>{
     cloudSaveTimers.delete(snapshot.id);
-    try{await upsertCloudTemplate(state.sdk,snapshot);clearTemplateDeleted(snapshot.id)}
-    catch(err){console.warn("云端模板自动保存失败",err)}
+    try{
+      const result=await runCloudOperation(()=>upsertCloudTemplate(state.sdk,snapshot));
+      if(!result?.reason)clearTemplateDeleted(snapshot.id);
+      updateCloudState("云端已保存","ok");
+    }catch(err){
+      updateCloudState("云端待同步","warn");
+      console.warn("云端模板自动保存失败",err);
+    }
   },900));
 }
 async function syncCloudTemplates(force=false){
   if(!state.connected||!state.sdk||cloudSyncBusy)return null;
   if(!force&&Date.now()-lastCloudSyncAt<60000)return null;
   cloudSyncBusy=true;
+  const syncBtn=$("templateLibrarySync");if(syncBtn)syncBtn.disabled=true;
+  updateCloudState("同步中…","busy");
   try{
     const previous=state.activeTemplateId;
-    const result=await syncTemplatesWithCloud(state.sdk,state.templates,loadTemplateTombstones());
+    const result=await runCloudOperation(()=>syncTemplatesWithCloud(state.sdk,state.templates,loadTemplateTombstones()));
     state.templates=result.templates;
     saveTemplates(state.templates);
     for(const id of result.clearedDeletedIds||[])clearTemplateDeleted(id);
     state.activeTemplateId=state.templates.some(t=>t.id===previous)?previous:(state.templates[0]?.id||null);
     persistActiveTemplate();fillTemplates();
     lastCloudSyncAt=Date.now();
-    if(result.uploaded||result.downloaded)toast("云端模板已同步 · 上传 "+result.uploaded+" / 下载 "+result.downloaded);
+    updateCloudState("云端已同步","ok");
+    if(result.uploaded||result.downloaded||result.removedLocal)toast("云端模板已同步 · 上传 "+result.uploaded+" / 下载 "+result.downloaded+(result.removedLocal?(" / 删除同步 "+result.removedLocal):""));
     return result;
   }catch(err){
+    updateCloudState("云端同步失败","error");
     console.warn("云端模板同步失败",err);
     return null;
-  }finally{cloudSyncBusy=false}
+  }finally{
+    cloudSyncBusy=false;
+    if(syncBtn)syncBtn.disabled=false;
+  }
 }
-function autoBind(){const tpl=activeTemplate();if(autoBindTemplateFields(tpl,state.fields))saveTemplates(state.templates)}
+function autoBind(){
+  const tpl=activeTemplate();if(!tpl)return false;
+  const changed=autoBindTemplateFields(tpl,state.fields);
+  if(changed){
+    tpl.updatedAt=Date.now();
+    saveTemplates(state.templates);
+    queueCloudTemplateSave(tpl);
+  }
+  return changed;
+}
 
 function activeRecord(){
   if(state.selectedRecords?.length){
@@ -165,10 +196,31 @@ async function renderPreview(force=false){
   lastPreviewKey=key;
   const html=renderTemplateToHtml(tpl,rec.data||{});
   if(host.innerHTML!==html)host.innerHTML=html;
+  armPreviewImageRecovery(host,rec);
   await hydrateCodes(host);
   requestAnimationFrame(fitPreview);
 }
 
+async function recoverPreviewImage(rec,src){
+  if(!rec||!state.table||!state.fields.length)return;
+  const key=String(src||"");
+  const last=failedImageSources.get(key)||0;
+  if(key&&Date.now()-last<30000)return;
+  if(key)failedImageSources.set(key,Date.now());
+  try{
+    const fresh=await resolveAttachmentUrls(state.table,rec,state.fields,{force:true});
+    if(!fresh)return;
+    state.selectedRecords=state.selectedRecords.map(r=>r.id===fresh.id?fresh:r);
+    if(state.record?.id===fresh.id)state.record=fresh;
+    syncBridge();
+    await renderPreview(true);
+  }catch(err){console.warn("图片自动恢复失败",err)}
+}
+function armPreviewImageRecovery(host,rec){
+  for(const img of host?.querySelectorAll?.("img")||[]){
+    img.addEventListener("error",()=>recoverPreviewImage(rec,img.currentSrc||img.src),{once:true});
+  }
+}
 function applyPreviewTransform(){
   const host=$("previewHost");if(!host)return;
   host.style.setProperty("--preview-scale",String(previewScale));
@@ -235,7 +287,7 @@ async function refresh(){
     await syncCloudTemplates(false);
     state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
     state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);
-    state.selectedRecords=await Promise.all(state.selectedRecords.map(r=>resolveAttachmentUrls(ctx.table,r,ctx.fields)));
+    state.selectedRecords=await resolveAttachmentUrlsForRecords(ctx.table,state.selectedRecords,ctx.fields);
     if(state.record){
       const same=state.selectedRecords.find(r=>r.id===state.record.id);
       if(same) state.record=same;
@@ -257,7 +309,7 @@ async function chooseBatch(single=false){
   try{
     let rows=await chooseRecords(state.sdk,state.table,state.fields,state.selection);
     if(!rows.length){toast("没有选择记录");return}
-    rows=await Promise.all(rows.map(r=>resolveAttachmentUrls(state.table,r,state.fields)));
+    rows=await resolveAttachmentUrlsForRecords(state.table,rows,state.fields);
     state.selectedRecords=single?[rows[0]]:rows;
     state.record=state.selectedRecords[0];
     currentIndex=0;autoBind();syncBridge();await renderPreview();
@@ -350,12 +402,20 @@ async function init(){
     const tpl=activeTemplate();if(!tpl)return;
     if(tpl.id==="tpl_shipping_215x140"){toast("内置发货单模板不可删除");return}
     if(state.templates.length<=1){toast("至少保留一个模板");return}
+    const deletedAt=Date.now();
     markTemplateDeleted(tpl.id);
+    clearTimeout(cloudSaveTimers.get(tpl.id));cloudSaveTimers.delete(tpl.id);
     state.templates=state.templates.filter(t=>t.id!==tpl.id);
     state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);fillTemplates();syncBridge();await renderPreview(true);
     if(state.connected&&state.sdk){
-      try{await deleteCloudTemplate(state.sdk,tpl.id);clearTemplateDeleted(tpl.id)}
-      catch(err){console.warn("云端模板删除失败，已保留待同步删除标记",err)}
+      try{
+        const result=await runCloudOperation(()=>deleteCloudTemplate(state.sdk,tpl.id,deletedAt));
+        if(result?.deleted)clearTemplateDeleted(tpl.id);
+        updateCloudState("云端已同步","ok");
+      }catch(err){
+        updateCloudState("删除待同步","warn");
+        console.warn("云端模板删除失败，已保留待同步删除标记",err);
+      }
     }
     toast("模板已删除");
   };
@@ -369,6 +429,8 @@ async function init(){
   });
   window.addEventListener("resize",()=>{clearTimeout(window.__previewResize);window.__previewResize=setTimeout(()=>fitPreview(),80)});
   window.addEventListener("message",e=>{
+    const origin=bridgeTargetOrigin();
+    if(origin!=="*"&&e.origin!==origin)return;
     if(e.data?.type==="SUPER_PRINT_TEMPLATE_SAVE"&&e.data.template)applyDesignerTemplate(e.data.template);
   });
   window.addEventListener("focus",()=>{
@@ -379,6 +441,9 @@ async function init(){
 
   await refresh();
   try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}
+  window.addEventListener("online",()=>refresh());
+  window.addEventListener("offline",()=>{status("离线模式","warn");$("statusText").textContent="网络已断开";updateCloudState("离线","warn")});
+  document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&Date.now()-lastCloudSyncAt>30000)refresh()});
   setInterval(()=>{if(document.visibilityState==="visible")refresh()},20000);
 }
 init().catch(err=>{console.error(err);showCompat("超级打印初始化失败。请尝试重新连接，或在新窗口中打开。","error="+(err?.stack||err?.message||String(err))) });
