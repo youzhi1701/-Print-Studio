@@ -90,7 +90,7 @@ function syncBridgeData(showToast=true,provided=null,{force=false}={}){
 }
 function autoBindNow(){
   const changed=autoBindTemplateFields(current(),state.fields);
-  if(changed){saveTemplates(state.templates);renderAll();toast("已按字段名称自动绑定")}else{toast(state.fields.length?"当前字段已完成匹配":"没有可绑定的飞书字段")}
+  if(changed){renderAll();pushHistory();autoSave(true);toast("已按字段名称自动绑定")}else{toast(state.fields.length?"当前字段已完成匹配":"没有可绑定的飞书字段")}
 }
 function renderAll(){const t=current();if(!t)return;$("templateName").value=t.name;$("pageW").value=t.page.width;$("pageH").value=t.page.height;$("safeArea").value=t.page.safeArea??4;applyPage(false);renderElements();renderLayers();syncProps();$("selectionState").textContent=(t.elements?.length||0)+" 个元素"}
 function applyPage(save=true){
