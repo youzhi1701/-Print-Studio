@@ -460,3 +460,10 @@
 }
 .table-cell-value-state.ok{color:#0f766e;background:rgba(16,185,129,.06);border-color:rgba(16,185,129,.15)}
 .table-cell-value-state.empty{color:#9a6700;background:rgba(245,158,11,.06);border-color:rgba(245,158,11,.16)}
+
+/* final-output code components in editor */
+.barcode-el{display:flex!important;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none!important}
+.barcode-el svg.barcode{display:block;width:100%!important;flex:1 1 auto;min-height:0;max-height:100%}
+.barcode-el .barcode-label{position:static!important;left:auto!important;right:auto!important;bottom:auto!important;display:block;flex:0 0 auto;width:100%;line-height:1.15;text-align:center;color:var(--ink)!important;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.qrcode-el{display:grid!important;place-items:center;background:none!important}
+.qrcode-el canvas.qrcode{display:block;width:100%!important;height:100%!important;max-width:100%!important;max-height:100%!important}
