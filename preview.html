@@ -17,6 +17,8 @@
     </div>
     <div class="preview-actions">
       <button id="fitBtn">适配</button>
+      <button id="resetBtn" title="100% 并居中">还原</button>
+      <button id="zoomOutBtn" title="缩小">−</button><span id="zoomText">100%</span><button id="zoomInBtn" title="放大">＋</button>
       <button id="prevBtn">‹</button>
       <span id="counter">1 / 1</span>
       <button id="nextBtn">›</button>
@@ -38,7 +40,7 @@
 
   <footer class="preview-status glass-card">
     <span id="statusText">等待同步</span>
-    <span>Esc 关闭 · Ctrl+P 打印当前</span>
+    <span>滚轮缩放 · 拖动画布 · 双击适配 · Ctrl+P 打印</span>
   </footer>
 
   <script type="module" src="./js/preview.js?v=20261005-6"></script>
