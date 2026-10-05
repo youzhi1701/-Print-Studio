@@ -302,4 +302,27 @@ export function visibleColumns(el,visualRows,rootData={},hideEmpty=false){
   return visible.length?visible:cols;
 }
 
+export function buildTableLayout(el,rootData={},hideEmpty=false){
+  ensureTableModel(el,rootData);
+  const rows=materializeTableRows(el,rootData);
+  const allCols=normalizeTableColumns(el);
+  const cols=visibleColumns(el,rows,rootData,hideEmpty).map(col=>({...col,index:allCols.findIndex(c=>c.id===col.id)}));
+  const rowIdSet=new Set(rows.map(r=>r.id)),colIdSet=new Set(cols.map(c=>c.id));
+  const cellRows=rows.map((row,rowIndex)=>{
+    const cells=[];
+    for(const col of cols){
+      if(isCoveredCell(el,row.id,col.id))continue;
+      const merge=mergeForCell(el,row.id,col.id);
+      const master=isMergeMaster(merge,row.id,col.id);
+      const {cfg,value}=cellValue(el,row,col,rootData);
+      const rowspan=master?Math.max(1,(merge?.rowIds||[]).filter(id=>rowIdSet.has(id)).length):1;
+      const colspan=master?Math.max(1,(merge?.colIds||[]).filter(id=>colIdSet.has(id)).length):1;
+      cells.push({row,rowIndex,col,colIndex:col.index,merge,master,rowspan,colspan,cfg,value,height:rowHeight(row,el)});
+    }
+    return cells;
+  });
+  const hasAny=cellRows.some(row=>row.some(cell=>hasValue(cell.value)));
+  return{rows,cols,allCols,cellRows,hasAny};
+}
+
 export function rowHeight(row,el){return Number(row?.height)||Number(el?.rowHeight)||8}
