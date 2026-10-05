@@ -115,11 +115,9 @@
             <label class="stack">无数据<select id="tableEmptyBehavior"><option value="hide">打印隐藏空表</option><option value="blank">保留空表</option></select></label>
             <div class="two"><label>行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label><label>最多数据行<input id="tableMaxRows" type="number" min="1" step="1"></label></div>
             <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
-            <div class="table-cell-actions">
-              <button id="mergeCellsBtn" type="button">合并单元格</button>
-              <button id="unmergeCellsBtn" type="button">取消合并</button>
-              <button id="insertRowBtn" type="button">插入行</button>
-              <button id="deleteRowBtn" type="button">删除行</button>
+            <div class="table-editor-hint">
+              <b>单元格编辑</b>
+              <span id="tableSelectionHint">单击或拖拽选择格子，操作工具会悬浮在表格上方</span>
             </div>
           </div>
           <div id="codeProps" class="prop-group hidden">
@@ -150,7 +148,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261005-3"></script>
+  <script type="module" src="./js/designer.js?v=20261005-4"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>
