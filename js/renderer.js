@@ -54,7 +54,8 @@ function tableCellConfig(el,row,col,column){
 function tableCellValue(cfg,row,data,column){
   if(cfg.type==="text")return cfg.text||"";
   const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
-  return row?.[field]??data?.[field]??""
+  if(row?.__manualBlank&&cfg.type==="inherit")return "";
+  return row?.[field]??((cfg.type==="field"||cfg.type==="image")?data?.[field]:"")??""
 }
 function visibleColumns(el,rows,data){
   const cols=normalizeColumns(el.columns).map((c,i)=>({...c,_index:i}));
@@ -103,9 +104,9 @@ export function renderTemplateToHtml(tpl,data={}){
     if(el.type==="container")return '<div style="'+common+'border:'+(el.borderWidth??.5)+'px '+(el.borderStyle||"solid")+' #cbd2df;border-radius:'+(el.radius||0)+'px"></div>';
     if(el.type==="table"){
       const rows0=tableRows(el,data).slice(0,el.maxRows||5);
-      const rows=(rows0.length?rows0:[{}]).map(r=>r||{});
+      const rows=(rows0.length?rows0:[{}]).map(r=>({...((r&&typeof r==="object")?r:{}),__sourceRow:true}));
       const wanted=Math.max(rows.length,Number(el.designRowCount)||1);
-      while(rows.length<wanted)rows.push({});
+      while(rows.length<wanted)rows.push({__manualBlank:true});
       const configured=normalizeColumns(el.columns);
       const hasAny=rows0.some(row=>configured.some(col=>hasValue(row?.[col.field]??data?.[col.field])));
       if(!hasAny&&el.emptyBehavior==="hide")return"";
