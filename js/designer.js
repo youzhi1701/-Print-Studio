@@ -1,11 +1,11 @@
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-6";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-6";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-6";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-6";import {printTemplateRecords} from "./print.js?v=20261005-6";import {
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261005-9";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261005-9";import {readBridge,requestBridgeFromOpener,onBridgeMessage} from "./bridge.js?v=20261005-9";import {renderTemplateToHtml,hydrateCodes} from "./renderer.js?v=20261005-9";import {printTemplateRecords} from "./print.js?v=20261005-9";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261005-7";
+} from "./table-model.js?v=20261005-9";
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
