@@ -36,7 +36,8 @@ function escHtml(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<"
 const TEMPLATE_SAMPLE_IMAGE="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="140"><rect width="180" height="140" fill="#eef1f5"/><rect x="18" y="18" width="144" height="104" rx="10" fill="#d8dee8"/><path d="M42 96l28-28 18 18 20-25 30 35z" fill="#aab5c5"/><circle cx="64" cy="51" r="12" fill="#b8c3d2"/></svg>');
 const TEMPLATE_SAMPLE_DATA={
   "订单编号":"SP202610060001","收件人":"示例客户","手机号":"138****8888","收货地址":"示例省示例市示例区 XX 路 88 号",
-  "商品名称":"示例商品","商品属性":"标准规格","数量":"2","价格":"99.00","产品图片":TEMPLATE_SAMPLE_IMAGE
+  "商品名称":"示例商品","商品属性":"标准规格","数量":"2","价格":"99.00","产品图片":TEMPLATE_SAMPLE_IMAGE,
+  "SKU编码":"SKU-001","条码值":"6901234567892","运单号":"YT1234567890","备注":"示例备注","总金额":"198.00","重量":"1.2kg","批次号":"LOT-001"
 };
 function templateSearchText(t){
   return [t.name,t.category,t.description,...(t.tags||[]),t.page?.width+"x"+t.page?.height].filter(Boolean).join(" ").toLowerCase();
@@ -541,6 +542,6 @@ async function init(){
   window.addEventListener("online",()=>refresh());
   window.addEventListener("offline",()=>{status("离线模式","warn");$("statusText").textContent="网络已断开";updateCloudState("离线","warn")});
   document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"&&Date.now()-lastCloudSyncAt>30000)refresh()});
-  setInterval(()=>{if(document.visibilityState==="visible")refresh()},20000);
+  setInterval(()=>{if(document.visibilityState==="visible")refresh()},60000);
 }
 init().catch(err=>{console.error(err);showCompat("超级打印初始化失败。请尝试重新连接，或在新窗口中打开。","error="+(err?.stack||err?.message||String(err))) });
