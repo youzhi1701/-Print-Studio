@@ -394,7 +394,7 @@ function pasteSelectedTableCells(){
   const e=selectedOne(),b=tableSelectionBounds();if(!e||e.type!=="table"||!b||!tableClipboard)return;
   const {rows,cols}=tableAxes(e);
   for(let dr=0;dr<tableClipboard.rows;dr++)for(let dc=0;dc<tableClipboard.cols;dc++){
-    const row=rows[b.r0+dr],col=cols[b.c0+dc];if(!row||!col)continue;
+    const row=rows[b.r0+dr],col=cols[b.c0+dc];if(!row||!col||tmIsCoveredCell(e,row.id,col.id))continue;
     const value=tableClipboard.matrix[dr][dc];
     tmSetCellOverride(e,row.id,col.id,value?structuredClone(value):null);
   }
@@ -608,7 +608,8 @@ function applyTableCellInspector(e){
     imageFit:$("tableCellImageFit").value||e.tableImageFit||"contain"
   };
   for(const s of selectedCells){
-    const row=rows[s.row],col=cols[s.col];if(row&&col)tmSetCellOverride(e,row.id,col.id,cfg);
+    const row=rows[s.row],col=cols[s.col];if(!row||!col||tmIsCoveredCell(e,row.id,col.id))continue;
+    tmSetCellOverride(e,row.id,col.id,cfg);
   }
 }
 function syncProps(){
