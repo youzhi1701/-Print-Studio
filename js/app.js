@@ -54,7 +54,6 @@ function updateRecordMeta(){
   $("recordSub").textContent=rec?(state.selectedRecords.length>1?("第 "+(currentIndex+1)+" / "+state.selectedRecords.length+" 条"):"点击切换"):"点击选择";
   $("selectionText").textContent=state.selectedRecords.length>1?("已选择 "+state.selectedRecords.length+" 条记录"):(rec?"已选择 1 条记录":"未选择记录");
   $("previewCounter").textContent=state.selectedRecords.length>1?((currentIndex+1)+" / "+state.selectedRecords.length):"1 / 1";
-  $("printCurrent").textContent=state.selectedRecords.length>1?("打印 "+state.selectedRecords.length+" 条记录"):"打印当前记录";
   const multi=state.selectedRecords.length>1;
   $("prevRecord").hidden=!multi;$("nextRecord").hidden=!multi;
   $("prevRecord").disabled=!multi||currentIndex<=0;
@@ -284,7 +283,11 @@ async function init(){
   window.addEventListener("message",e=>{
     if(e.data?.type==="SUPER_PRINT_TEMPLATE_SAVE"&&e.data.template)applyDesignerTemplate(e.data.template);
   });
-  window.addEventListener("focus",()=>{state.templates=loadTemplates();fillTemplates();autoBind();renderPreview(false)});
+  window.addEventListener("focus",()=>{
+    state.templates=loadTemplates();
+    if(!state.templates.some(t=>t.id===state.activeTemplateId)){state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate()}
+    fillTemplates();autoBind();syncBridge();renderPreview(false)
+  });
 
   await refresh();
   try{state.sdk?.base?.onSelectionChange?.(()=>refresh())}catch(err){console.warn("selection listener unavailable",err)}
