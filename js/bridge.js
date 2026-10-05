@@ -1,4 +1,4 @@
-import {STORAGE_KEYS} from "./state.js";
+import {STORAGE_KEYS,storageGet,storageSet} from "./state.js";
 
 let lastPayload=null;
 let listenerInstalled=false;
@@ -38,13 +38,13 @@ function installOpenerResponder(){
 
 export function writeBridge(payload){
   lastPayload={...normalizePayload(payload),bridgeUpdatedAt:Date.now()};
-  try{localStorage.setItem(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))}catch{}
+  storageSet(STORAGE_KEYS.bridge,JSON.stringify(lastPayload))
   installOpenerResponder();
 }
 
 export function readBridge(){
   try{
-    const raw=JSON.parse(localStorage.getItem(STORAGE_KEYS.bridge)||"null");
+    const raw=JSON.parse(storageGet(STORAGE_KEYS.bridge)||"null");
     return raw?normalizePayload(raw):null
   }catch{return null}
 }
