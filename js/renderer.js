@@ -38,7 +38,8 @@ function textCss(el){
 function imagePosition(el){return (el.alignX||"center")+" "+(el.alignY||"center")}
 function visibleColumns(el,rows,data){
   const cols=normalizeColumns(el.columns).map((c,i)=>({...c,_index:i}));
-  let v=el.hideEmptyColumns?cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field]))):cols;
+  const structural=Array.isArray(el.merges)&&el.merges.length>0;
+  let v=(el.hideEmptyColumns&&!structural)?cols.filter(col=>rows.some(r=>hasValue(r?.[col.field]??data?.[col.field]))):cols;
   if(!v.length)v=cols;
   const sum=v.reduce((n,col)=>n+(Number(col.width)||0),0)||100;
   return v.map(col=>({...col,width:(Number(col.width)||0)*100/sum}))
