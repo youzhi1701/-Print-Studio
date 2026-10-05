@@ -7,10 +7,10 @@
     height:auto!important;
     overflow:visible!important;
   }
-  body>*:not(.print-host){
+  body.super-print-printing>*:not(.print-host){
     display:none!important;
   }
-  .print-host{
+  body.super-print-printing .print-host{
     display:block!important;
     position:static!important;
     inset:auto!important;
@@ -21,16 +21,19 @@
     overflow:visible!important;
     background:#fff!important;
   }
-  .print-host .print-sheet{
+  body.super-print-printing .print-host .print-sheet{
+    display:block!important;
     margin:0!important;
+    padding:0!important;
     box-shadow:none!important;
     break-after:page;
     page-break-after:always;
   }
-  .print-host .print-sheet:last-child{
+  body.super-print-printing .print-host .print-sheet:last-child{
     break-after:auto;
     page-break-after:auto;
   }
-  .aurora-layer,.toast{display:none!important}
+  body.super-print-printing .aurora-layer,
+  body.super-print-printing .toast{display:none!important}
   @page{margin:0}
 }
