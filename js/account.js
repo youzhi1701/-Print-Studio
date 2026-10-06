@@ -55,3 +55,10 @@ export async function verifyPhoneCode(phone,code){
   const data=await accountFetch("/api/auth/verify-code",{method:"POST",body:JSON.stringify({phone,code})});
   setSession(data.token,data.user);return profile;
 }
+
+export async function getAccountHealth(){
+  try{
+    const res=await fetch("/api/health",{credentials:"same-origin",cache:"no-store"});
+    return await res.json();
+  }catch{return{sessionConfigured:false,storageConfigured:false,storageReady:false,smsConfigured:false}}
+}
