@@ -484,7 +484,7 @@
 .design-element.inline-editing>.render-element *{pointer-events:auto!important;user-select:text!important}
 .design-element.inline-editing>.render-text{cursor:text!important;outline:0!important}
 
-/* v20261006-19 · template library actions */
+/* v20261006-20 · template library actions */
 .top-tools .template-action{white-space:nowrap}
 .top-tools .primary-soft{
   color:#1d4ed8;
@@ -504,25 +504,25 @@
   .top-tools::-webkit-scrollbar{display:none}
 }
 
-/* v20261006-19 · strict WYSIWYG editing */
+/* v20261006-20 · strict WYSIWYG editing */
 .design-element.output-empty{background:transparent!important}
 .design-element.output-empty:not(.selected){outline:0!important}
 .design-element.output-empty.selected{outline:1px dashed rgba(37,99,235,.38)!important;outline-offset:1px}
 .design-element>.render-element{box-sizing:border-box!important}
 .table-el>table{box-sizing:border-box!important}
 
-/* v20261006-19 · WYSIWYG contrast */
+/* v20261006-20 · WYSIWYG contrast */
 .design-element{color:#111827}
 .design-element>.render-element{color:#111827!important}
 .design-element>.render-field{background:transparent!important}
 .print-page .render-text,.print-page .render-field,.print-page table{color:#111827!important}
 
-/* v20261006-19 · prevent clipped collapsed table borders */
+/* v20261006-20 · prevent clipped collapsed table borders */
 .table-el{overflow:visible!important}
 .table-el table{border-collapse:collapse!important;border-spacing:0!important;color:#000!important}
 .table-el th,.table-el td{border-color:#444!important;color:#000!important}
 
-/* v20261006-19 · compact core property panel */
+/* v20261006-20 · compact core property panel */
 .compact-props{display:grid;gap:8px}
 .prop-mini-title{
   margin-top:2px;padding-top:8px;border-top:1px solid rgba(84,104,145,.10);
