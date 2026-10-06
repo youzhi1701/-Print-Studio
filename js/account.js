@@ -1,4 +1,4 @@
-import {storageGet,storageSet,storageRemove,STORAGE_KEYS,safeJson} from "./state.js?v=20261006-08";
+import {storageGet,storageSet,storageRemove,STORAGE_KEYS,safeJson} from "./state.js?v=20261006-09";
 
 let profile=safeJson(storageGet(STORAGE_KEYS.authProfile),null);
 let lastFeishuKey="";
