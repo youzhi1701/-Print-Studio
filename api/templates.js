@@ -45,7 +45,10 @@ module.exports=async function(req,res){
     if(req.method==="DELETE"){
       const data=body(req),id=String(data.id||"");
       if(!/^[A-Za-z0-9._:-]{1,128}$/.test(id))return json(res,400,{error:"invalid_id"});
-      const deletedAt=Math.max(Date.now(),Number(data.deletedAt||0));
+      const now=Date.now(),requested=Number(data.deletedAt||0);
+      const eventAt=requested>0&&requested<=now+5*60*1000?requested:now;
+      const previous=Number(await redis("HGET",deletedKey(ownerId),id)||0);
+      const deletedAt=Math.max(previous,eventAt);
       await redis("DEL",tplKey(ownerId,id));
       await redis("SREM",tplIndexKey(ownerId),id);
       await redis("HSET",deletedKey(ownerId),id,String(deletedAt));
