@@ -138,17 +138,13 @@
         <span>飞书身份</span><b id="feishuIdentityState">未识别</b>
       </div>
       <div class="account-phone-box">
-        <b>绑定手机号 / 独立登录</b>
-        <small>手机号验证后，可在非飞书环境使用同一套私人模板。</small>
+        <b>手机号识别 / 独立进入</b>
+        <small>直接输入手机号即可进入对应私人模板库，不发送验证码。</small>
         <div class="account-phone-line">
           <input id="accountPhone" inputmode="tel" autocomplete="tel" placeholder="手机号，例如 13800138000">
-          <button id="sendPhoneCode" type="button">获取验证码</button>
+          <button id="phoneLoginBtn" type="button" class="primary">进入模板库</button>
         </div>
-        <div class="account-phone-line">
-          <input id="accountCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码">
-          <button id="verifyPhoneCode" type="button" class="primary">验证并绑定</button>
-        </div>
-        <small id="phoneLoginHint"></small>
+        <small id="phoneLoginHint">手机号仅作为账户识别码。</small>
       </div>
       <div class="account-actions">
         <button id="accountSyncNow" type="button">立即同步我的模板</button>
