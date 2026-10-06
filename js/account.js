@@ -1,4 +1,4 @@
-import {storageGet,storageSet,storageRemove,STORAGE_KEYS,safeJson} from "./state.js?v=20261006-10";
+import {storageGet,storageSet,storageRemove,STORAGE_KEYS,safeJson} from "./state.js?v=20261006-12";
 
 let profile=safeJson(storageGet(STORAGE_KEYS.authProfile),null);
 let lastFeishuKey="";
@@ -51,7 +51,8 @@ export async function loginWithFeishuIdentity(identity){
 
 export async function loginWithPhone(phone){
   const data=await accountFetch("/api/auth/phone",{method:"POST",body:JSON.stringify({phone})});
-  setSession(data.token,data.user);return profile;
+  setSession(data.token,data.user);
+  return {user:profile,created:!!data.created};
 }
 
 export async function getAccountHealth(){
