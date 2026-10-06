@@ -6,7 +6,7 @@ import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./b
 import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-09";
 import {printTemplateRecords} from "./print.js?v=20261006-09";
 import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-09";
-import {restoreAccount,loginWithFeishuIdentity,requestPhoneCode,verifyPhoneCode,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261006-09";
+import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261006-09";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
@@ -141,7 +141,7 @@ async function openAccount(){
     else if(!health.storageReady)stateText.textContent="私有云连接异常";
     else stateText.textContent=hasAccountSession()?"账户已连接":"私有云已就绪";
   }
-  if(hint&&!health.smsConfigured)hint.textContent="手机号验证码服务尚未配置；飞书身份仍可自动登录私人模板。";
+  if(hint&&!hasAccountSession())hint.textContent="直接输入手机号即可进入对应私人模板库。";
 }
 function closeAccount(){$("accountModal")?.classList.add("hidden")}
 function setTemplateScope(scope){
@@ -509,20 +509,12 @@ async function init(){
   $("accountBtn").onclick=openAccount;
   $("accountClose").onclick=closeAccount;
   $("accountModal").addEventListener("click",e=>{if(e.target===$("accountModal"))closeAccount()});
-  $("sendPhoneCode").onclick=async()=>{
+  $("phoneLoginBtn").onclick=async()=>{
     const phone=$("accountPhone").value.trim(),hint=$("phoneLoginHint");
-    hint.textContent="正在发送…";
+    hint.textContent="正在进入手机号模板库…";
     try{
-      const r=await requestPhoneCode(phone);
-      hint.textContent=r.devCode?("开发验证码："+r.devCode):"验证码已发送，请在 5 分钟内完成验证";
-    }catch(err){hint.textContent=err.message;toast(err.message)}
-  };
-  $("verifyPhoneCode").onclick=async()=>{
-    const phone=$("accountPhone").value.trim(),code=$("accountCode").value.trim(),hint=$("phoneLoginHint");
-    hint.textContent="正在验证…";
-    try{
-      await verifyPhoneCode(phone,code);updateAccountUi();hint.textContent="手机号已验证并绑定";
-      await syncCloudTemplates(true);fillTemplates();toast("账户已绑定，私人模板已同步");
+      await loginWithPhone(phone);updateAccountUi();hint.textContent="已进入该手机号的私人模板库";
+      await syncCloudTemplates(true);fillTemplates();toast("手机号账户已切换，私人模板已同步");
     }catch(err){hint.textContent=err.message;toast(err.message)}
   };
   $("accountSyncNow").onclick=async()=>{const r=await syncCloudTemplates(true);updateAccountUi();if(r){fillTemplates();toast("私人模板已同步")}else toast("请先登录账户")};
