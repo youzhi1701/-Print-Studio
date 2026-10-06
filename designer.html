@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印 · 模板设计器</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261006-20">
-  <link rel="stylesheet" href="./css/designer.css?v=20261006-20">
-  <link rel="stylesheet" href="./css/print.css?v=20261006-20" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261006-21">
+  <link rel="stylesheet" href="./css/designer.css?v=20261006-21">
+  <link rel="stylesheet" href="./css/print.css?v=20261006-21" media="print">
 </head>
 <body class="aurora-app designer-body">
   <div class="aurora-layer" aria-hidden="true"></div>
   <header class="designer-top glass">
-    <div class="designer-brand" title="build 20261006-20"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-20</span></small></div></div>
+    <div class="designer-brand" title="build 20261006-21"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-21</span></small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
       <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
@@ -120,16 +120,23 @@
           <div id="tableProps" class="prop-group hidden">
             <label class="stack">数据源<select id="tableDataField"><option value="">当前记录（单行）</option></select></label>
             <div class="stack"><span>列配置</span><div id="tableColumnList" class="table-column-list"></div></div>
-            <div class="table-column-actions"><button id="addTableColumn" type="button">+ 添加列</button><button id="normalizeTableWidths" type="button">均分列宽</button></div>
-            <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>斑马纹<select id="tableZebra"><option value="false">关闭</option><option value="true">开启</option></select></label></div>
-            <label class="stack">图片单元格<select id="tableImageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select></label>
-            <div class="two"><label>文字换行<select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select></label><label>空列<select id="tableHideEmptyColumns"><option value="true">自动隐藏</option><option value="false">保留</option></select></label></div>
-            <label class="stack">无数据<select id="tableEmptyBehavior"><option value="hide">打印隐藏空表</option><option value="blank">保留空表</option></select></label>
-            <div class="two"><label>行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label><label>最多数据行<input id="tableMaxRows" type="number" min="1" step="1"></label></div>
-            <div class="two"><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label><label>字号<input id="tableFontSize" type="number" min="6"></label></div>
+            <div id="tableFitState" class="table-fit-state">自动适配页面</div>
+            <div class="table-column-actions"><button id="smartFitTable" type="button" class="primary-soft">自动适配页面</button><button id="addTableColumn" type="button">+ 添加列</button></div>
+            <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>行高<select id="tableRowMode"><option value="auto">自动</option><option value="fixed">固定</option></select></label></div>
+            <div class="two"><label>字号<input id="tableFontSize" type="number" min="6"></label><label>边框<input id="tableBorderWidth" type="number" min="0" max="4" step=".5"></label></div>
+            <label id="tableFixedRowHeightGroup" class="stack hidden">固定行高(mm)<input id="tableRowHeight" type="number" min="4" step=".5"></label>
+            <div class="core-hidden" aria-hidden="true">
+              <select id="tableZebra"><option value="false">关闭</option><option value="true">开启</option></select>
+              <select id="tableImageFit"><option value="contain">完整显示</option><option value="cover">铺满裁切</option><option value="fill">拉伸填充</option><option value="original">原尺寸</option></select>
+              <select id="tableWrap"><option value="true">开启</option><option value="false">关闭</option></select>
+              <select id="tableHideEmptyColumns"><option value="true">自动隐藏</option><option value="false">保留</option></select>
+              <select id="tableEmptyBehavior"><option value="hide">打印隐藏空表</option><option value="blank">保留空表</option></select>
+              <input id="tableMaxRows" type="number" min="1" step="1">
+              <button id="normalizeTableWidths" type="button">均分列宽</button>
+            </div>
             <div class="table-editor-hint">
-              <b>单元格编辑</b>
-              <span id="tableSelectionHint">单击或拖拽选择格子，操作工具会悬浮在表格上方</span>
+              <b>表格编辑</b>
+              <span id="tableSelectionHint">优先调整字段和列宽；需要时再选择单元格进行高级编辑</span>
             </div>
             <div id="tableCellInspector" class="table-cell-inspector hidden">
               <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>选中单元格</div>
@@ -168,7 +175,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261006-20"></script>
+  <script type="module" src="./js/designer.js?v=20261006-21"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>

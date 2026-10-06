@@ -347,12 +347,36 @@ export function visibleColumns(el,visualRows,rootData={},hideEmpty=false){
   return visible.length?visible:cols;
 }
 
+function estimatedWrappedRowHeight(el,row,cells){
+  const base=rowHeight(row,el);
+  if(el?.autoRowHeight===false||el?.wrap===false)return base;
+  const fontPx=Math.max(6,Number(el?.fontSize)||9);
+  const pxPerMm=96/25.4;
+  const lineMm=(fontPx*1.35)/pxPerMm;
+  let needed=base;
+  for(const cell of cells){
+    const valueText=String(cell.value??"");
+    const imageLike=cell.cfg?.type==="image"||/图片|图像|image/i.test(String(cell.col?.field||cell.col?.title||""))||valueText.startsWith("data:image/")||valueText.startsWith("blob:");
+    if(!hasValue(cell.value)||imageLike)continue;
+    const widthPct=Math.max(1,Number(cell.col?.width)||100/Math.max(1,cells.length));
+    const cellMm=Math.max(4,(Number(el?.w)||100)*widthPct/100);
+    const pad=Math.max(0,Number(cell.cfg?.padding??2));
+    const usable=Math.max(2,cellMm-pad*2);
+    const charMm=Math.max(.9,(fontPx/pxPerMm)*.95);
+    const chars=Math.max(1,Math.floor(usable/charMm));
+    const lines=String(cell.value??"").split(/\n/).reduce((sum,line)=>sum+Math.max(1,Math.ceil([...line].length/chars)),0);
+    needed=Math.max(needed,lines*lineMm+pad*2+.8);
+  }
+  return Math.ceil(Math.min(80,needed)*2)/2;
+}
+
 export function buildTableLayout(el,rootData={},hideEmpty=false){
   ensureTableModel(el,rootData);
   const rows=materializeTableRows(el,rootData);
   const allCols=normalizeTableColumns(el);
   const cols=visibleColumns(el,rows,rootData,hideEmpty).map(col=>({...col,index:allCols.findIndex(c=>c.id===col.id)}));
   const rowIdSet=new Set(rows.map(r=>r.id)),colIdSet=new Set(cols.map(c=>c.id));
+  const rowHeights=[];
   const cellRows=rows.map((row,rowIndex)=>{
     const cells=[];
     for(const col of cols){
@@ -364,12 +388,15 @@ export function buildTableLayout(el,rootData={},hideEmpty=false){
       const colspan=master?Math.max(1,(merge?.colIds||[]).filter(id=>colIdSet.has(id)).length):1;
       cells.push({row,rowIndex,col,colIndex:col.index,merge,master,rowspan,colspan,cfg,value,height:rowHeight(row,el)});
     }
+    const visualHeight=estimatedWrappedRowHeight(el,row,cells);
+    rowHeights[rowIndex]=visualHeight;
+    cells.forEach(cell=>cell.height=visualHeight);
     return cells;
   });
   const hasAny=cellRows.some(row=>row.some(cell=>hasValue(cell.value)));
   const headerHeight=el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8);
-  const totalHeight=headerHeight+rows.reduce((sum,row)=>sum+rowHeight(row,el),0);
-  return{rows,cols,allCols,cellRows,hasAny,headerHeight,totalHeight};
+  const totalHeight=headerHeight+rowHeights.reduce((sum,h)=>sum+(Number(h)||0),0);
+  return{rows,cols,allCols,cellRows,rowHeights,hasAny,headerHeight,totalHeight};
 }
 
 export function rowHeight(row,el){return Number(row?.height)||Number(el?.rowHeight)||8}
