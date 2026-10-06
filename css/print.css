@@ -37,3 +37,27 @@
   body.super-print-printing .toast{display:none!important}
   @page{margin:0}
 }
+
+/* v20261006-17 · print legibility */
+@media print{
+  body.super-print-printing .print-host,
+  body.super-print-printing .print-host .print-sheet{
+    color:#000!important;
+    -webkit-print-color-adjust:exact!important;
+    print-color-adjust:exact!important;
+  }
+  body.super-print-printing .print-host .render-text,
+  body.super-print-printing .print-host .render-field,
+  body.super-print-printing .print-host table,
+  body.super-print-printing .print-host th,
+  body.super-print-printing .print-host td,
+  body.super-print-printing .print-host small{
+    color:#000!important;
+    text-shadow:none!important;
+    opacity:1!important;
+  }
+  body.super-print-printing .print-host th,
+  body.super-print-printing .print-host td{
+    border-color:#555!important;
+  }
+}
