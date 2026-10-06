@@ -125,6 +125,9 @@ function validTemplate(tpl){
   return size<=MAX_TEMPLATE_BYTES;
 }
 function parseDeletedFlat(value){
+  if(value&&typeof value==="object"&&!Array.isArray(value)){
+    return Object.fromEntries(Object.entries(value).map(([k,v])=>[k,Number(v)||0]));
+  }
   if(!Array.isArray(value))return{};
   const out={};
   for(let i=0;i<value.length;i+=2)out[value[i]]=Number(value[i+1])||0;
