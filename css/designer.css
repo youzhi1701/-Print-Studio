@@ -484,7 +484,7 @@
 .design-element.inline-editing>.render-element *{pointer-events:auto!important;user-select:text!important}
 .design-element.inline-editing>.render-text{cursor:text!important;outline:0!important}
 
-/* v20261006-15 · template library actions */
+/* v20261006-16 · template library actions */
 .top-tools .template-action{white-space:nowrap}
 .top-tools .primary-soft{
   color:#1d4ed8;
@@ -503,3 +503,10 @@
   .top-tools{gap:4px;overflow-x:auto;scrollbar-width:none}
   .top-tools::-webkit-scrollbar{display:none}
 }
+
+/* v20261006-16 · strict WYSIWYG editing */
+.design-element.output-empty{background:transparent!important}
+.design-element.output-empty:not(.selected){outline:0!important}
+.design-element.output-empty.selected{outline:1px dashed rgba(37,99,235,.38)!important;outline-offset:1px}
+.design-element>.render-element{box-sizing:border-box!important}
+.table-el>table{box-sizing:border-box!important}
