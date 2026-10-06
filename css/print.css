@@ -58,6 +58,6 @@
   }
   body.super-print-printing .print-host th,
   body.super-print-printing .print-host td{
-    border-color:#555!important;
+    border-color:#333!important;
   }
 }
