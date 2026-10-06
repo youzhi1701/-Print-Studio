@@ -512,7 +512,7 @@ async function init(){
   setStorageScope(getAccountProfile()?.id||"local");
   updateAccountUi();
   state.templates=loadTemplates();
-  const settings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
+  const settings=safeJson(storageGet(storageScopedKey(STORAGE_KEYS.settings)),{})||{};
   state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
   fillTemplates();
   if(hasAccountSession())await syncCloudTemplates(true);
