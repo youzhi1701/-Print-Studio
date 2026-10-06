@@ -159,17 +159,29 @@ function persistActiveTemplate(){
   storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
 }
 function loadTemplateTombstones(){
-  const list=safeJson(storageGet(STORAGE_KEYS.templateTombstones),[]);
-  return Array.isArray(list)?list.filter(Boolean):[];
+  const raw=safeJson(storageGet(STORAGE_KEYS.templateTombstones),[]);
+  if(!Array.isArray(raw))return[];
+  let migrated=false;
+  const list=raw.map(x=>{
+    if(typeof x==="string"){migrated=true;return{id:x,deletedAt:Date.now()}}
+    if(x&&typeof x==="object"&&x.id)return{id:String(x.id),deletedAt:Number(x.deletedAt)||Date.now()};
+    return null
+  }).filter(Boolean);
+  if(migrated)saveTemplateTombstones(list);
+  return list;
 }
-function saveTemplateTombstones(ids){
-  storageSet(STORAGE_KEYS.templateTombstones,JSON.stringify([...new Set((ids||[]).filter(Boolean))]));
+function saveTemplateTombstones(items){
+  const map=new Map();
+  for(const x of items||[])if(x?.id)map.set(String(x.id),{id:String(x.id),deletedAt:Number(x.deletedAt)||Date.now()});
+  storageSet(STORAGE_KEYS.templateTombstones,JSON.stringify([...map.values()]));
 }
-function markTemplateDeleted(id){
-  const ids=loadTemplateTombstones();if(id&&!ids.includes(id))ids.push(id);saveTemplateTombstones(ids);
+function markTemplateDeleted(id,deletedAt=Date.now()){
+  const items=loadTemplateTombstones(),i=items.findIndex(x=>x.id===String(id));
+  const item={id:String(id),deletedAt:Number(deletedAt)||Date.now()};
+  if(i>=0)items[i]=item;else items.push(item);saveTemplateTombstones(items);
 }
 function clearTemplateDeleted(id){
-  saveTemplateTombstones(loadTemplateTombstones().filter(x=>x!==id));
+  saveTemplateTombstones(loadTemplateTombstones().filter(x=>x.id!==String(id)));
 }
 function updateCloudState(text,stateName=""){
   const n=$("templateLibraryState");if(!n)return;
@@ -475,6 +487,7 @@ async function init(){
   const settings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
   state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
   fillTemplates();
+  if(hasAccountSession())await syncCloudTemplates(true);
 
   $("templateLibraryList")?.addEventListener("click",async e=>{
     const item=e.target.closest("[data-template-id]");if(!item)return;
@@ -574,7 +587,7 @@ async function init(){
     if(isBuiltinTemplate(tpl)){toast("内置模板不可删除，可在设计器中复制后修改");return}
     if(state.templates.length<=1){toast("至少保留一个模板");return}
     const deletedAt=Date.now();
-    markTemplateDeleted(tpl.id);
+    markTemplateDeleted(tpl.id,deletedAt);
     clearTimeout(cloudSaveTimers.get(tpl.id));cloudSaveTimers.delete(tpl.id);
     state.templates=state.templates.filter(t=>t.id!==tpl.id);templateThumbCache.clear();
     state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);syncBridge();await renderPreview(true);fillTemplates();if(!$("templateLibraryModal").classList.contains("hidden"))renderTemplateLibrary();
