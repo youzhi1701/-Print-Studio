@@ -1,4 +1,4 @@
-export const STORAGE_KEYS={templates:"super-print.templates.v1",settings:"super-print.settings.v1",bridge:"super-print.bridge.v1",templateTombstones:"super-print.template-tombstones.v1",authToken:"super-print.auth-token.v1",authProfile:"super-print.auth-profile.v1"};
+export const STORAGE_KEYS={templates:"super-print.templates.v1",settings:"super-print.settings.v1",bridge:"super-print.bridge.v1",templateTombstones:"super-print.template-tombstones.v1",authToken:"super-print.auth-token.v1",authProfile:"super-print.auth-profile.v1",accountScope:"super-print.account-scope.v1"};
 export const state={sdk:null,connected:false,selection:null,table:null,fields:[],record:null,selectedRecords:[],templates:[],activeTemplateId:null};
 export function safeJson(value,fallback){try{return JSON.parse(value)}catch{return fallback}}
 export function uid(prefix="id"){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8)}
@@ -58,3 +58,7 @@ export function storageRemove(key){
   if(store){try{store.removeItem(key)}catch{}}
   memoryStore.delete(key)
 }
+
+export function getStorageScope(){return storageGet(STORAGE_KEYS.accountScope)||"local"}
+export function setStorageScope(scope){const v=String(scope||"local").trim()||"local";storageSet(STORAGE_KEYS.accountScope,v);return v}
+export function storageScopedKey(base,scope=getStorageScope()){return String(base)+"::"+String(scope||"local")}
