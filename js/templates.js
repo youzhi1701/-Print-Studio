@@ -1,5 +1,5 @@
-import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet,storageScopedKey} from "./state.js?v=20261006-18";
-import {ensureTableModel} from "./table-model.js?v=20261006-18";
+import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet,storageScopedKey} from "./state.js?v=20261006-19";
+import {ensureTableModel} from "./table-model.js?v=20261006-19";
 
 const BUILTIN_CREATED_AT=1760000000000;
 const page=(width,height,margin=4)=>({width,height,orientation:width>=height?"landscape":"portrait",margin,safeArea:Math.min(4,margin)});
