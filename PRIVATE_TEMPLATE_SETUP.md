@@ -8,8 +8,8 @@
 
 - SESSION_SECRET
   - 至少 24 个字符
-  - 用于签名登录会话和验证码摘要
-  - 示例生成方式：随机 32~64 字节字符串
+  - 用于签名登录会话
+  - 建议使用随机 32~64 字节字符串
 
 - KV_REST_API_URL
 - KV_REST_API_TOKEN
@@ -20,49 +20,39 @@
 
 Redis 可使用 Vercel Marketplace 中提供 Redis REST 接口的存储服务，或其他 Upstash REST 兼容实例。
 
-## 手机验证码（可选）
+## 身份识别方式
 
-飞书内打开插件时，会优先使用：
+### 飞书内自动识别
+
+插件在飞书内打开时，优先使用：
+
 - bitable.bridge.getBaseUserId()
 - bitable.bridge.getTenantKey()
 
-自动识别同一飞书用户。
+自动识别当前飞书用户，并映射为超级打印自己的稳定 user_id。
 
-如果还需要手机号绑定/独立网页登录，需要配置：
+### 手机号直接识别
 
-- SMS_WEBHOOK_URL
-- SMS_WEBHOOK_TOKEN（可选）
+不使用短信验证码。
 
-超级打印会向 SMS_WEBHOOK_URL 发送：
+用户直接输入手机号即可进入对应的私人模板账户：
 
-```json
-{
-  "phone": "+8613800138000",
-  "code": "123456",
-  "purpose": "super-print-login"
-}
-```
+- 首次使用：自动建立手机号与 user_id 的映射。
+- 已有账户：直接读取该手机号对应的私人模板库。
+- 如果当前已经通过飞书身份登录，首次输入一个尚未绑定的手机号，会把该手机号绑定到当前账户。
+- 手机号不会作为模板 owner_id，服务端仍使用随机 user_id 隔离模板。
+- 服务端仅保存手机号 hash 和脱敏显示值。
 
-短信服务返回 HTTP 2xx 即视为发送成功。
-
-没有配置 SMS_WEBHOOK_URL 时，生产环境不会伪造验证码发送成功，界面会明确提示“短信验证码服务尚未配置”。
-
-## 开发环境测试验证码
-
-仅非 Production 环境可设置：
-
-- ALLOW_DEV_OTP=1
-
-此时 /api/auth/request-code 会在响应中返回 devCode，Production 环境不会返回。
+注意：这种模式是“手机号识别”，不是“手机号所有权验证”。知道某个手机号的人理论上可以尝试进入该手机号账户，因此适合当前以使用便利为优先的内部工具场景。
 
 ## 数据隔离
 
 - 内置模板：跟随程序代码，不进入私人云。
 - 自定义模板：只保存在当前账户 owner_id 下。
 - owner_id 由后端生成 UUID，不使用手机号明文。
-- 手机号只保存 hash 和脱敏显示值。
 - 模板 API 不接受客户端传入 owner_id，始终从服务端会话中读取当前用户。
 - 删除模板使用 tombstone 时间戳，避免旧设备把较新的模板误恢复。
+- 旧的飞书多维表格公共模板库逻辑已经停用。
 
 ## 健康检查
 
@@ -76,9 +66,8 @@ Redis 可使用 Vercel Marketplace 中提供 Redis REST 接口的存储服务，
 {
   "sessionConfigured": true,
   "storageConfigured": true,
-  "storageReady": true,
-  "smsConfigured": false
+  "storageReady": true
 }
 ```
 
-smsConfigured=false 不影响飞书身份自动登录，只影响手机号验证码登录/绑定。
+三个字段都为 true 时，账户与私人模板后端已就绪。
