@@ -63,7 +63,7 @@ function requireSession(req,res){
 function redisConfig(){
   const url=process.env.KV_REST_API_URL||process.env.UPSTASH_REDIS_REST_URL;
   const token=process.env.KV_REST_API_TOKEN||process.env.UPSTASH_REDIS_REST_TOKEN;
-  if(!url||!token)throw new Error("私有模板存储未配置");
+  if(!url||!token)throw new Error("云端模板数据库尚未连接");
   return{url:url.replace(/\/$/,""),token};
 }
 async function redis(...args){
@@ -90,21 +90,42 @@ async function writeUser(user){
   return user;
 }
 async function getOrCreateIdentity(type,hash,profilePatch={}){
-  let userId=await redis("GET",identityKey(type,hash));
+  const key=identityKey(type,hash);
+  let userId=await redis("GET",key);
   let user=userId?await readUser(userId):null;
-  if(!user){
-    userId=crypto.randomUUID();
-    user={id:userId,createdAt:Date.now(),updatedAt:Date.now(),providers:{}};
-    user.providers[type]=true;
-    Object.assign(user,profilePatch);
-    await writeUser(user);
-    await redis("SET",identityKey(type,hash),userId);
-  }else{
+  if(user){
     user.providers={...(user.providers||{}),[type]:true};
     Object.assign(user,profilePatch);
     await writeUser(user);
+    return {user,created:false};
   }
-  return user;
+
+  const candidateId=crypto.randomUUID();
+  const now=Date.now();
+  const candidate={
+    id:candidateId,
+    createdAt:now,
+    updatedAt:now,
+    lastLoginAt:now,
+    templateStoreVersion:1,
+    providers:{[type]:true},
+    ...profilePatch
+  };
+  await writeUser(candidate);
+
+  const claimed=await redis("SET",key,candidateId,"NX");
+  if(claimed){
+    return {user:candidate,created:true};
+  }
+
+  await redis("DEL",userKey(candidateId));
+  userId=await redis("GET",key);
+  user=userId?await readUser(userId):null;
+  if(!user)throw new Error("账户初始化失败，请重试");
+  user.providers={...(user.providers||{}),[type]:true};
+  Object.assign(user,profilePatch);
+  await writeUser(user);
+  return {user,created:false};
 }
 function normalizePhone(input){
   let p=String(input||"").trim().replace(/[\s()-]/g,"");
