@@ -28,7 +28,7 @@ module.exports=async function(req,res){
       }
     }
     if(!user){
-      user=await getOrCreateIdentity("feishu",identityHash,{feishuIdentityHash:identityHash});
+      const createdIdentity=await getOrCreateIdentity("feishu",identityHash,{feishuIdentityHash:identityHash});\n      user=createdIdentity.user;
     }
     const providers=Object.keys(user.providers||{}).filter(k=>user.providers[k]);
     const token=issueToken(user.id,providers);
