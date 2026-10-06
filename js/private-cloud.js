@@ -1,5 +1,5 @@
-import {isBuiltinTemplate,isValidTemplateObject,normalizeTemplateObject} from "./templates.js?v=20261006-10";
-import {accountFetch,hasAccountSession} from "./account.js?v=20261006-10";
+import {isBuiltinTemplate,isValidTemplateObject,normalizeTemplateObject} from "./templates.js?v=20261006-12";
+import {accountFetch,hasAccountSession} from "./account.js?v=20261006-12";
 
 function clone(v){return typeof structuredClone==="function"?structuredClone(v):JSON.parse(JSON.stringify(v))}
 function time(t){return Number(t?.updatedAt||0)||0}
