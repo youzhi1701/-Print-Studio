@@ -23,9 +23,11 @@ export async function syncTemplatesWithCloud(_ignored,localTemplates=[],deletedI
   if(!hasAccountSession())return{templates:(localTemplates||[]).map(clone),uploaded:0,downloaded:0,updatedLocal:0,removedLocal:0,clearedDeletedIds:[],skipped:true};
 
   const clearedDeletedIds=[];
-  for(const id of deletedIds||[]){
+  for(const entry of deletedIds||[]){
+    const id=typeof entry==="string"?entry:entry?.id;
+    const deletedAt=typeof entry==="object"?Number(entry?.deletedAt||0):0;
     if(!id||isBuiltinTemplate(id))continue;
-    try{await deleteCloudTemplate(null,id,Date.now());clearedDeletedIds.push(id)}catch{}
+    try{await deleteCloudTemplate(null,id,deletedAt||Date.now());clearedDeletedIds.push(String(id))}catch{}
   }
 
   let remote=await accountFetch("/api/templates");
