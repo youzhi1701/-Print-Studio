@@ -48,11 +48,8 @@ export async function loginWithFeishuIdentity(identity){
   return profile;
 }
 
-export async function requestPhoneCode(phone){
-  return await accountFetch("/api/auth/request-code",{method:"POST",body:JSON.stringify({phone})});
-}
-export async function verifyPhoneCode(phone,code){
-  const data=await accountFetch("/api/auth/verify-code",{method:"POST",body:JSON.stringify({phone,code})});
+export async function loginWithPhone(phone){
+  const data=await accountFetch("/api/auth/phone",{method:"POST",body:JSON.stringify({phone})});
   setSession(data.token,data.user);return profile;
 }
 
@@ -60,5 +57,5 @@ export async function getAccountHealth(){
   try{
     const res=await fetch("/api/health",{credentials:"same-origin",cache:"no-store"});
     return await res.json();
-  }catch{return{sessionConfigured:false,storageConfigured:false,storageReady:false,smsConfigured:false}}
+  }catch{return{sessionConfigured:false,storageConfigured:false,storageReady:false}}
 }
