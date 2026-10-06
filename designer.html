@@ -4,19 +4,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印 · 模板设计器</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261006-11">
-  <link rel="stylesheet" href="./css/designer.css?v=20261006-11">
-  <link rel="stylesheet" href="./css/print.css?v=20261006-11" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261006-15">
+  <link rel="stylesheet" href="./css/designer.css?v=20261006-15">
+  <link rel="stylesheet" href="./css/print.css?v=20261006-15" media="print">
 </head>
 <body class="aurora-app designer-body">
   <div class="aurora-layer" aria-hidden="true"></div>
   <header class="designer-top glass">
-    <div class="designer-brand" title="build 20261006-11"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-11</span></small></div></div>
+    <div class="designer-brand" title="build 20261006-15"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-15</span></small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
       <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
       <button id="undoBtn" title="撤销">↶</button><button id="redoBtn" title="重做">↷</button>
-      <button id="quickBtn">快捷模式</button><button id="newBtn">新建</button><button id="previewBtn">实际预览</button>
+      <button id="quickBtn">快捷模式</button><button id="newBtn">新建</button><button id="addToMineBtn" class="template-action primary-soft">添加到我的模板库</button><button id="saveTemplateBtn" class="template-action">保存修改</button><button id="saveAsTemplateBtn" class="template-action">另存为</button><button id="deleteTemplateBtn" class="template-action danger">删除模板</button><button id="previewBtn">实际预览</button>
       <button id="fullBtn">⛶ 全屏</button><button id="printBtn" class="primary">测试打印</button>
     </div>
   </header>
@@ -160,7 +160,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261006-11"></script>
+  <script type="module" src="./js/designer.js?v=20261006-15"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>
