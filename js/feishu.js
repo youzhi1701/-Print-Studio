@@ -191,3 +191,15 @@ export async function resolveAttachmentUrlsForRecords(table,records,fields,optio
   const rows=await mapLimit(records,4,r=>resolveAttachmentUrls(table,r,fields,options));
   return rows.filter(Boolean);
 }
+
+export async function readFeishuIdentity(bitable){
+  if(!bitable?.bridge)return null;
+  let baseUserId="",tenantKey="",instanceId="",product="";
+  try{baseUserId=String(await bitable.bridge.getBaseUserId?.()||"")}catch{}
+  if(!baseUserId){try{baseUserId=String(await bitable.bridge.getUserId?.()||"")}catch{}}
+  try{tenantKey=String(await bitable.bridge.getTenantKey?.()||"")}catch{}
+  try{instanceId=String(await bitable.bridge.getInstanceId?.()||"")}catch{}
+  try{product=String((await bitable.bridge.getEnv?.())?.product||"")}catch{}
+  if(!baseUserId||!tenantKey)return null;
+  return{baseUserId,tenantKey,instanceId,product};
+}
