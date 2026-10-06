@@ -220,3 +220,37 @@
   .template-library-modal{padding:6px}
   .template-library-dialog{max-height:calc(100vh - 12px);border-radius:13px}
 }
+
+/* account + private template scope */
+.account-entry{min-width:38px!important;font-size:8px!important}
+.account-entry.signed-in{color:var(--success);border-color:rgba(12,143,99,.18);background:rgba(12,143,99,.06)}
+.template-scope-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:2px;border-radius:8px;background:rgba(120,140,180,.07)}
+.template-scope-tabs button{height:27px;border:0;border-radius:6px;background:transparent;color:var(--muted);font-size:9px;cursor:pointer}
+.template-scope-tabs button.active{background:#fff;color:var(--blue);box-shadow:0 2px 7px rgba(50,70,110,.08)}
+
+.account-modal{
+  position:fixed;inset:0;z-index:2300;display:grid;place-items:center;padding:12px;
+  background:rgba(20,30,52,.28);backdrop-filter:blur(10px)
+}
+.account-modal.hidden{display:none!important}
+.account-dialog{
+  width:min(440px,100%);display:grid;gap:10px;padding:13px;border-radius:16px
+}
+.account-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.account-head>div{display:grid;gap:2px}
+.account-head b{font-size:14px}.account-head small{font-size:8px;color:var(--muted)}
+#accountClose{width:28px;height:28px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.6);font-size:16px;color:var(--ink2);cursor:pointer}
+.account-summary{display:flex;align-items:center;gap:9px;padding:9px;border:1px solid rgba(84,104,145,.09);border-radius:11px;background:rgba(255,255,255,.38)}
+.account-avatar{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:rgba(37,99,235,.08);color:var(--blue);font-weight:800}
+.account-summary>div:last-child{display:grid;gap:2px}.account-summary strong{font-size:11px}.account-summary small{font-size:8px;color:var(--muted)}
+.account-provider-row{display:flex;align-items:center;justify-content:space-between;padding:7px 9px;border-radius:9px;background:rgba(120,140,180,.05);font-size:9px;color:var(--muted)}
+.account-provider-row b{font-size:9px;color:var(--ink2)}
+.account-phone-box{display:grid;gap:6px;padding:9px;border:1px solid rgba(84,104,145,.09);border-radius:11px;background:rgba(255,255,255,.34)}
+.account-phone-box>b{font-size:10px}.account-phone-box>small{font-size:8px;line-height:1.5;color:var(--muted)}
+.account-phone-line{display:grid;grid-template-columns:minmax(0,1fr) 104px;gap:5px}
+.account-phone-line input{height:32px;min-width:0;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.62);padding:0 9px;font-size:9px;color:var(--ink)}
+.account-phone-line button,.account-actions button{height:32px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.58);font-size:9px;color:var(--ink2);cursor:pointer}
+.account-phone-line .primary{background:linear-gradient(135deg,#2563eb,#5b6ee1);border-color:transparent;color:#fff}
+#phoneLoginHint{min-height:12px}
+.account-actions{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+@media(max-width:420px){.account-dialog{padding:10px}.account-phone-line{grid-template-columns:1fr 96px}}
