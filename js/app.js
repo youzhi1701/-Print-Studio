@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261006-11";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-11";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261006-11";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-11";
-import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-11";
-import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-11";
-import {printTemplateRecords} from "./print.js?v=20261006-11";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-11";
-import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261006-11";
+import {mountBuildVersion} from "./version.js?v=20261006-12";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS,getStorageScope,setStorageScope,storageScopedKey} from "./state.js?v=20261006-12";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261006-12";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-12";
+import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-12";
+import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-12";
+import {printTemplateRecords} from "./print.js?v=20261006-12";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-12";
+import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261006-12";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
@@ -163,11 +163,11 @@ function closeTemplateLibrary(){
   templateThumbObserver?.disconnect?.();
 }
 function persistActiveTemplate(){
-  const currentSettings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
-  storageSet(STORAGE_KEYS.settings,JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
+  const currentSettings=safeJson(storageGet(storageScopedKey(STORAGE_KEYS.settings)),{})||{};
+  storageSet(storageScopedKey(STORAGE_KEYS.settings),JSON.stringify({...currentSettings,activeTemplateId:state.activeTemplateId||null}));
 }
 function loadTemplateTombstones(){
-  const raw=safeJson(storageGet(STORAGE_KEYS.templateTombstones),[]);
+  const raw=safeJson(storageGet(storageScopedKey(STORAGE_KEYS.templateTombstones)),[]);
   if(!Array.isArray(raw))return[];
   let migrated=false;
   const list=raw.map(x=>{
@@ -181,7 +181,7 @@ function loadTemplateTombstones(){
 function saveTemplateTombstones(items){
   const map=new Map();
   for(const x of items||[])if(x?.id)map.set(String(x.id),{id:String(x.id),deletedAt:Number(x.deletedAt)||Date.now()});
-  storageSet(STORAGE_KEYS.templateTombstones,JSON.stringify([...map.values()]));
+  storageSet(storageScopedKey(STORAGE_KEYS.templateTombstones),JSON.stringify([...map.values()]));
 }
 function markTemplateDeleted(id,deletedAt=Date.now()){
   const items=loadTemplateTombstones(),i=items.findIndex(x=>x.id===String(id));
@@ -190,6 +190,22 @@ function markTemplateDeleted(id,deletedAt=Date.now()){
 }
 function clearTemplateDeleted(id){
   saveTemplateTombstones(loadTemplateTombstones().filter(x=>x.id!==String(id)));
+}
+function activateAccountTemplateScope(user){
+  const nextScope=String(user?.id||"local");
+  if(getStorageScope()===nextScope)return false;
+  for(const timer of cloudSaveTimers.values())clearTimeout(timer);
+  cloudSaveTimers.clear();
+  lastCloudSyncAt=0;
+  setStorageScope(nextScope);
+  state.templates=loadTemplates();
+  const scopedSettings=safeJson(storageGet(storageScopedKey(STORAGE_KEYS.settings)),{})||{};
+  state.activeTemplateId=state.templates.some(t=>t.id===scopedSettings.activeTemplateId)?scopedSettings.activeTemplateId:(state.templates[0]?.id||null);
+  templateThumbCache.clear();
+  fillTemplates();
+  syncBridge();
+  renderPreview(true);
+  return true;
 }
 function updateCloudState(text,stateName=""){
   const n=$("templateLibraryState");if(!n)return;
@@ -412,7 +428,10 @@ async function refresh(){
     state.connected=true;state.sdk=c.bitable;status("已连接","success");hideCompat();
     try{
       const identity=await readFeishuIdentity(c.bitable);
-      if(identity)await loginWithFeishuIdentity(identity);
+      if(identity){
+        const account=await loginWithFeishuIdentity(identity);
+        activateAccountTemplateScope(account);
+      }
       updateAccountUi();
     }catch(err){console.warn("飞书身份自动识别失败",err);updateAccountUi()}
     const ctx=await readContext(c.bitable);
@@ -490,6 +509,7 @@ async function init(){
   if($("compatCopy"))$("compatCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("compatDetails")?.textContent||compatInfo());toast("诊断信息已复制")}catch{toast("复制失败，请手动复制")}};
 
   await restoreAccount();
+  setStorageScope(getAccountProfile()?.id||"local");
   updateAccountUi();
   state.templates=loadTemplates();
   const settings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
@@ -511,14 +531,24 @@ async function init(){
   $("accountModal").addEventListener("click",e=>{if(e.target===$("accountModal"))closeAccount()});
   $("phoneLoginBtn").onclick=async()=>{
     const phone=$("accountPhone").value.trim(),hint=$("phoneLoginHint");
-    hint.textContent="正在进入手机号模板库…";
+    hint.textContent="正在识别手机号并准备私人模板库…";
     try{
-      await loginWithPhone(phone);updateAccountUi();hint.textContent="已进入该手机号的私人模板库";
-      await syncCloudTemplates(true);fillTemplates();toast("手机号账户已切换，私人模板已同步");
-    }catch(err){hint.textContent=err.message;toast(err.message)}
+      const result=await loginWithPhone(phone);
+      activateAccountTemplateScope(result?.user||getAccountProfile());
+      updateAccountUi();
+      hint.textContent=result?.created?"新用户已自动注册，私人模板库已创建":"已进入该手机号的私人模板库";
+      await syncCloudTemplates(true);
+      fillTemplates();
+      await renderPreview(true);
+      toast(result?.created?"注册成功，已进入私人模板库":"手机号账户已切换，私人模板已同步");
+    }catch(err){
+      const msg=String(err?.message||"手机号登录失败");
+      hint.textContent=msg.includes("数据库尚未连接")?"云端模板数据库未连接，请先完成服务配置":msg;
+      toast(hint.textContent);
+    }
   };
   $("accountSyncNow").onclick=async()=>{const r=await syncCloudTemplates(true);updateAccountUi();if(r){fillTemplates();toast("私人模板已同步")}else toast("请先登录账户")};
-  $("accountLogout").onclick=()=>{clearAccountSession();updateAccountUi();closeAccount();toast("已退出本机账号，模板保留在本地")};
+  $("accountLogout").onclick=()=>{clearAccountSession();activateAccountTemplateScope(null);updateAccountUi();closeAccount();toast("已退出本机账号")};
   $("templateChooser").onclick=openTemplateLibrary;
   $("templateLibraryClose").onclick=closeTemplateLibrary;
   $("templateLibraryModal").addEventListener("click",e=>{if(e.target===$("templateLibraryModal"))closeTemplateLibrary()});
