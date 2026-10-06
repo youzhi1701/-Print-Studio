@@ -1,11 +1,11 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261006-16";
+} from "./table-model.js?v=20261006-17";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
 function commonStyle(el,positioned=true){
-  const base='box-sizing:border-box;width:'+(positioned?el.w+'mm':'100%')+';height:'+(positioned?el.h+'mm':'100%')+';font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;';
+  const base='box-sizing:border-box;width:'+(positioned?el.w+'mm':'100%')+';height:'+(positioned?el.h+'mm':'100%')+';font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;color:#111827;';
   return positioned?('position:absolute;left:'+el.x+'mm;top:'+el.y+'mm;'+base):('position:relative;left:auto;top:auto;'+base)
 }
 function textCss(el){
@@ -36,7 +36,7 @@ export function renderTableMarkup(el,rootData={},options={}){
   const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map((c,ci)=>{
     const cls=editable?' class="table-head-cell" data-col="'+(c.index??ci)+'"':"";
-    return '<th'+cls+' style="box-sizing:border-box;border:'+bw+'px solid #667085;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
+    return '<th'+cls+' style="box-sizing:border-box;border:'+bw+'px solid #4b5563;color:#111827;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   }).join("")+'</tr></thead>';
 
   const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri]})).filter(({cells,row})=>{
@@ -53,12 +53,12 @@ export function renderTableMarkup(el,rootData={},options={}){
       const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
       const selected=editable&&selectedKeys.has(String(ri)+":"+String(cell.colIndex));
       const cls=editable?(' class="table-edit-cell'+(selected?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'"'):"";
-      return '<td'+cls+' '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #cbd2df;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
+      return '<td'+cls+' '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #6b7280;color:#111827;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
     return '<tr style="height:'+row.height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const html='<table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
+  const html='<table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#111827">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
   return{html,layout,renderedHeight,allCols}
 }
 
