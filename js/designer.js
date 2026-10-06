@@ -192,7 +192,7 @@ async function addCurrentToMyLibrary(){
   state.activeTemplateId=copy.id;
   history=[];hIndex=-1;selected.clear();clearTableSelection();
   saveTemplates(state.templates);
-  history.replaceState(null,"",new URL(location.href).toString().replace(/([?&])template=[^&]*/,(m,p)=>p+"template="+encodeURIComponent(copy.id)));
+  window.history.replaceState(null,"",new URL(location.href).toString().replace(/([?&])template=[^&]*/,(m,p)=>p+"template="+encodeURIComponent(copy.id)));
   renderAll();pushHistory();
   const ok=await saveCurrentTemplateToCloud({announce:false});
   toast(ok?"已添加到我的模板库":"已复制为私人模板，云端同步待重试");
@@ -213,7 +213,7 @@ async function saveAsTemplate(){
   state.activeTemplateId=copy.id;
   history=[];hIndex=-1;selected.clear();clearTableSelection();
   saveTemplates(state.templates);
-  const u=new URL(location.href);u.searchParams.set("template",copy.id);history.replaceState(null,"",u);
+  const u=new URL(location.href);u.searchParams.set("template",copy.id);window.history.replaceState(null,"",u);
   renderAll();pushHistory();
   await saveCurrentTemplateToCloud({announce:false});
   toast("已另存到我的模板库");
@@ -231,7 +231,7 @@ async function deleteCurrentTemplate(){
   }
   state.activeTemplateId=state.templates[0]?.id||null;
   history=[];hIndex=-1;selected.clear();clearTableSelection();
-  if(state.activeTemplateId){const u=new URL(location.href);u.searchParams.set("template",state.activeTemplateId);history.replaceState(null,"",u)}
+  if(state.activeTemplateId){const u=new URL(location.href);u.searchParams.set("template",state.activeTemplateId);window.history.replaceState(null,"",u)}
   renderAll();pushHistory();toast("模板已删除");
 }
 function renderAll(){const t=current();if(!t)return;$("templateName").value=t.name;updateTemplateActionState();$("pageW").value=t.page.width;$("pageH").value=t.page.height;$("safeArea").value=t.page.safeArea??4;$("printOffsetX").value=Number(t.printSettings?.offsetX||0);$("printOffsetY").value=Number(t.printSettings?.offsetY||0);$("printScale").value=Number(t.printSettings?.scale||100);applyPage(false);renderElements();renderLayers();syncProps();$("selectionState").textContent=(t.elements?.length||0)+" 个元素"}
