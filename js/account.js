@@ -39,6 +39,7 @@ export async function restoreAccount(){
 }
 
 export async function loginWithFeishuIdentity(identity){
+  if(hasAccountSession()&&profile?.providers?.includes?.("phone"))return profile;
   const baseUserId=String(identity?.baseUserId||""),tenantKey=String(identity?.tenantKey||"");
   if(!baseUserId||!tenantKey)return profile;
   const key=tenantKey+"|"+baseUserId;
