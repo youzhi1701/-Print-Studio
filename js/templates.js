@@ -1,4 +1,4 @@
-import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet} from "./state.js?v=20261006-11";
+import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet,storageScopedKey} from "./state.js?v=20261006-12";
 import {ensureTableModel} from "./table-model.js?v=20261006-11";
 
 const BUILTIN_CREATED_AT=1760000000000;
@@ -195,7 +195,7 @@ export function normalizeTemplateObject(t){
 }
 
 export function loadTemplates(){
-  const raw=storageGet(STORAGE_KEYS.templates);
+  const raw=storageGet(storageScopedKey(STORAGE_KEYS.templates));
   const data=safeJson(raw,null);
   let list=Array.isArray(data)?data.filter(Boolean).map(normalizeTemplateObject):[];
   const byId=new Map(list.map(t=>[t.id,t]));
@@ -214,7 +214,7 @@ export function loadTemplates(){
     if(ab!==bb)return ab?-1:1;
     return Number(b.updatedAt||0)-Number(a.updatedAt||0);
   });
-  storageSet(STORAGE_KEYS.templates,JSON.stringify(list));
+  storageSet(storageScopedKey(STORAGE_KEYS.templates),JSON.stringify(list));
   return list;
 }
 export function saveTemplates(list){
@@ -224,7 +224,7 @@ export function saveTemplates(list){
     Object.keys(tpl).forEach(k=>delete tpl[k]);
     Object.assign(tpl,normalized);
   }
-  return storageSet(STORAGE_KEYS.templates,JSON.stringify(list||[]))
+  return storageSet(storageScopedKey(STORAGE_KEYS.templates),JSON.stringify(list||[]))
 }
 export function createTemplate(name="未命名模板",p={width:215,height:140}){
   return{id:uid("tpl"),schemaVersion:7,name,category:"自定义",description:"",tags:[],status:"draft",page:{...p,orientation:p.width>=p.height?"landscape":"portrait",margin:5,safeArea:4},printSettings:{scale:100,offsetX:0,offsetY:0},elements:[],createdAt:Date.now(),updatedAt:Date.now()}
