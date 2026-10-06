@@ -483,3 +483,23 @@
 .design-element.inline-editing>.render-element,
 .design-element.inline-editing>.render-element *{pointer-events:auto!important;user-select:text!important}
 .design-element.inline-editing>.render-text{cursor:text!important;outline:0!important}
+
+/* v20261006-15 · template library actions */
+.top-tools .template-action{white-space:nowrap}
+.top-tools .primary-soft{
+  color:#1d4ed8;
+  border-color:rgba(37,99,235,.24);
+  background:rgba(37,99,235,.08)
+}
+.top-tools .template-action.danger{
+  color:#b42318;
+  border-color:rgba(180,35,24,.16);
+  background:rgba(255,255,255,.48)
+}
+.top-tools .template-action.danger:hover{background:rgba(180,35,24,.07)}
+.top-tools .template-action:disabled{opacity:.42;cursor:not-allowed}
+@media (max-width:1120px){
+  .designer-top{gap:6px}
+  .top-tools{gap:4px;overflow-x:auto;scrollbar-width:none}
+  .top-tools::-webkit-scrollbar{display:none}
+}
