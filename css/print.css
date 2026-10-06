@@ -38,7 +38,7 @@
   @page{margin:0}
 }
 
-/* v20261006-17 · print legibility */
+/* v20261006-18 · print legibility */
 @media print{
   body.super-print-printing .print-host,
   body.super-print-printing .print-host .print-sheet{
