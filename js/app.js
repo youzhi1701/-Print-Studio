@@ -1,15 +1,16 @@
 import {mountBuildVersion} from "./version.js?v=20261006-07";
 import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS} from "./state.js?v=20261006-07";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords} from "./feishu.js?v=20261006-07";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261006-08";
 import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-07";
 import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-07";
 import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-07";
 import {printTemplateRecords} from "./print.js?v=20261006-07";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./cloud-templates.js?v=20261006-07";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-08";
+import {restoreAccount,loginWithFeishuIdentity,requestPhoneCode,verifyPhoneCode,clearAccountSession,getAccountProfile,hasAccountSession} from "./account.js?v=20261006-08";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
-let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();let templateLibraryQuery="",templateLibraryCategory="全部";let templateThumbObserver=null;const templateThumbCache=new Map();let templateSearchTimer=null;
+let toastTimer,refreshing=false,currentIndex=0,lastPreviewKey="";let previewScale=1,previewFitScale=1,previewPanX=0,previewPanY=0,previewPanning=false,previewPointer=null;let cloudSyncBusy=false,lastCloudSyncAt=0;const cloudSaveTimers=new Map();let cloudOperation=Promise.resolve();const failedImageSources=new Map();let templateLibraryQuery="",templateLibraryCategory="全部",templateLibraryScope="mine";let templateThumbObserver=null;const templateThumbCache=new Map();let templateSearchTimer=null;
 
 function toast(msg){const n=$("toast");n.textContent=msg;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1600)}
 function status(text,type=""){const n=$("sdkState");n.textContent=text;n.className="status-pill "+type}
@@ -42,9 +43,12 @@ const TEMPLATE_SAMPLE_DATA={
 function templateSearchText(t){
   return [t.name,t.category,t.description,...(t.tags||[]),t.page?.width+"x"+t.page?.height].filter(Boolean).join(" ").toLowerCase();
 }
+function scopeTemplates(){
+  return state.templates.filter(t=>templateLibraryScope==="builtin"?isBuiltinTemplate(t):!isBuiltinTemplate(t));
+}
 function filteredTemplates(){
   const q=templateLibraryQuery.trim().toLowerCase();
-  return state.templates.filter(t=>{
+  return scopeTemplates().filter(t=>{
     if(templateLibraryCategory!=="全部"&&String(t.category||"其他")!==templateLibraryCategory)return false;
     return !q||templateSearchText(t).includes(q);
   });
@@ -52,7 +56,7 @@ function filteredTemplates(){
 function populateTemplateCategories(){
   const select=$("templateCategoryFilter");if(!select)return;
   const current=templateLibraryCategory;
-  const cats=[...new Set(state.templates.map(t=>String(t.category||"其他")))].sort((a,b)=>a.localeCompare(b,"zh-CN"));
+  const cats=[...new Set(scopeTemplates().map(t=>String(t.category||"其他")))].sort((a,b)=>a.localeCompare(b,"zh-CN"));
   select.innerHTML='<option value="全部">全部分类</option>'+cats.map(x=>'<option value="'+escHtml(x)+'">'+escHtml(x)+'</option>').join("");
   select.value=cats.includes(current)?current:"全部";
   templateLibraryCategory=select.value;
@@ -96,7 +100,7 @@ function renderTemplateLibrary(){
   if(!list)return;
   populateTemplateCategories();
   const shown=filteredTemplates();
-  if(count)count.textContent=shown.length===state.templates.length?(state.templates.length+" 个模板"):(shown.length+" / "+state.templates.length);
+  const scoped=scopeTemplates();if(count)count.textContent=shown.length===scoped.length?(scoped.length+" 个模板"):(shown.length+" / "+scoped.length);
   list.innerHTML=shown.map(t=>{
     const active=t.id===state.activeTemplateId;
     const size=(Number(t.page?.width)||215)+"×"+(Number(t.page?.height)||140);
@@ -116,8 +120,32 @@ function fillTemplates(){
   const modal=$("templateLibraryModal");
   if(modal&&!modal.classList.contains("hidden"))renderTemplateLibrary();
 }
+function updateAccountUi(){
+  const user=getAccountProfile(),signed=hasAccountSession();
+  const btn=$("accountBtn"),badge=$("accountBadge"),title=$("accountTitle"),sub=$("accountSub"),stateText=$("accountStateText");
+  if(btn)btn.classList.toggle("signed-in",signed);
+  if(badge)badge.textContent=signed?"我的":"账号";
+  if(title)title.textContent=signed?(user?.phoneMasked||"飞书账户"):"未登录";
+  if(sub)sub.textContent=signed?"私人模板已按账户隔离":"登录后模板可跨设备同步";
+  if(stateText)stateText.textContent=signed?"账户已连接":"等待身份识别";
+  if($("feishuIdentityState"))$("feishuIdentityState").textContent=user?.providers?.includes?.("feishu")?"已识别":"未识别";
+  if($("accountLogout"))$("accountLogout").hidden=!signed;
+  updateCloudState(signed?"私有云":"仅本地",signed?"ok":"warn");
+}
+function openAccount(){
+  $("accountModal")?.classList.remove("hidden");updateAccountUi();
+}
+function closeAccount(){$("accountModal")?.classList.add("hidden")}
+function setTemplateScope(scope){
+  templateLibraryScope=scope==="builtin"?"builtin":"mine";
+  templateLibraryCategory="全部";
+  document.querySelectorAll("[data-template-scope]").forEach(b=>b.classList.toggle("active",b.dataset.templateScope===templateLibraryScope));
+  renderTemplateLibrary();
+}
 function openTemplateLibrary(){
   const modal=$("templateLibraryModal");if(!modal)return;
+  templateLibraryScope=isBuiltinTemplate(activeTemplate())?"builtin":"mine";
+  document.querySelectorAll("[data-template-scope]").forEach(b=>b.classList.toggle("active",b.dataset.templateScope===templateLibraryScope));
   modal.classList.remove("hidden");
   renderTemplateLibrary();
   requestAnimationFrame(()=>$("templateLibrarySearch")?.focus());
@@ -153,13 +181,13 @@ function runCloudOperation(task){
   return op;
 }
 function queueCloudTemplateSave(template){
-  if(!state.connected||!state.sdk||!template?.id)return;
+  if(!hasAccountSession()||!template?.id||isBuiltinTemplate(template))return;
   const snapshot=structuredClone(template);
   clearTimeout(cloudSaveTimers.get(snapshot.id));
   cloudSaveTimers.set(snapshot.id,setTimeout(async()=>{
     cloudSaveTimers.delete(snapshot.id);
     try{
-      const result=await runCloudOperation(()=>upsertCloudTemplate(state.sdk,snapshot));
+      const result=await runCloudOperation(()=>upsertCloudTemplate(null,snapshot));
       if(result?.reason){
         updateCloudState("云端版本较新","warn");
         setTimeout(()=>syncCloudTemplates(true),0);
@@ -174,14 +202,14 @@ function queueCloudTemplateSave(template){
   },900));
 }
 async function syncCloudTemplates(force=false){
-  if(!state.connected||!state.sdk||cloudSyncBusy)return null;
+  if(!hasAccountSession()||cloudSyncBusy){updateCloudState("仅本地","warn");return null;}
   if(!force&&Date.now()-lastCloudSyncAt<60000)return null;
   cloudSyncBusy=true;
   const syncBtn=$("templateLibrarySync");if(syncBtn)syncBtn.disabled=true;
   updateCloudState("同步中…","busy");
   try{
     const previous=state.activeTemplateId;
-    const result=await runCloudOperation(()=>syncTemplatesWithCloud(state.sdk,state.templates,loadTemplateTombstones()));
+    const result=await runCloudOperation(()=>syncTemplatesWithCloud(null,state.templates,loadTemplateTombstones()));
     state.templates=result.templates;
     templateThumbCache.clear();
     saveTemplates(state.templates);
@@ -362,6 +390,11 @@ async function refresh(){
       await renderPreview();return
     }
     state.connected=true;state.sdk=c.bitable;status("已连接","success");hideCompat();
+    try{
+      const identity=await readFeishuIdentity(c.bitable);
+      if(identity)await loginWithFeishuIdentity(identity);
+      updateAccountUi();
+    }catch(err){console.warn("飞书身份自动识别失败",err);updateAccountUi()}
     const ctx=await readContext(c.bitable);
     state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
     await syncCloudTemplates(false);
@@ -436,6 +469,8 @@ async function init(){
   if($("compatOpen"))$("compatOpen").onclick=()=>window.open(location.href,"_blank","noopener");
   if($("compatCopy"))$("compatCopy").onclick=async()=>{try{await navigator.clipboard.writeText($("compatDetails")?.textContent||compatInfo());toast("诊断信息已复制")}catch{toast("复制失败，请手动复制")}};
 
+  await restoreAccount();
+  updateAccountUi();
   state.templates=loadTemplates();
   const settings=safeJson(storageGet(STORAGE_KEYS.settings),{})||{};
   state.activeTemplateId=state.templates.some(t=>t.id===settings.activeTemplateId)?settings.activeTemplateId:(state.templates[0]?.id||null);
@@ -448,7 +483,29 @@ async function init(){
   });
   if($("templateLibrarySearch"))$("templateLibrarySearch").oninput=e=>{templateLibraryQuery=e.target.value||"";clearTimeout(templateSearchTimer);templateSearchTimer=setTimeout(renderTemplateLibrary,120)};
   if($("templateCategoryFilter"))$("templateCategoryFilter").onchange=e=>{templateLibraryCategory=e.target.value||"全部";renderTemplateLibrary()};
-  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);if(r)renderTemplateLibrary();else toast("模板库同步失败")};
+  if($("templateLibrarySync"))$("templateLibrarySync").onclick=async()=>{const r=await syncCloudTemplates(true);if(r)renderTemplateLibrary();else toast(hasAccountSession()?"模板库同步失败":"请先登录账户")};
+  document.querySelectorAll("[data-template-scope]").forEach(b=>b.onclick=()=>setTemplateScope(b.dataset.templateScope));
+  $("accountBtn").onclick=openAccount;
+  $("accountClose").onclick=closeAccount;
+  $("accountModal").addEventListener("click",e=>{if(e.target===$("accountModal"))closeAccount()});
+  $("sendPhoneCode").onclick=async()=>{
+    const phone=$("accountPhone").value.trim(),hint=$("phoneLoginHint");
+    hint.textContent="正在发送…";
+    try{
+      const r=await requestPhoneCode(phone);
+      hint.textContent=r.devCode?("开发验证码："+r.devCode):"验证码已发送，请在 5 分钟内完成验证";
+    }catch(err){hint.textContent=err.message;toast(err.message)}
+  };
+  $("verifyPhoneCode").onclick=async()=>{
+    const phone=$("accountPhone").value.trim(),code=$("accountCode").value.trim(),hint=$("phoneLoginHint");
+    hint.textContent="正在验证…";
+    try{
+      await verifyPhoneCode(phone,code);updateAccountUi();hint.textContent="手机号已验证并绑定";
+      await syncCloudTemplates(true);fillTemplates();toast("账户已绑定，私人模板已同步");
+    }catch(err){hint.textContent=err.message;toast(err.message)}
+  };
+  $("accountSyncNow").onclick=async()=>{const r=await syncCloudTemplates(true);updateAccountUi();if(r){fillTemplates();toast("私人模板已同步")}else toast("请先登录账户")};
+  $("accountLogout").onclick=()=>{clearAccountSession();updateAccountUi();closeAccount();toast("已退出本机账号，模板保留在本地")};
   $("templateChooser").onclick=openTemplateLibrary;
   $("templateLibraryClose").onclick=closeTemplateLibrary;
   $("templateLibraryModal").addEventListener("click",e=>{if(e.target===$("templateLibraryModal"))closeTemplateLibrary()});
@@ -499,7 +556,7 @@ async function init(){
 
   $("moreBtn").onclick=e=>{e.stopPropagation();const m=$("moreMenu");m.classList.toggle("hidden");const r=$("moreBtn").getBoundingClientRect();m.style.top=(r.bottom+5)+"px";m.style.right="12px"};
   document.addEventListener("click",e=>{if(!e.target.closest("#moreMenu")&&!e.target.closest("#moreBtn"))$("moreMenu").classList.add("hidden")});
-  document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("templateLibraryModal").classList.contains("hidden"))closeTemplateLibrary()});
+  document.addEventListener("keydown",e=>{if(e.key!=="Escape")return;if(!$("templateLibraryModal").classList.contains("hidden"))closeTemplateLibrary();if(!$("accountModal").classList.contains("hidden"))closeAccount()});
   $("refreshData").onclick=refresh;$("exportTemplate").onclick=()=>exportTemplate(activeTemplate());
   $("importTemplate").onclick=()=>$("importTemplateFile").click();
   $("importTemplateFile").onchange=async e=>{
@@ -521,9 +578,9 @@ async function init(){
     clearTimeout(cloudSaveTimers.get(tpl.id));cloudSaveTimers.delete(tpl.id);
     state.templates=state.templates.filter(t=>t.id!==tpl.id);templateThumbCache.clear();
     state.activeTemplateId=state.templates[0]?.id||null;persistActiveTemplate();saveTemplates(state.templates);syncBridge();await renderPreview(true);fillTemplates();if(!$("templateLibraryModal").classList.contains("hidden"))renderTemplateLibrary();
-    if(state.connected&&state.sdk){
+    if(hasAccountSession()){
       try{
-        const result=await runCloudOperation(()=>deleteCloudTemplate(state.sdk,tpl.id,deletedAt));
+        const result=await runCloudOperation(()=>deleteCloudTemplate(null,tpl.id,deletedAt));
         if(result?.deleted)clearTemplateDeleted(tpl.id);
         updateCloudState("云端已同步","ok");
       }catch(err){
