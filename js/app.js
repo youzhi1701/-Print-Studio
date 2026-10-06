@@ -6,7 +6,7 @@ import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./b
 import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-07";
 import {printTemplateRecords} from "./print.js?v=20261006-07";
 import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-08";
-import {restoreAccount,loginWithFeishuIdentity,requestPhoneCode,verifyPhoneCode,clearAccountSession,getAccountProfile,hasAccountSession} from "./account.js?v=20261006-08";
+import {restoreAccount,loginWithFeishuIdentity,requestPhoneCode,verifyPhoneCode,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261006-08";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
@@ -132,8 +132,16 @@ function updateAccountUi(){
   if($("accountLogout"))$("accountLogout").hidden=!signed;
   updateCloudState(signed?"私有云":"仅本地",signed?"ok":"warn");
 }
-function openAccount(){
+async function openAccount(){
   $("accountModal")?.classList.remove("hidden");updateAccountUi();
+  const health=await getAccountHealth();
+  const stateText=$("accountStateText"),hint=$("phoneLoginHint");
+  if(stateText){
+    if(!health.sessionConfigured||!health.storageConfigured)stateText.textContent="私有云尚未配置";
+    else if(!health.storageReady)stateText.textContent="私有云连接异常";
+    else stateText.textContent=hasAccountSession()?"账户已连接":"私有云已就绪";
+  }
+  if(hint&&!health.smsConfigured)hint.textContent="手机号验证码服务尚未配置；飞书身份仍可自动登录私人模板。";
 }
 function closeAccount(){$("accountModal")?.classList.add("hidden")}
 function setTemplateScope(scope){
