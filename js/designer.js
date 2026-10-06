@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261006-11";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-11";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields} from "./templates.js?v=20261006-11";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-11";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-11";import {printTemplateRecords} from "./print.js?v=20261006-11";import {
+import {mountBuildVersion} from "./version.js?v=20261006-15";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-15";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-15";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-15";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-15";import {printTemplateRecords} from "./print.js?v=20261006-15";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-15";import {hasAccountSession} from "./account.js?v=20261006-15";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261006-11";
+} from "./table-model.js?v=20261006-15";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -136,7 +136,105 @@ function autoBindNow(){
   const changed=autoBindTemplateFields(current(),state.fields);
   if(changed){renderAll();commitEdit({immediate:true});toast("已按字段名称自动绑定")}else{toast(state.fields.length?"当前字段已完成匹配":"没有可绑定的飞书字段")}
 }
-function renderAll(){const t=current();if(!t)return;$("templateName").value=t.name;$("pageW").value=t.page.width;$("pageH").value=t.page.height;$("safeArea").value=t.page.safeArea??4;$("printOffsetX").value=Number(t.printSettings?.offsetX||0);$("printOffsetY").value=Number(t.printSettings?.offsetY||0);$("printScale").value=Number(t.printSettings?.scale||100);applyPage(false);renderElements();renderLayers();syncProps();$("selectionState").textContent=(t.elements?.length||0)+" 个元素"}
+function updateTemplateActionState(){
+  const t=current();
+  if(!t)return;
+  const builtIn=isBuiltinTemplate(t);
+  const addBtn=$("addToMineBtn"),saveBtn=$("saveTemplateBtn"),saveAsBtn=$("saveAsTemplateBtn"),deleteBtn=$("deleteTemplateBtn");
+  if(addBtn){
+    addBtn.classList.toggle("hidden",!builtIn);
+    addBtn.disabled=!builtIn;
+  }
+  if(saveBtn){
+    saveBtn.disabled=builtIn;
+    saveBtn.title=builtIn?"内置模板请先添加到我的模板库":"保存当前修改";
+  }
+  if(saveAsBtn)saveAsBtn.disabled=false;
+  if(deleteBtn){
+    deleteBtn.disabled=builtIn;
+    deleteBtn.title=builtIn?"内置模板不能删除":"删除当前私人模板";
+  }
+}
+async function saveCurrentTemplateToCloud({announce=true}={}){
+  const t=current();if(!t)return false;
+  if(isBuiltinTemplate(t)){if(announce)toast("内置模板请先添加到我的模板库");return false}
+  autoSave(true);
+  if(!hasAccountSession()){
+    if(announce)toast("已保存到本机；登录手机号后可同步私人模板库");
+    return true
+  }
+  try{
+    const result=await upsertCloudTemplate(null,structuredClone(t));
+    if(result?.skipped){
+      if(announce)toast("云端版本较新，请返回模板库同步后再试");
+      return false
+    }
+    if(announce)toast("已保存到我的模板库");
+    return true
+  }catch(err){
+    console.warn("save private template failed",err);
+    if(announce)toast(err?.message||"私人模板保存失败");
+    return false
+  }
+}
+async function addCurrentToMyLibrary(){
+  const src=current();if(!src)return;
+  if(!isBuiltinTemplate(src)){toast("当前模板已经在我的模板库");return}
+  const copy=structuredClone(src);
+  copy.id=uid("tpl");
+  copy.builtIn=false;
+  copy.status="draft";
+  copy.category=copy.category||"自定义";
+  copy.name=String(src.name||"模板")+"（我的）";
+  copy.createdAt=Date.now();
+  copy.updatedAt=Date.now();
+  state.templates.push(copy);
+  state.activeTemplateId=copy.id;
+  history=[];hIndex=-1;selected.clear();clearTableSelection();
+  saveTemplates(state.templates);
+  history.replaceState(null,"",new URL(location.href).toString().replace(/([?&])template=[^&]*/,(m,p)=>p+"template="+encodeURIComponent(copy.id)));
+  renderAll();pushHistory();
+  const ok=await saveCurrentTemplateToCloud({announce:false});
+  toast(ok?"已添加到我的模板库":"已复制为私人模板，云端同步待重试");
+}
+async function saveAsTemplate(){
+  const src=current();if(!src)return;
+  const suggested=(String(src.name||"模板").replace(/（副本\d*）$/,"")||"模板")+"（副本）";
+  const name=window.prompt("另存为模板名称",suggested);
+  if(name===null)return;
+  const copy=structuredClone(src);
+  copy.id=uid("tpl");
+  copy.builtIn=false;
+  copy.status="draft";
+  copy.name=String(name).trim()||suggested;
+  copy.createdAt=Date.now();
+  copy.updatedAt=Date.now();
+  state.templates.push(copy);
+  state.activeTemplateId=copy.id;
+  history=[];hIndex=-1;selected.clear();clearTableSelection();
+  saveTemplates(state.templates);
+  const u=new URL(location.href);u.searchParams.set("template",copy.id);history.replaceState(null,"",u);
+  renderAll();pushHistory();
+  await saveCurrentTemplateToCloud({announce:false});
+  toast("已另存到我的模板库");
+}
+async function deleteCurrentTemplate(){
+  const t=current();if(!t)return;
+  if(isBuiltinTemplate(t)){toast("内置模板不能删除");return}
+  if(!window.confirm("确定删除模板「"+(t.name||"未命名模板")+"」吗？删除后将从当前手机号的私人模板库移除。"))return;
+  const id=t.id,deletedAt=Date.now();
+  state.templates=state.templates.filter(x=>x.id!==id);
+  saveTemplates(state.templates);
+  if(hasAccountSession()){
+    try{await deleteCloudTemplate(null,id,deletedAt)}
+    catch(err){console.warn("delete private template failed",err);toast("本机已删除，云端删除失败，请稍后同步")}
+  }
+  state.activeTemplateId=state.templates[0]?.id||null;
+  history=[];hIndex=-1;selected.clear();clearTableSelection();
+  if(state.activeTemplateId){const u=new URL(location.href);u.searchParams.set("template",state.activeTemplateId);history.replaceState(null,"",u)}
+  renderAll();pushHistory();toast("模板已删除");
+}
+function renderAll(){const t=current();if(!t)return;$("templateName").value=t.name;updateTemplateActionState();$("pageW").value=t.page.width;$("pageH").value=t.page.height;$("safeArea").value=t.page.safeArea??4;$("printOffsetX").value=Number(t.printSettings?.offsetX||0);$("printOffsetY").value=Number(t.printSettings?.offsetY||0);$("printScale").value=Number(t.printSettings?.scale||100);applyPage(false);renderElements();renderLayers();syncProps();$("selectionState").textContent=(t.elements?.length||0)+" 个元素"}
 function applyPage(save=true){
   const t=current();if(!t)return;
   const w=Math.max(20,Number($("pageW").value)||215),h=Math.max(20,Number($("pageH").value)||140),safe=Math.max(0,Number($("safeArea").value)||0);
@@ -1062,6 +1160,10 @@ $("leftToggle").onclick=()=>{
   else g.classList.toggle("left-collapsed");
   setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},80);
 };
+$("addToMineBtn").onclick=addCurrentToMyLibrary;
+$("saveTemplateBtn").onclick=()=>saveCurrentTemplateToCloud();
+$("saveAsTemplateBtn").onclick=saveAsTemplate;
+$("deleteTemplateBtn").onclick=deleteCurrentTemplate;
 $("rightToggle").onclick=()=>{
   const g=document.querySelector(".designer-grid");
   if(window.innerWidth<=900){g.classList.toggle("right-open");if(g.classList.contains("right-open"))g.classList.remove("left-open")}
