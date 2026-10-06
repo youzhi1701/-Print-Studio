@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261006-11";
+} from "./table-model.js?v=20261006-16";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
@@ -28,10 +28,10 @@ function cellHtml(v,imageFit="contain"){
 export function renderTableMarkup(el,rootData={},options={}){
   const editable=options.editable===true;
   const selectedKeys=new Set((options.selectedCells||[]).map(s=>String(s.row)+":"+String(s.col)));
-  const layout=buildTableLayout(el,rootData,editable?false:el.hideEmptyColumns===true);
+  const layout=buildTableLayout(el,rootData,el.hideEmptyColumns===true);
   const {rows,cols,allCols,cellRows,hasAny}=layout;
   const bw=el.borderWidth??.5;
-  if(!hasAny&&el.emptyBehavior==="hide"&&!editable)return{html:"",layout,renderedHeight:0};
+  if(!hasAny&&el.emptyBehavior==="hide")return{html:"",layout,renderedHeight:0};
 
   const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map((c,ci)=>{
@@ -40,7 +40,6 @@ export function renderTableMarkup(el,rootData={},options={}){
   }).join("")+'</tr></thead>';
 
   const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri]})).filter(({cells,row})=>{
-    if(editable)return true;
     const hasRenderedValue=cells.some(cell=>hasValue(cell.value));
     const spansMultiple=(el.merges||[]).some(m=>m.rowIds?.includes(row.id)&&(m.rowIds?.length||0)>1);
     return el.emptyBehavior!=="hide"||hasRenderedValue||spansMultiple;
@@ -59,7 +58,7 @@ export function renderTableMarkup(el,rootData={},options={}){
     return '<tr style="height:'+row.height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const html='<table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;table-layout:fixed;font-size:'+(el.fontSize||9)+'px">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
+  const html='<table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
   return{html,layout,renderedHeight,allCols}
 }
 
