@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261006-15";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-15";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-15";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-15";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-15";import {printTemplateRecords} from "./print.js?v=20261006-15";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-15";import {hasAccountSession} from "./account.js?v=20261006-15";import {
+import {mountBuildVersion} from "./version.js?v=20261006-16";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261006-16";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-16";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261006-16";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-16";import {printTemplateRecords} from "./print.js?v=20261006-16";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-16";import {hasAccountSession} from "./account.js?v=20261006-16";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261006-15";
+} from "./table-model.js?v=20261006-16";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -438,33 +438,30 @@ window.addEventListener("pointerup",endTableCellDrag);
 function content(n,e){
   const data=state.record?.data||{};
   if(e.type!=="table"){
-    const editorData={...data};
-    const hasRealValue=hasValue(editorData[e.field]);
-    if(e.type==="field"&&!hasRealValue)editorData[e.field]="{{"+(e.field||"字段")+"}}";
-    if(e.type==="barcode"&&!hasRealValue)editorData[e.field]=String(e.barcodeFormat||"CODE128").toUpperCase()==="EAN13"?"6901234567892":"1234567890";
-    if(e.type==="qrcode"&&!hasRealValue)editorData[e.field]="https://example.local/";
-    if(e.type==="image"&&!hasRealValue){
-      if(e.emptyBehavior==="blank"){n.innerHTML="";return}
-      n.innerHTML='<div class="image-placeholder">暂无图片'+(e.field?(" · "+htmlEsc(e.field)):"")+'</div>';
-      return
-    }
-    const html=renderElementToHtml({...e,hidden:false},editorData,false);
+    const html=renderElementToHtml({...e,hidden:false},data,false);
+    n.classList.remove("output-empty");
     if(html){
       n.innerHTML=html;
-      if(e.type==="barcode"&&!hasRealValue&&e.showText!==false){
-        const label=n.querySelector("small");if(label)label.textContent="{{"+(e.field||"字段")+"}}";
-      }
       const img=n.querySelector("img");
-      if(img)img.onerror=()=>{requestImageRefresh(state.record?.id||"");n.innerHTML='<div class="image-placeholder">图片加载失败 · 正在刷新</div>'};
+      if(img)img.onerror=()=>requestImageRefresh(state.record?.id||"");
       if(e.type==="barcode"||e.type==="qrcode")requestAnimationFrame(()=>hydrateCodes(n));
-      return
+    }else{
+      n.innerHTML="";
+      n.classList.add("output-empty");
+      n.title="当前数据下该元素不会出现在最终打印结果中";
     }
+    return
   }
   if(e.type==="table"){
     const rendered=renderTableMarkup(e,data,{editable:true,selectedCells});
     const {rows,allCols}=rendered.layout;
     n.classList.toggle("wrap-on",e.wrap!==false);n.classList.toggle("wrap-off",e.wrap===false);
+    n.classList.toggle("output-empty",!rendered.html);
     n.innerHTML=rendered.html;
+    if(!rendered.html){
+      n.title="当前数据下该表格不会出现在最终打印结果中";
+      return
+    }
     n.querySelectorAll("td.table-edit-cell").forEach(cell=>{
       const row=Number(cell.dataset.row),col=Number(cell.dataset.col);
       cell.addEventListener("pointerdown",ev=>beginTableCellDrag(ev,e,row,col));
@@ -482,10 +479,10 @@ function content(n,e){
       });
     });
     if(selected.has(e.id)&&!preview&&!e.locked){
-      addTableColumnResizers(n,e,allCols);addTableRowResizers(n,e,rows);
+      addTableColumnResizers(n,e,allCols);
+      addTableRowResizers(n,e,rows);
       if(selectedCells.length)addTableCellToolbar(n,e);
     }
-    return
   }
 }
 function addTableColumnResizers(n,e,cols){
