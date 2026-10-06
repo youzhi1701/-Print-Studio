@@ -19,6 +19,7 @@
         <div><h1>超级打印</h1><p>快速打印 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261006-08</span></p></div>
       </div>
       <div class="quick-header-actions">
+        <button id="accountBtn" class="header-icon account-entry" title="账户与私有模板"><span id="accountBadge">账号</span></button>
         <button id="openDesigner" class="header-icon" title="编辑或自定义当前模板">✎</button>
         <button id="moreBtn" class="header-icon" title="更多">···</button>
         <span id="sdkState" class="status-pill">连接中</span>
@@ -102,6 +103,10 @@
           <button id="templateLibraryClose" type="button" title="关闭模板库">×</button>
         </div>
       </div>
+      <div class="template-scope-tabs" role="tablist" aria-label="模板范围">
+        <button type="button" data-template-scope="mine" class="active">我的模板</button>
+        <button type="button" data-template-scope="builtin">内置模板</button>
+      </div>
       <div class="template-library-tools">
         <input id="templateLibrarySearch" type="search" placeholder="搜索模板、尺寸或用途" aria-label="搜索模板">
         <select id="templateCategoryFilter" aria-label="模板分类">
@@ -116,6 +121,39 @@
         <button id="deleteTemplate" type="button" class="danger">删除当前模板</button>
       </div>
       <input id="importTemplateFile" type="file" accept="application/json,.json,.superprint.json" hidden>
+    </section>
+  </div>
+
+  <div id="accountModal" class="account-modal hidden" role="dialog" aria-modal="true" aria-label="账户与私有模板">
+    <section class="account-dialog glass-card">
+      <div class="account-head">
+        <div><b>账户与私有模板</b><small id="accountStateText">正在识别身份</small></div>
+        <button id="accountClose" type="button" title="关闭">×</button>
+      </div>
+      <div class="account-summary">
+        <div class="account-avatar" aria-hidden="true">私</div>
+        <div><strong id="accountTitle">未登录</strong><small id="accountSub">登录后模板可跨设备同步</small></div>
+      </div>
+      <div class="account-provider-row">
+        <span>飞书身份</span><b id="feishuIdentityState">未识别</b>
+      </div>
+      <div class="account-phone-box">
+        <b>绑定手机号 / 独立登录</b>
+        <small>手机号验证后，可在非飞书环境使用同一套私人模板。</small>
+        <div class="account-phone-line">
+          <input id="accountPhone" inputmode="tel" autocomplete="tel" placeholder="手机号，例如 13800138000">
+          <button id="sendPhoneCode" type="button">获取验证码</button>
+        </div>
+        <div class="account-phone-line">
+          <input id="accountCode" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="6 位验证码">
+          <button id="verifyPhoneCode" type="button" class="primary">验证并绑定</button>
+        </div>
+        <small id="phoneLoginHint"></small>
+      </div>
+      <div class="account-actions">
+        <button id="accountSyncNow" type="button">立即同步我的模板</button>
+        <button id="accountLogout" type="button">退出本机账号</button>
+      </div>
     </section>
   </div>
 
