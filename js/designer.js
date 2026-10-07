@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261007-29";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261007-29";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261007-29";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261007-29";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261007-29";import {printTemplateRecords} from "./print.js?v=20261007-29";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261007-29";import {hasAccountSession} from "./account.js?v=20261007-29";import {
+import {mountBuildVersion} from "./version.js?v=20261007-30";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261007-30";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261007-30";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261007-30";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261007-30";import {printTemplateRecords} from "./print.js?v=20261007-30";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261007-30";import {hasAccountSession} from "./account.js?v=20261007-30";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261007-29";
+} from "./table-model.js?v=20261007-30";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -1023,23 +1023,47 @@ function renderTableColumnEditor(e){
   list.innerHTML="";
   const cols=normalizeColumns(e.columns);
   cols.forEach((col,index)=>{
-    const row=document.createElement("div");row.className="table-column-row";row.dataset.colId=col.id;
+    const card=document.createElement("div");card.className="table-column-row";card.dataset.colId=col.id;
+
+    const head=document.createElement("div");head.className="table-column-head";
     const move=document.createElement("span");move.className="col-drag";move.textContent="⋮⋮";move.title="拖动调整列顺序";move.draggable=true;
-    const title=document.createElement("input");title.className="col-title";title.value=col.title||"";title.placeholder="表头";
+    const titleWrap=document.createElement("label");titleWrap.className="col-control col-title-control";
+    const titleLabel=document.createElement("span");titleLabel.textContent="表头";
+    const title=document.createElement("input");title.className="col-title";title.value=col.title||"";title.placeholder="默认显示字段标题";
+    titleWrap.append(titleLabel,title);
+    const remove=document.createElement("button");remove.type="button";remove.className="col-remove";remove.textContent="×";remove.title="删除列";
+    head.append(move,titleWrap,remove);
+
+    const fieldWrap=document.createElement("label");fieldWrap.className="col-control";
+    const fieldLabel=document.createElement("span");fieldLabel.textContent="字段";
     const field=document.createElement("select");field.className="col-field";field.innerHTML='<option value="">未绑定</option>';
     for(const f of state.fields){const o=document.createElement("option");o.value=f.name;o.textContent=f.name;field.appendChild(o)}
     field.value=col.field||"";
-    const template=document.createElement("input");template.className="col-template";template.value=col.template!==undefined?col.template:(col.field?"{{"+col.field+"}}":"");template.placeholder="内容，如 {{电话}}";
-    const remove=document.createElement("button");remove.type="button";remove.className="col-remove";remove.textContent="×";remove.title="删除列";
+    fieldWrap.append(fieldLabel,field);
+
+    const templateWrap=document.createElement("label");templateWrap.className="col-control col-template-control";
+    const templateLabel=document.createElement("span");templateLabel.textContent="内容";
+    const template=document.createElement("textarea");template.className="col-template";template.rows=2;
+    template.value=col.template!==undefined?col.template:(col.field?"{{"+col.field+"}}":"");
+    template.placeholder="例如：{{商品名称}} 或 商品：{{商品名称}}";
+    template.spellcheck=false;
+    templateWrap.append(templateLabel,template);
+
+    const body=document.createElement("div");body.className="table-column-body";body.append(fieldWrap,templateWrap);
+    card.append(head,body);
+
     const commit=()=>{
       col.title=title.value.trim()||field.value||("列"+(index+1));
       col.field=field.value||"";
       col.template=template.value;
-      e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave()
+      e.columns=cols;
+      refreshElementNode(e);updateTableFitState(e);autoSave()
     };
     const checkpoint=()=>{commit();pushHistory()};
+
     title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
     template.addEventListener("input",commit);template.addEventListener("change",checkpoint);
+    template.addEventListener("keydown",ev=>{if(ev.key==="Enter"&&(ev.ctrlKey||ev.metaKey)){ev.preventDefault();template.blur()}});
     field.addEventListener("change",()=>{
       const oldField=col.field||"";
       const oldDefaultTitle=!col.title||col.title===oldField;
@@ -1049,20 +1073,24 @@ function renderTableColumnEditor(e){
       if(oldDefaultTemplate){template.value=col.field?"{{"+col.field+"}}":"";col.template=template.value}
       e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave();pushHistory()
     });
-    move.ondragstart=ev=>{row.classList.add("dragging");ev.dataTransfer.effectAllowed="move";ev.dataTransfer.setData("text/table-col-id",col.id)};
-    move.ondragend=()=>{row.classList.remove("dragging");list.querySelectorAll(".drag-over").forEach(x=>x.classList.remove("drag-over"))};
-    row.ondragover=ev=>{ev.preventDefault();row.classList.add("drag-over");ev.dataTransfer.dropEffect="move"};
-    row.ondragleave=()=>row.classList.remove("drag-over");
-    row.ondrop=ev=>{
-      ev.preventDefault();row.classList.remove("drag-over");
+
+    move.ondragstart=ev=>{card.classList.add("dragging");ev.dataTransfer.effectAllowed="move";ev.dataTransfer.setData("text/table-col-id",col.id)};
+    move.ondragend=()=>{card.classList.remove("dragging");list.querySelectorAll(".drag-over").forEach(x=>x.classList.remove("drag-over"))};
+    card.ondragover=ev=>{ev.preventDefault();card.classList.add("drag-over");ev.dataTransfer.dropEffect="move"};
+    card.ondragleave=()=>card.classList.remove("drag-over");
+    card.ondrop=ev=>{
+      ev.preventDefault();card.classList.remove("drag-over");
       const movingId=ev.dataTransfer.getData("text/table-col-id");if(!movingId||movingId===col.id)return;
       const from=cols.findIndex(c=>c.id===movingId),to=cols.findIndex(c=>c.id===col.id);if(from<0||to<0)return;
       const [movingCol]=cols.splice(from,1);cols.splice(to,0,movingCol);
       e.columns=cols;e.smartColumns=false;normalizeMergeContiguity(e);clearTableSelection();
       renderTableColumnEditor(e);refreshElementNode(e);commitEdit()
     };
-    remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);refreshElementNode(e);commitEdit()};
-    row.append(move,title,field,template,remove);list.appendChild(row);
+    remove.onclick=()=>{
+      if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}
+      selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);refreshElementNode(e);commitEdit()
+    };
+    list.appendChild(card);
   });
 }
 function addTableColumn(){
