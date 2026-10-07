@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261007-26";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261007-26";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261007-26";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261007-26";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261007-26";import {printTemplateRecords} from "./print.js?v=20261007-26";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261007-26";import {hasAccountSession} from "./account.js?v=20261007-26";import {
+import {mountBuildVersion} from "./version.js?v=20261007-27";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261007-27";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261007-27";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261007-27";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261007-27";import {printTemplateRecords} from "./print.js?v=20261007-27";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261007-27";import {hasAccountSession} from "./account.js?v=20261007-27";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261007-26";
+} from "./table-model.js?v=20261007-27";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -1021,14 +1021,30 @@ function renderTableColumnEditor(e){
   cols.forEach((col,index)=>{
     const row=document.createElement("div");row.className="table-column-row";row.dataset.colId=col.id;
     const move=document.createElement("span");move.className="col-drag";move.textContent="⋮⋮";move.title="拖动调整列顺序";move.draggable=true;
-    const title=document.createElement("input");title.value=col.title||"";title.placeholder="表头";
-    const field=document.createElement("select");field.innerHTML='<option value="">未绑定</option>';
+    const title=document.createElement("input");title.className="col-title";title.value=col.title||"";title.placeholder="表头";
+    const field=document.createElement("select");field.className="col-field";field.innerHTML='<option value="">未绑定</option>';
     for(const f of state.fields){const o=document.createElement("option");o.value=f.name;o.textContent=f.name;field.appendChild(o)}
     field.value=col.field||"";
+    const template=document.createElement("input");template.className="col-template";template.value=col.template!==undefined?col.template:(col.field?"{{"+col.field+"}}":"");template.placeholder="内容，如 {{电话}}";
     const remove=document.createElement("button");remove.type="button";remove.className="col-remove";remove.textContent="×";remove.title="删除列";
-    const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave()};
+    const commit=()=>{
+      col.title=title.value.trim()||field.value||("列"+(index+1));
+      col.field=field.value||"";
+      col.template=template.value;
+      e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave()
+    };
     const checkpoint=()=>{commit();pushHistory()};
-    title.addEventListener("input",commit);title.addEventListener("change",checkpoint);field.addEventListener("change",checkpoint);
+    title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
+    template.addEventListener("input",commit);template.addEventListener("change",checkpoint);
+    field.addEventListener("change",()=>{
+      const oldField=col.field||"";
+      const oldDefaultTitle=!col.title||col.title===oldField;
+      const oldDefaultTemplate=col.template===undefined||col.template===""||col.template==="{{"+oldField+"}}";
+      col.field=field.value||"";
+      if(oldDefaultTitle){title.value=col.field||("列"+(index+1));col.title=title.value}
+      if(oldDefaultTemplate){template.value=col.field?"{{"+col.field+"}}":"";col.template=template.value}
+      e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave();pushHistory()
+    });
     move.ondragstart=ev=>{row.classList.add("dragging");ev.dataTransfer.effectAllowed="move";ev.dataTransfer.setData("text/table-col-id",col.id)};
     move.ondragend=()=>{row.classList.remove("dragging");list.querySelectorAll(".drag-over").forEach(x=>x.classList.remove("drag-over"))};
     row.ondragover=ev=>{ev.preventDefault();row.classList.add("drag-over");ev.dataTransfer.dropEffect="move"};
@@ -1042,7 +1058,7 @@ function renderTableColumnEditor(e){
       renderTableColumnEditor(e);refreshElementNode(e);commitEdit()
     };
     remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);refreshElementNode(e);commitEdit()};
-    row.append(move,title,field,remove);list.appendChild(row);
+    row.append(move,title,field,template,remove);list.appendChild(row);
   });
 }
 function addTableColumn(){

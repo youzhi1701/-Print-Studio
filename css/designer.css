@@ -594,3 +594,11 @@
   background:#2563eb!important;box-shadow:0 0 0 1px rgba(255,255,255,.9)
 }
 .table-header-resizer::after{background:rgba(37,99,235,.42)!important}
+
+/* v20261007-27 · table column: header + binding + free content template */
+.table-column-row{
+  grid-template-columns:20px minmax(0,.72fr) minmax(0,.88fr) minmax(0,1.25fr) 28px!important;
+  align-items:center!important
+}
+.table-column-row .col-template{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:8px!important}
+.table-column-row .col-title,.table-column-row .col-field,.table-column-row .col-template{min-width:0!important}

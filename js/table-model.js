@@ -37,8 +37,10 @@ export function normalizeTableColumns(el){
     {title:"价格",field:"价格",width:15,align:"right"}
   ];
   cols=cols.map((c,i)=>{
-    if(typeof c==="string")return{id:id("col"),title:c,field:c,width:null,align:i===0?"left":"center"};
-    return{id:c.id||id("col"),title:c.title||c.field||("列"+(i+1)),field:c.field||c.title||"",width:c.width??null,align:c.align||"center"};
+    if(typeof c==="string")return{id:id("col"),title:c,field:c,template:"{{"+c+"}}",width:null,align:i===0?"left":"center"};
+    const field=c.field||c.title||"";
+    const template=c.template!==undefined?String(c.template):(field?"{{"+field+"}}":"");
+    return{id:c.id||id("col"),title:c.title||field||("列"+(i+1)),field,template,width:c.width??null,align:c.align||"center"};
   });
   const valid=cols.every(c=>Number.isFinite(Number(c.width))&&Number(c.width)>0);
   if(!valid){const w=100/cols.length;cols.forEach(c=>c.width=w)}
@@ -165,13 +167,32 @@ export function cellConfig(el,rowId,colId,column){
   };
 }
 
+function templateValue(source,key){
+  if(!source||!key)return undefined;
+  if(Object.prototype.hasOwnProperty.call(source,key))return source[key];
+  return undefined
+}
+function renderColumnTemplate(template,rowData,rootData){
+  return String(template??"").replace(/\{\{\s*([^{}]+?)\s*\}\}/g,(_,rawKey)=>{
+    const key=String(rawKey||"").trim();
+    const value=templateValue(rowData,key)??templateValue(rootData,key)??"";
+    if(value===null||value===undefined)return"";
+    if(Array.isArray(value))return value.map(v=>typeof v==="object"?(v?.text??v?.name??v?.url??""):v).filter(Boolean).join("、");
+    if(typeof value==="object")return value.text??value.name??value.url??value.value??"";
+    return String(value)
+  })
+}
 export function cellValue(el,row,column,rootData={}){
   const cfg=cellConfig(el,row.id,column.id,column);
   if(cfg.type==="text")return{cfg,value:cfg.text||""};
   const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
   if(row.type==="manual"&&cfg.type==="inherit")return{cfg,value:""};
   const rowData=row.data||{};
-  const value=rowData?.[field]??((cfg.type==="field"||cfg.type==="image")?rootData?.[field]:"")??"";
+  if(cfg.type==="inherit"){
+    const template=column?.template!==undefined?column.template:(field?"{{"+field+"}}":"");
+    return{cfg,value:renderColumnTemplate(template,rowData,rootData)}
+  }
+  const value=rowData?.[field]??rootData?.[field]??"";
   return{cfg,value};
 }
 
@@ -287,7 +308,7 @@ export function insertColumn(el,index){
   const neighbor=cols[Math.min(index,cols.length-1)]||cols[cols.length-1];
   let width=20;
   if(neighbor){width=Math.max(8,Number(neighbor.width)/2);neighbor.width=Math.max(8,Number(neighbor.width)-width)}
-  const col={id:id("col"),title:"新列",field:"",width,align:"center"};
+  const col={id:id("col"),title:"新列",field:"",template:"",width,align:"center"};
   const before=cols.map(c=>c.id);
   cols.splice(Math.max(0,Math.min(index,cols.length)),0,col);
   // Expand merges only when insertion occurs inside them.

@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印 · 模板设计器</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261007-26">
-  <link rel="stylesheet" href="./css/designer.css?v=20261007-26">
-  <link rel="stylesheet" href="./css/print.css?v=20261007-26" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261007-27">
+  <link rel="stylesheet" href="./css/designer.css?v=20261007-27">
+  <link rel="stylesheet" href="./css/print.css?v=20261007-27" media="print">
 </head>
 <body class="aurora-app designer-body">
   <div class="aurora-layer" aria-hidden="true"></div>
   <header class="designer-top glass">
-    <div class="designer-brand" title="build 20261007-26"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261007-26</span></small></div></div>
+    <div class="designer-brand" title="build 20261007-27"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261007-27</span></small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
       <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
@@ -136,7 +136,7 @@
             </div>
             <div class="table-editor-hint">
               <b>表格编辑</b>
-              <span id="tableSelectionHint">列顺序直接拖动 · 列宽直接拖画布分隔线 · 单元格为高级编辑</span>
+              <span id="tableSelectionHint">表头可直接改 · 内容支持 {{字段名}} 与固定文字混排 · 列宽直接拖分隔线</span>
             </div>
             <div id="tableCellInspector" class="table-cell-inspector hidden">
               <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>选中单元格</div>
@@ -175,7 +175,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261007-26"></script>
+  <script type="module" src="./js/designer.js?v=20261007-27"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>
