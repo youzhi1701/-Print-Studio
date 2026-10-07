@@ -13,8 +13,8 @@ function resolveTemplate(template,data={}){
   })
 }
 function fieldValue(el,data){
-  const template=el.text||((el.field&&"{{"+el.field+"}}")||"");
-  return String(el.label||"")+resolveTemplate(template,data)
+  const template=String(el.label||"")+String(el.text||((el.field&&"{{"+el.field+"}}")||""));
+  return resolveTemplate(template,data)
 }
 function commonStyle(el,positioned=true){
   const base='box-sizing:border-box;width:'+(positioned?el.w+'mm':'100%')+';height:'+(positioned?el.h+'mm':'100%')+';font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;color:#111827;';
@@ -86,10 +86,12 @@ export function renderElementToHtml(el,data={},positioned=true){
   const common=commonStyle(el,positioned);
   if(el.type==="text")return '<div class="render-element render-text" style="'+common+textCss(el)+'">'+esc(el.text)+'</div>';
   if(el.type==="field"){
+    const template=String(el.label||"")+String(el.text||((el.field&&"{{"+el.field+"}}")||""));
+    const tokenKeys=[...template.matchAll(/\{\{\s*([^{}]+?)\s*\}\}/g)].map(m=>String(m[1]).trim());
+    const hasData=tokenKeys.length?tokenKeys.some(k=>hasValue(data?.[k])):hasValue(template);
+    if(!hasData&&el.emptyBehavior==="hide")return"";
     const value=fieldValue(el,data);
-    const hasResolved=hasValue(value);
-    if(!hasResolved&&el.emptyBehavior==="hide")return"";
-    const output=hasResolved?value:(el.emptyBehavior==="placeholder"?(el.text||""):"");
+    const output=hasValue(value)?value:(el.emptyBehavior==="placeholder"?template:"");
     return '<div class="render-element render-field" style="'+common+textCss(el)+'">'+esc(output)+'</div>'
   }
   if(el.type==="barcode"){
