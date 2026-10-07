@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261006-21";
+} from "./table-model.js?v=20261007-24";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
@@ -58,7 +58,7 @@ export function renderTableMarkup(el,rootData={},options={}){
     return '<tr style="height:'+height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const html='<table style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
+  const html='<table style="width:100%;height:'+renderedHeight+'mm;border:'+bw+'px solid #333;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
   return{html,layout,renderedHeight,allCols}
 }
 

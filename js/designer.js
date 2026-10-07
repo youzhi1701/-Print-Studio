@@ -623,7 +623,7 @@ function addTableRowResizers(n,e,rows){
   const headerH=e.showHeader===false?0:(e.headerHeight||e.rowHeight||8);
   let y=headerH;
   rows.forEach((row,ri)=>{
-    y+=tmRowHeight(row,e);
+    y+=Number(row?.height)||Number(e.rowHeight)||8;
     const h=document.createElement("span");
     h.className="table-row-resizer";h.style.top=y*MM+"px";h.dataset.row=ri;h.title="拖动调整此行高度";
     h.addEventListener("pointerdown",ev=>startTableRowResize(ev,e,ri,rows,n));n.appendChild(h)
