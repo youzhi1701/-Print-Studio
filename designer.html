@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印 · 模板设计器</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261007-28">
-  <link rel="stylesheet" href="./css/designer.css?v=20261007-28">
-  <link rel="stylesheet" href="./css/print.css?v=20261007-28" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261007-29">
+  <link rel="stylesheet" href="./css/designer.css?v=20261007-29">
+  <link rel="stylesheet" href="./css/print.css?v=20261007-29" media="print">
 </head>
 <body class="aurora-app designer-body">
   <div class="aurora-layer" aria-hidden="true"></div>
   <header class="designer-top glass">
-    <div class="designer-brand" title="build 20261007-28"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261007-28</span></small></div></div>
+    <div class="designer-brand" title="build 20261007-29"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261007-29</span></small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
       <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
@@ -95,8 +95,12 @@
           <div class="section-sep"></div>
           <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>内容 <span id="elementTypeBadge" class="type-badge"></span></div>
           <div id="textProps" class="prop-group compact-props">
-            <label class="stack">文本<textarea id="propText" rows="2"></textarea></label>
-            <label class="stack">绑定字段<select id="propField"><option value="">未绑定</option></select></label>
+            <label id="plainTextGroup" class="stack">文本<textarea id="propText" rows="2"></textarea></label>
+            <div id="dataFieldGroups" class="field-prop-groups hidden">
+              <label class="stack">表头<input id="fieldLabel" type="text" placeholder="默认显示绑定字段标题"></label>
+              <label class="stack">内容<textarea id="fieldTemplate" rows="2" placeholder="{{字段名}}"></textarea></label>
+            </div>
+            <label id="propFieldGroup" class="stack">绑定字段<select id="propField"><option value="">未绑定</option></select></label>
 
             <div class="prop-mini-title">文字</div>
             <div class="two"><label>字号<input id="propFontSize" type="number" min="6"></label><label>字重<select id="propWeight"><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option><option value="800">特粗</option></select></label></div>
@@ -175,7 +179,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261007-28"></script>
+  <script type="module" src="./js/designer.js?v=20261007-29"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>

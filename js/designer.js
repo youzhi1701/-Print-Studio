@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261007-28";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261007-28";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261007-28";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261007-28";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261007-28";import {printTemplateRecords} from "./print.js?v=20261007-28";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261007-28";import {hasAccountSession} from "./account.js?v=20261007-28";import {
+import {mountBuildVersion} from "./version.js?v=20261007-29";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261007-29";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261007-29";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261007-29";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261007-29";import {printTemplateRecords} from "./print.js?v=20261007-29";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261007-29";import {hasAccountSession} from "./account.js?v=20261007-29";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261007-28";
+} from "./table-model.js?v=20261007-29";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -341,7 +341,7 @@ function smartFitSelectedTable(){
 function defaults(type,field=""){
   const b={id:uid("el"),type,x:20,y:20,w:45,h:10,text:"",field,fontSize:11,fontWeight:"400",align:"left",locked:false,hidden:false};
   if(type==="text"){b.text="双击或在右侧修改文字";b.w=58;b.h=4.8;b.wrap=true;b.maxLines=0;b.overflowMode="grow";b.autoHeight=true;b.emptyBehavior="blank"}
-  if(type==="field"){b.text="{{"+(field||"字段")+"}}";b.field=field;b.w=50;b.h=4.8;b.wrap=true;b.maxLines=0;b.overflowMode="grow";b.autoHeight=true;b.emptyBehavior="hide"}
+  if(type==="field"){b.field=field;b.label=field||"";b.text=field?"{{"+field+"}}":"{{字段}}";b.w=50;b.h=4.8;b.wrap=true;b.maxLines=0;b.overflowMode="grow";b.autoHeight=true;b.emptyBehavior="hide"}
   if(type==="image"){b.w=30;b.h=25;b.field=field;b.imageFit="contain";b.radius=0;b.aspectLock=true;b.alignX="center";b.alignY="center";b.padding=0;b.emptyBehavior="hide"}
   if(type==="table"){const p=current()?.page||{width:215,safeArea:4};const safe=Math.max(0,Number(p.safeArea)||0);b.w=Math.max(20,p.width-safe*2);b.h=14;b.columns=normalizeColumns(smartTableColumnsForPage(p.width));b.showHeader=true;b.zebra=false;b.rowHeight=p.width<=85?6:7.5;b.headerHeight=b.rowHeight;b.autoRowHeight=true;b.maxRows=5;b.borderWidth=.5;b.fontSize=p.width<=85?8:9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=true;b.emptyBehavior="hide";b.smartLayout=true;b.smartColumns=true;b.merges=[];b.rowDefs=[{id:uid("row"),type:"data",height:b.rowHeight}];b.cellMap={};b.tableModelVersion=3}
   if(type==="barcode"){b.w=62;b.h=20;b.field=field||"订单编号";b.showText=true;b.barcodeFormat="CODE128";b.barcodeFontSize=8}
@@ -355,9 +355,13 @@ function visibleTextValue(e){
   if(e.type==="text")return String(e.text||"");
   if(e.type==="field"){
     const data=state.record?.data||{};
-    const raw=data?.[e.field];
-    if(raw===undefined||raw===null||raw==="")return e.emptyBehavior==="placeholder"?String(e.text||""):"";
-    return String((e.label||"")+raw)
+    const template=e.text||((e.field&&"{{"+e.field+"}}")||"");
+    const body=String(template).replace(/\{\{\s*([^{}]+?)\s*\}\}/g,(_,k)=>{
+      const v=data?.[String(k).trim()];return v===undefined||v===null?"":String(v)
+    });
+    const empty=!body.replace(/\s/g,"");
+    if(empty&&e.emptyBehavior==="hide")return"";
+    return String(e.label||"")+(body||(e.emptyBehavior==="placeholder"?template:""))
   }
   return""
 }
@@ -1139,7 +1143,18 @@ function syncProps(){
   $("elementTypeBadge").textContent=elementTypeName(e.type);
   ["textProps","imageProps","tableProps","codeProps","shapeProps"].forEach(id=>$(id).classList.add("hidden"));
   if(["text","field"].includes(e.type)){
-    $("textProps").classList.remove("hidden");$("propText").value=e.text||"";$("propField").value=e.field||"";$("propFontSize").value=e.fontSize||11;$("propWeight").value=e.fontWeight||"400";$("textWrap").value=String(e.wrap!==false);$("textMaxLines").value=e.maxLines||0;$("textOverflow").value=e.overflowMode||"clip";$("textEmptyBehavior").value=e.emptyBehavior||"blank";
+    $("textProps").classList.remove("hidden");
+    const isField=e.type==="field";
+    $("plainTextGroup")?.classList.toggle("hidden",isField);
+    $("dataFieldGroups")?.classList.toggle("hidden",!isField);
+    $("propFieldGroup")?.classList.toggle("hidden",!isField);
+    $("propText").value=e.text||"";
+    $("propField").value=e.field||"";
+    if(isField){
+      $("fieldLabel").value=e.label!==undefined?e.label:(e.field||"");
+      $("fieldTemplate").value=e.text||((e.field&&"{{"+e.field+"}}")||"");
+    }
+    $("propFontSize").value=e.fontSize||11;$("propWeight").value=e.fontWeight||"400";$("textWrap").value=String(e.wrap!==false);$("textMaxLines").value=e.maxLines||0;$("textOverflow").value=e.overflowMode||"clip";$("textEmptyBehavior").value=e.emptyBehavior||"blank";
     document.querySelectorAll("[data-align]").forEach(b=>b.classList.toggle("active",b.dataset.align===(e.align||"left")));
   }
   if(e.type==="image"){
@@ -1164,7 +1179,26 @@ function updateProps(ev){
   const targetId=ev?.target?.id||"";
   e.x=Number($("propX").value)||0;e.y=Number($("propY").value)||0;e.w=Math.max(.5,Number($("propW").value)||1);if(e.type!=="table"){if(targetId==="propH")e.autoHeight=false;e.h=Math.max(.5,Number($("propH").value)||1);}
 
-  if(["text","field"].includes(e.type)){e.text=$("propText").value;e.field=$("propField").value;e.fontSize=Math.max(6,Number($("propFontSize").value)||11);e.fontWeight=$("propWeight").value;e.wrap=$("textWrap").value==="true";e.maxLines=Math.max(0,Number($("textMaxLines").value)||0);e.overflowMode=$("textOverflow").value;e.emptyBehavior=$("textEmptyBehavior").value;if(e.type==="field"&&e.field)e.text="{{"+e.field+"}}";if(["propText","propField","propFontSize","propWeight","textWrap","propW"].includes(targetId)&&e.autoHeight!==false){e.autoHeight=true;syncAutoTextHeight(e)}}
+  if(["text","field"].includes(e.type)){
+    if(e.type==="text")e.text=$("propText").value;
+    if(e.type==="field"){
+      const oldField=e.field||"",nextField=$("propField").value||"";
+      const oldDefaultLabel=e.label===undefined||e.label===""||e.label===oldField;
+      const oldDefaultTemplate=!e.text||e.text==="{{"+oldField+"}}"||e.text==="{{字段}}";
+      e.field=nextField;
+      if(targetId==="propField"){
+        if(oldDefaultLabel)e.label=nextField;
+        if(oldDefaultTemplate)e.text=nextField?"{{"+nextField+"}}":"";
+        $("fieldLabel").value=e.label||"";
+        $("fieldTemplate").value=e.text||""
+      }else{
+        e.label=$("fieldLabel").value;
+        e.text=$("fieldTemplate").value
+      }
+    }
+    e.fontSize=Math.max(6,Number($("propFontSize").value)||11);e.fontWeight=$("propWeight").value;e.wrap=$("textWrap").value==="true";e.maxLines=Math.max(0,Number($("textMaxLines").value)||0);e.overflowMode=$("textOverflow").value;e.emptyBehavior=$("textEmptyBehavior").value;
+    if(["propText","propField","fieldLabel","fieldTemplate","propFontSize","propWeight","textWrap","propW"].includes(targetId)&&e.autoHeight!==false){e.autoHeight=true;syncAutoTextHeight(e)}
+  }
   if(e.type==="image"){e.field=$("imageField").value;e.imageFit=$("imageFit").value;e.radius=Math.max(0,Number($("imageRadius").value)||0);e.aspectLock=$("imageAspectLock").value==="true";e.alignX=$("imageAlignX").value;e.alignY=$("imageAlignY").value;e.padding=Math.max(0,Number($("imagePadding").value)||0);e.emptyBehavior=$("imageEmptyBehavior").value}
 
   if(e.type==="table"){

@@ -1,9 +1,21 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261007-28";
+} from "./table-model.js?v=20261007-29";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
-function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
+function resolveTemplate(template,data={}){
+  return String(template??"").replace(/\{\{\s*([^{}]+?)\s*\}\}/g,(_,raw)=>{
+    const key=String(raw||"").trim(),v=data?.[key];
+    if(v===undefined||v===null)return"";
+    if(Array.isArray(v))return v.map(x=>typeof x==="object"?(x?.text??x?.name??x?.url??""):x).filter(Boolean).join("、");
+    if(typeof v==="object")return v.text??v.name??v.url??v.value??"";
+    return String(v)
+  })
+}
+function fieldValue(el,data){
+  const template=el.text||((el.field&&"{{"+el.field+"}}")||"");
+  return String(el.label||"")+resolveTemplate(template,data)
+}
 function commonStyle(el,positioned=true){
   const base='box-sizing:border-box;width:'+(positioned?el.w+'mm':'100%')+';height:'+(positioned?el.h+'mm':'100%')+';font-size:'+(el.fontSize||10)+'px;font-weight:'+(el.fontWeight||400)+';text-align:'+(el.align||"left")+';overflow:hidden;color:#111827;';
   return positioned?('position:absolute;left:'+el.x+'mm;top:'+el.y+'mm;'+base):('position:relative;left:auto;top:auto;'+base)
@@ -74,10 +86,11 @@ export function renderElementToHtml(el,data={},positioned=true){
   const common=commonStyle(el,positioned);
   if(el.type==="text")return '<div class="render-element render-text" style="'+common+textCss(el)+'">'+esc(el.text)+'</div>';
   if(el.type==="field"){
-    const raw=data?.[el.field];
-    if(!hasValue(raw)&&el.emptyBehavior==="hide")return"";
-    const value=hasValue(raw)?fieldValue(el,data):(el.emptyBehavior==="placeholder"?(el.text||""):"");
-    return '<div class="render-element render-field" style="'+common+textCss(el)+'">'+esc(value)+'</div>'
+    const value=fieldValue(el,data);
+    const hasResolved=hasValue(value);
+    if(!hasResolved&&el.emptyBehavior==="hide")return"";
+    const output=hasResolved?value:(el.emptyBehavior==="placeholder"?(el.text||""):"");
+    return '<div class="render-element render-field" style="'+common+textCss(el)+'">'+esc(output)+'</div>'
   }
   if(el.type==="barcode"){
     const v=data?.[el.field]||el.text||"";if(!hasValue(v))return"";

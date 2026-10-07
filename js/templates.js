@@ -4,7 +4,7 @@ import {ensureTableModel} from "./table-model.js?v=20261006-21";
 const BUILTIN_CREATED_AT=1760000000000;
 const page=(width,height,margin=4)=>({width,height,orientation:width>=height?"landscape":"portrait",margin,safeArea:Math.min(4,margin)});
 const text=(id,x,y,w,h,value,fontSize=10,fontWeight=400,align="left")=>({id,type:"text",x,y,w,h,text:value,fontSize,fontWeight,align});
-const field=(id,x,y,w,h,label,name,fontSize=10,fontWeight=400,align="left")=>({id,type:"field",x,y,w,h,label,field:name,fontSize,fontWeight,align,wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"hide"});
+const field=(id,x,y,w,h,label,name,fontSize=10,fontWeight=400,align="left")=>({id,type:"field",x,y,w,h,label,field:name,text:"{{"+name+"}}",fontSize,fontWeight,align,wrap:true,maxLines:0,overflowMode:"clip",emptyBehavior:"hide"});
 const line=(id,x,y,w,borderWidth=.35)=>({id,type:"line",x,y,w,h:.5,borderWidth,borderStyle:"solid"});
 const barcode=(id,x,y,w,h,name,fontSize=7)=>({id,type:"barcode",x,y,w,h,field:name,showText:true,barcodeFormat:"CODE128",barcodeFontSize:fontSize});
 const qrcode=(id,x,y,w,h,name)=>({id,type:"qrcode",x,y,w,h,field:name,qrLevel:"M",qrMargin:0});
