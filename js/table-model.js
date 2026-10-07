@@ -186,8 +186,8 @@ export function cellValue(el,row,column,rootData={}){
   const cfg=cellConfig(el,row.id,column.id,column);
   if(cfg.type==="text")return{cfg,value:cfg.text||""};
   const field=(cfg.type==="field"||cfg.type==="image")?(cfg.field||column?.field):(column?.field||cfg.field);
-  if(row.type==="manual"&&cfg.type==="inherit")return{cfg,value:""};
   const rowData=row.data||{};
+  if(row.type==="manual"&&cfg.type==="inherit"&&!Object.keys(rowData).length)return{cfg,value:""};
   if(cfg.type==="inherit"){
     const template=column?.template!==undefined?column.template:(field?"{{"+field+"}}":"");
     return{cfg,value:renderColumnTemplate(template,rowData,rootData)}

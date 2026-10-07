@@ -310,10 +310,28 @@ export function autoBindTemplateFields(template,fields=[]){
     }
     if(el.type==="table"&&Array.isArray(el.columns)){
       el.columns=el.columns.map(col=>{
-        if(typeof col==="string"){const m=matchFieldName(col,fields)||col;return{title:col,field:m,width:null,align:"center"}}
-        if(col.field&&fields.some(f=>f.name===col.field))return col;
-        const matched=matchFieldName(col.field||col.title,fields);
-        if(matched&&matched!==col.field){changed=true;return{...col,field:matched}}
+        if(typeof col==="string"){
+          const m=matchFieldName(col,fields)||col;
+          return{title:col,field:m,template:"{{"+m+"}}",width:null,align:"center"}
+        }
+        const currentField=col.field||"";
+        if(currentField&&fields.some(f=>f.name===currentField)){
+          if(col.template===undefined)return{...col,template:"{{"+currentField+"}}"};
+          return col
+        }
+        const matched=matchFieldName(currentField||col.title,fields);
+        if(matched&&matched!==currentField){
+          const titleWasDefault=!col.title||col.title===currentField;
+          const templateWasDefault=col.template===undefined||col.template===""||col.template==="{{"+currentField+"}}";
+          changed=true;
+          return{
+            ...col,
+            field:matched,
+            title:titleWasDefault?matched:col.title,
+            template:templateWasDefault?"{{"+matched+"}}":col.template
+          }
+        }
+        if(col.template===undefined&&currentField)return{...col,template:"{{"+currentField+"}}"};
         return col
       });
       if(el.cellMap&&typeof el.cellMap==="object"){
