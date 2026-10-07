@@ -760,34 +760,20 @@ function deleteSelectedColumns(){
 function addTableCellToolbar(n,e){
   const b=tableSelectionBounds();if(!b)return;
   const bar=document.createElement("div");bar.className="table-context-tools";bar.dataset.role="table-tools";
-  const pageH=current()?.page?.height||140;
-  const visualH=elementVisualHeight(e);
-  if(e.y<10)bar.style.top=(visualH+1.5)*MM+"px";
-  else if(e.y+visualH+10>pageH)bar.style.top="4px";
-  const defs=[
-    ["merge","合并"],["unmerge","拆分"],["rowAbove","上插行"],["rowBelow","下插行"],
-    ["colLeft","左插列"],["colRight","右插列"],["delRow","删行"],["delCol","删列"]
-  ];
+  const pageH=current()?.page?.height||140,visualH=elementVisualHeight(e);
+  if(e.y<10)bar.style.top=(visualH+1.5)*MM+"px";else if(e.y+visualH+10>pageH)bar.style.top="4px";
+  const defs=[["merge","合并"],["unmerge","拆分"],["addRow","加行"],["addCol","加列"],["delRow","删行"],["delCol","删列"]];
   for(const [cmd,label] of defs){
     const btn=document.createElement("button");btn.type="button";btn.dataset.cmd=cmd;btn.textContent=label;
     if(cmd==="merge")btn.disabled=selectedCells.length<2||!selectionIsRectangle();
     btn.addEventListener("pointerdown",ev=>{ev.preventDefault();ev.stopPropagation()});
-    btn.onclick=ev=>{
-      ev.stopPropagation();
-      if(cmd==="merge")mergeSelectedCells();
-      if(cmd==="unmerge")unmergeSelectedCells();
-      if(cmd==="rowAbove")insertTableRowAt("above");
-      if(cmd==="rowBelow")insertTableRowAt("below");
-      if(cmd==="colLeft")insertTableColumnAt("left");
-      if(cmd==="colRight")insertTableColumnAt("right");
-      if(cmd==="delRow")deleteSelectedRows();
-      if(cmd==="delCol")deleteSelectedColumns();
-    };
-    bar.appendChild(btn)
+    btn.onclick=ev=>{ev.stopPropagation();
+      if(cmd==="merge")mergeSelectedCells();if(cmd==="unmerge")unmergeSelectedCells();
+      if(cmd==="addRow")insertTableRowAt("below");if(cmd==="addCol")insertTableColumnAt("right");
+      if(cmd==="delRow")deleteSelectedRows();if(cmd==="delCol")deleteSelectedColumns();
+    };bar.appendChild(btn)
   }
-  const meta=document.createElement("span");meta.className="table-context-meta";
-  meta.textContent=(b.r1-b.r0+1)+"行 × "+(b.c1-b.c0+1)+"列";bar.appendChild(meta);
-  n.appendChild(bar)
+  const meta=document.createElement("span");meta.className="table-context-meta";meta.textContent=(b.r1-b.r0+1)+"行 × "+(b.c1-b.c0+1)+"列";bar.appendChild(meta);n.appendChild(bar)
 }
 function insertTableRow(){insertTableRowAt("below")}
 function deleteTableRow(){deleteSelectedRows()}
@@ -977,29 +963,30 @@ function renderTableColumnEditor(e){
   list.innerHTML="";
   const cols=normalizeColumns(e.columns);
   cols.forEach((col,index)=>{
-    const row=document.createElement("div");row.className="table-column-row";
-    const move=document.createElement("div");move.className="col-move";
-    const up=document.createElement("button");up.type="button";up.textContent="▲";up.disabled=index===0;
-    const down=document.createElement("button");down.type="button";down.textContent="▼";down.disabled=index===cols.length-1;
-    move.append(up,down);
-
+    const row=document.createElement("div");row.className="table-column-row";row.dataset.colId=col.id;
+    const move=document.createElement("span");move.className="col-drag";move.textContent="⋮⋮";move.title="拖动调整列顺序";move.draggable=true;
     const title=document.createElement("input");title.value=col.title||"";title.placeholder="表头";
-    const field=document.createElement("select");
-    field.innerHTML='<option value="">未绑定</option>';
+    const field=document.createElement("select");field.innerHTML='<option value="">未绑定</option>';
     for(const f of state.fields){const o=document.createElement("option");o.value=f.name;o.textContent=f.name;field.appendChild(o)}
     field.value=col.field||"";
-    const width=document.createElement("input");width.type="number";width.min="1";width.max="100";width.step="1";width.value=col.width??Math.round(100/Math.max(1,cols.length));width.title="宽度%";
     const remove=document.createElement("button");remove.type="button";remove.className="col-remove";remove.textContent="×";remove.title="删除列";
-
-    const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();col.width=Math.max(1,Number(width.value)||1);e.columns=cols;e.smartColumns=false;refreshElementNode(e);updateTableFitState(e);autoSave()};
+    const commit=()=>{col.title=title.value.trim()||field.value||("列"+(index+1));col.field=field.value||title.value.trim();e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave()};
     const checkpoint=()=>{commit();pushHistory()};
-    title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
-    field.addEventListener("change",checkpoint);
-    width.addEventListener("input",commit);width.addEventListener("change",checkpoint);
-    up.onclick=()=>{if(index<1)return;[cols[index-1],cols[index]]=[cols[index],cols[index-1]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);refreshElementNode(e);commitEdit()};
-    down.onclick=()=>{if(index>=cols.length-1)return;[cols[index],cols[index+1]]=[cols[index+1],cols[index]];e.columns=cols;normalizeMergeContiguity(e);clearTableSelection();renderTableColumnEditor(e);refreshElementNode(e);commitEdit()};
+    title.addEventListener("input",commit);title.addEventListener("change",checkpoint);field.addEventListener("change",checkpoint);
+    move.ondragstart=ev=>{row.classList.add("dragging");ev.dataTransfer.effectAllowed="move";ev.dataTransfer.setData("text/table-col-id",col.id)};
+    move.ondragend=()=>{row.classList.remove("dragging");list.querySelectorAll(".drag-over").forEach(x=>x.classList.remove("drag-over"))};
+    row.ondragover=ev=>{ev.preventDefault();row.classList.add("drag-over");ev.dataTransfer.dropEffect="move"};
+    row.ondragleave=()=>row.classList.remove("drag-over");
+    row.ondrop=ev=>{
+      ev.preventDefault();row.classList.remove("drag-over");
+      const movingId=ev.dataTransfer.getData("text/table-col-id");if(!movingId||movingId===col.id)return;
+      const from=cols.findIndex(c=>c.id===movingId),to=cols.findIndex(c=>c.id===col.id);if(from<0||to<0)return;
+      const [movingCol]=cols.splice(from,1);cols.splice(to,0,movingCol);
+      e.columns=cols;e.smartColumns=false;normalizeMergeContiguity(e);clearTableSelection();
+      renderTableColumnEditor(e);refreshElementNode(e);commitEdit()
+    };
     remove.onclick=()=>{if(!tmDeleteColumns(e,[index])){toast("表格至少保留 1 列");return}selectedCells=[];tableSelectionAnchor=null;renderTableColumnEditor(e);refreshElementNode(e);commitEdit()};
-    row.append(move,title,field,width,remove);list.appendChild(row);
+    row.append(move,title,field,remove);list.appendChild(row);
   });
 }
 function addTableColumn(){
@@ -1129,14 +1116,12 @@ function updateProps(ev){
 function layerLabel(e){
   if(e.name)return e.name;
   if(e.type==="field")return e.label?.replace(/[：:]$/,"")||e.field||"数据字段";
-  if(e.type==="table")return"明细表格";
+  if(e.type==="table"){const fields=(e.columns||[]).map(c=>c.field||c.title).filter(Boolean).slice(0,2);return fields.length?("明细表格 · "+fields.join("/")):"明细表格"}
   if(e.type==="image")return e.field?("图片 · "+e.field):"图片";
-  if(e.type==="barcode")return"条码 · "+(e.field||"");
-  if(e.type==="qrcode")return"二维码 · "+(e.field||"");
-  if(e.type==="text")return(e.text||"文本").slice(0,18);
-  return elementTypeName(e.type)
+  if(e.type==="barcode")return"条码 · "+(e.field||"");if(e.type==="qrcode")return"二维码 · "+(e.field||"");
+  if(e.type==="text")return(e.text||"文本").slice(0,18);return elementTypeName(e.type)
 }
-function layerIcon(type){return({text:"T",field:"{}",image:"▧",table:"▦",barcode:"|||",qrcode:"▦",line:"—",container:"□"})[type]||"•"}
+function layerIcon(type){return({text:"T",field:"{}",image:"▧",table:"▦",barcode:"▥",qrcode:"▦",line:"—",container:"□"})[type]||"•"}
 function reorderLayersFromDom(){
   const visibleOrder=[...$("layerList").querySelectorAll(".layer-row")].map(n=>n.dataset.id);
   if(!visibleOrder.length)return;
@@ -1149,16 +1134,19 @@ function reorderLayersFromDom(){
 }
 function renderLayers(){
   const list=$("layerList"),query=($("layerSearch")?.value||"").trim().toLowerCase();list.innerHTML="";
-  [...current().elements].reverse().forEach(e=>{
-    const label=layerLabel(e);if(query&&!label.toLowerCase().includes(query)&&!e.type.includes(query))return;
+  const ordered=[...current().elements].reverse(),bases=ordered.map(layerLabel),totals=new Map(),seen=new Map();
+  bases.forEach(x=>totals.set(x,(totals.get(x)||0)+1));
+  ordered.forEach((e,idx)=>{
+    const base=bases[idx],n=(seen.get(base)||0)+1;seen.set(base,n);const label=totals.get(base)>1?(base+" · "+n):base;
+    if(query&&!label.toLowerCase().includes(query)&&!e.type.includes(query))return;
     const r=document.createElement("div");
     r.className="layer-row"+(selected.has(e.id)?" active":"")+(e.hidden?" hidden-layer":"")+(e.locked?" locked-layer":"");
     r.dataset.id=e.id;r.draggable=true;
     const drag=document.createElement("span");drag.className="layer-drag";drag.textContent="⋮⋮";drag.title="拖动调整层级";
     const type=document.createElement("span");type.className="layer-type";type.textContent=layerIcon(e.type);type.title=elementTypeName(e.type);
     const name=document.createElement("span");name.className="layer-name";name.textContent=label;name.title="双击重命名";
-    const eye=document.createElement("button");eye.className="layer-icon-btn";eye.type="button";eye.title=e.hidden?"显示":"隐藏";eye.textContent=e.hidden?"○":"●";
-    const lock=document.createElement("button");lock.className="layer-icon-btn";lock.type="button";lock.title=e.locked?"解锁":"锁定";lock.textContent=e.locked?"◆":"◇";
+    const eye=document.createElement("button");eye.className="layer-icon-btn";eye.type="button";eye.title=e.hidden?"显示图层":"隐藏图层";eye.textContent=e.hidden?"◌":"👁";
+    const lock=document.createElement("button");lock.className="layer-icon-btn";lock.type="button";lock.title=e.locked?"解锁图层":"锁定图层";lock.textContent=e.locked?"🔒":"🔓";
     r.append(drag,type,name,eye,lock);
 
     r.onclick=ev=>{if(ev.target.closest("button")||ev.target.classList.contains("layer-drag")||ev.target.tagName==="INPUT")return;const previous=new Set(selected);selectElements(e.id);refreshSelectionVisuals(previous)};
