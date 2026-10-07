@@ -484,7 +484,7 @@
 .design-element.inline-editing>.render-element *{pointer-events:auto!important;user-select:text!important}
 .design-element.inline-editing>.render-text{cursor:text!important;outline:0!important}
 
-/* v20261007-24 · template library actions */
+/* v20261007-26 · template library actions */
 .top-tools .template-action{white-space:nowrap}
 .top-tools .primary-soft{
   color:#1d4ed8;
@@ -504,25 +504,25 @@
   .top-tools::-webkit-scrollbar{display:none}
 }
 
-/* v20261007-24 · strict WYSIWYG editing */
+/* v20261007-26 · strict WYSIWYG editing */
 .design-element.output-empty{background:transparent!important}
 .design-element.output-empty:not(.selected){outline:0!important}
 .design-element.output-empty.selected{outline:1px dashed rgba(37,99,235,.38)!important;outline-offset:1px}
 .design-element>.render-element{box-sizing:border-box!important}
 .table-el>table{box-sizing:border-box!important}
 
-/* v20261007-24 · WYSIWYG contrast */
+/* v20261007-26 · WYSIWYG contrast */
 .design-element{color:#111827}
 .design-element>.render-element{color:#111827!important}
 .design-element>.render-field{background:transparent!important}
 .print-page .render-text,.print-page .render-field,.print-page table{color:#111827!important}
 
-/* v20261007-24 · prevent clipped collapsed table borders */
+/* v20261007-26 · prevent clipped collapsed table borders */
 .table-el{overflow:visible!important}
 .table-el table{border-collapse:collapse!important;border-spacing:0!important;color:#000!important}
 .table-el th,.table-el td{border-color:#444!important;color:#000!important}
 
-/* v20261007-24 · compact core property panel */
+/* v20261007-26 · compact core property panel */
 .compact-props{display:grid;gap:8px}
 .prop-mini-title{
   margin-top:2px;padding-top:8px;border-top:1px solid rgba(84,104,145,.10);
@@ -533,7 +533,7 @@
 #props>.section-title{justify-content:flex-start}
 #elementTypeBadge{margin-left:auto}
 
-/* v20261007-24 · automatic print table */
+/* v20261007-26 · automatic print table */
 .table-fit-state{
   display:flex;align-items:center;min-height:30px;padding:0 8px;margin:2px 0 6px;
   border:1px solid rgba(16,185,129,.16);border-radius:8px;
@@ -545,7 +545,7 @@
 .table-column-row input[type="number"]{text-align:center}
 .table-el[data-auto-row="true"] .table-row-resizer{display:none!important}
 
-/* v20261007-24 · direct manipulation */
+/* v20261007-26 · direct manipulation */
 .table-column-row{grid-template-columns:20px minmax(0,.9fr) minmax(0,1.1fr) 28px!important;gap:4px!important;overflow:hidden!important}
 .table-column-row .col-drag{width:18px;height:28px;display:grid;place-items:center;color:var(--muted);cursor:grab;user-select:none;font-size:12px}
 .table-column-row.dragging{opacity:.45}.table-column-row.drag-over{box-shadow:inset 0 2px 0 #2563eb}
@@ -554,7 +554,7 @@
 .action-grid #frontBtn,.action-grid #backBtn{display:none!important}
 .layer-icon-btn{font-size:12px!important;display:grid!important;place-items:center!important}
 
-/* v20261007-24 · restore table borders and direct resize lines */
+/* v20261007-26 · restore table borders and direct resize lines */
 .table-el,
 .table-el.selected,
 .table-el:not(.selected){overflow:visible!important}
@@ -573,3 +573,24 @@
 .table-row-resizer:hover::after{background:#2563eb!important}
 .table-col-resizer{width:11px!important;margin-left:-5px!important}
 .table-row-resizer{height:11px!important;margin-top:-5px!important}
+
+/* v20261007-26 · resizers sit on the real rendered borders */
+.table-col-resizer,.table-row-resizer{
+  pointer-events:auto!important;touch-action:none!important;z-index:140!important
+}
+.table-col-resizer{
+  width:13px!important;margin-left:-6px!important
+}
+.table-row-resizer{
+  height:13px!important;margin-top:-6px!important
+}
+.table-el.selected .table-col-resizer,
+.table-el.selected .table-row-resizer{opacity:.5!important}
+.table-col-resizer::after,.table-row-resizer::after{
+  pointer-events:none!important;background:rgba(37,99,235,.34)!important
+}
+.table-col-resizer:hover::after,.table-col-resizer.active::after,
+.table-row-resizer:hover::after,.table-row-resizer.active::after{
+  background:#2563eb!important;box-shadow:0 0 0 1px rgba(255,255,255,.9)
+}
+.table-header-resizer::after{background:rgba(37,99,235,.42)!important}

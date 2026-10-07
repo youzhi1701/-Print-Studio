@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261007-24";
+} from "./table-model.js?v=20261007-26";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function fieldValue(el,data){const v=data?.[el.field]??"";return (el.label||"")+String(v)}
@@ -59,7 +59,7 @@ export function renderTableMarkup(el,rootData={},options={}){
   }).join("");
 
   const html='<table style="width:100%;height:'+renderedHeight+'mm;border:'+bw+'px solid #333;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
-  return{html,layout,renderedHeight,allCols}
+  return{html,layout,renderedHeight,allCols,visibleRows}
 }
 
 function renderTable(el,rootData,common){
