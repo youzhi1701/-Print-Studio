@@ -753,3 +753,8 @@
   color:#2563eb;border-color:rgba(37,99,235,.28);background:rgba(37,99,235,.08);font-weight:700
 }
 #multiAlignGroup button.active{background:rgba(255,255,255,.92)!important;color:#2563eb!important;font-weight:700!important}
+
+/* v20261008-43 · visible-column status */
+.table-column-row.empty-hidden{opacity:.76}
+.col-summary-main .col-status-hidden{color:#b45309!important;font-weight:600!important}
+.table-column-row.empty-hidden .col-summary-main b{color:var(--muted)!important}

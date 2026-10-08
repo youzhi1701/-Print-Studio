@@ -396,7 +396,11 @@ export function buildTableLayout(el,rootData={},hideEmpty=false){
   ensureTableModel(el,rootData);
   const rows=materializeTableRows(el,rootData);
   const allCols=normalizeTableColumns(el);
-  const cols=visibleColumns(el,rows,rootData,hideEmpty).map(col=>({...col,index:allCols.findIndex(c=>c.id===col.id)}));
+  let cols=visibleColumns(el,rows,rootData,hideEmpty).map(col=>({...col,index:allCols.findIndex(c=>c.id===col.id)}));
+  if(hideEmpty&&cols.length&&cols.length<allCols.length){
+    const sum=cols.reduce((n,c)=>n+(Number(c.width)||0),0)||100;
+    cols=cols.map(c=>({...c,width:(Number(c.width)||0)*100/sum}));
+  }
   const rowIdSet=new Set(rows.map(r=>r.id)),colIdSet=new Set(cols.map(c=>c.id));
   const rowHeights=[];
   const cellRows=rows.map((row,rowIndex)=>{

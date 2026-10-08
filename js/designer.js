@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-42";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-42";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-42";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-42";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-42";import {printTemplateRecords} from "./print.js?v=20261008-42";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-42";import {hasAccountSession} from "./account.js?v=20261008-42";import {
+import {mountBuildVersion} from "./version.js?v=20261008-43";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-43";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-43";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-43";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-43";import {printTemplateRecords} from "./print.js?v=20261008-43";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-43";import {hasAccountSession} from "./account.js?v=20261008-43";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-42";
+} from "./table-model.js?v=20261008-43";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -280,23 +280,38 @@ function smartTableColumnsForPage(pageWidth=215){
     {title:"价格",field:"价格",width:16,align:"right"}
   ]
 }
-function tableColumnWeight(col){
+function tableColumnKind(col){
   const key=String(col?.field||col?.title||"");
-  if(/商品名称|产品名称|标题/.test(key))return 5;
-  if(/商品属性|规格|型号/.test(key))return 3.2;
-  if(/产品图片|商品图片|图片/.test(key))return 2.6;
-  if(/数量|件数/.test(key))return 1.45;
-  if(/价格|金额|合计|单价/.test(key))return 2;
-  return 2.5
+  if(/产品图片|商品图片|图片|图像|image/i.test(key))return"image";
+  if(/数量|件数|qty|count/i.test(key))return"qty";
+  if(/价格|金额|合计|单价|price|amount/i.test(key))return"price";
+  if(/商品名称|产品名称|标题/.test(key))return"name";
+  if(/商品属性|规格|型号/.test(key))return"attr";
+  return"other"
+}
+function tableColumnWeight(col){
+  return({image:1.2,qty:.9,price:1.2,name:4.8,attr:2.8,other:2})[tableColumnKind(col)]||2
 }
 function applySmartColumnWidths(e){
   const cols=tmNormalizeColumns(e);if(!cols.length)return;
-  const weights=cols.map(tableColumnWeight),sum=weights.reduce((a,b)=>a+b,0)||1;
-  const minPct=Math.min(18,Math.max(7,700/Math.max(40,Number(e.w)||100)));
-  let widths=weights.map(w=>Math.max(minPct,w/sum*100));
-  const total=widths.reduce((a,b)=>a+b,0)||100;
-  widths=widths.map(w=>w/total*100);
-  cols.forEach((c,i)=>c.width=Math.round(widths[i]*10)/10);
+  const tableMm=Math.max(40,Number(e.w)||100);
+  const fixedMm={image:18,qty:12,price:18};
+  const fixed=cols.map(c=>fixedMm[tableColumnKind(c)]||0);
+  let fixedTotal=fixed.reduce((a,b)=>a+b,0);
+  const maxFixed=tableMm*.48;
+  const fixedScale=fixedTotal>maxFixed&&fixedTotal>0?maxFixed/fixedTotal:1;
+  fixedTotal*=fixedScale;
+  const flexIndexes=cols.map((c,i)=>fixed[i]?null:i).filter(i=>i!==null);
+  const flexWeights=flexIndexes.map(i=>tableColumnWeight(cols[i]));
+  const flexWeightTotal=flexWeights.reduce((a,b)=>a+b,0)||1;
+  const remaining=Math.max(tableMm*.36,tableMm-fixedTotal);
+  const widthsMm=cols.map((c,i)=>{
+    if(fixed[i])return fixed[i]*fixedScale;
+    const pos=flexIndexes.indexOf(i);
+    return remaining*(flexWeights[pos]||1)/flexWeightTotal
+  });
+  const totalMm=widthsMm.reduce((a,b)=>a+b,0)||tableMm;
+  cols.forEach((c,i)=>c.width=Math.round(widthsMm[i]/totalMm*1000)/10);
   e.columns=cols;e.smartColumns=true
 }
 function tableOverflowMm(e){
@@ -1022,6 +1037,13 @@ function renderTableColumnEditor(e){
   const list=$("tableColumnList");if(!list)return;
   list.innerHTML="";
   const cols=normalizeColumns(e.columns);
+  let visibleIds=new Set(cols.map(c=>c.id));
+  if(e.hideEmptyColumns!==false){
+    try{
+      const layout=buildTableLayout(e,state.record?.data||{},true);
+      visibleIds=new Set((layout.cols||[]).map(c=>c.id))
+    }catch{}
+  }
   if(expandedTableColumnId&&!cols.some(c=>c.id===expandedTableColumnId))expandedTableColumnId=null;
 
   cols.forEach((col,index)=>{
@@ -1035,7 +1057,10 @@ function renderTableColumnEditor(e){
 
     const meta=document.createElement("button");meta.type="button";meta.className="col-summary-main";
     const main=document.createElement("b");main.textContent=col.title||col.field||("列"+(index+1));
-    const sub=document.createElement("span");sub.textContent=col.field?("字段："+col.field):"未绑定字段";
+    const sub=document.createElement("span");
+    const hiddenByEmpty=e.hideEmptyColumns!==false&&!visibleIds.has(col.id);
+    sub.textContent=hiddenByEmpty?"当前为空 · 已隐藏":(col.field?("字段："+col.field):"未绑定字段");
+    if(hiddenByEmpty){sub.classList.add("col-status-hidden");card.classList.add("empty-hidden")}
     meta.append(main,sub);
 
     const toggle=document.createElement("button");toggle.type="button";toggle.className="col-expand";toggle.textContent=expanded?"▴":"▾";toggle.title=expanded?"收起":"编辑此列";
@@ -1081,8 +1106,13 @@ function renderTableColumnEditor(e){
         col.field=field.value||"";
         if(!col.template||/^\{\{[^{}]+\}\}$/.test(String(col.template)))col.template=col.field?"{{"+col.field+"}}":"";
         main.textContent=col.title||col.field||("列"+(index+1));
-        sub.textContent=col.field?("字段："+col.field):"未绑定字段";
-        e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave()
+        const hiddenNow=e.hideEmptyColumns!==false&&!visibleIds.has(col.id);
+        sub.textContent=hiddenNow?"当前为空 · 已隐藏":(col.field?("字段："+col.field):"未绑定字段");
+        sub.classList.toggle("col-status-hidden",hiddenNow);
+        card.classList.toggle("empty-hidden",hiddenNow);
+        e.columns=cols;
+        if(e.smartColumns!==false)applySmartColumnWidths(e);
+        refreshElementNode(e);updateTableFitState(e);autoSave()
       };
       const checkpoint=()=>{commit();pushHistory()};
       title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
