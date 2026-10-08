@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261007-29";
+} from "./table-model.js?v=20261008-38";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function resolveTemplate(template,data={}){
@@ -48,7 +48,7 @@ export function renderTableMarkup(el,rootData={},options={}){
   const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map((c,ci)=>{
     const cls=editable?' class="table-head-cell" data-col="'+(c.index??ci)+'"':"";
-    return '<th'+cls+' style="box-sizing:border-box;border:'+bw+'px solid #333;color:#000;padding:2px;text-align:'+c.align+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
+    return '<th'+cls+' style="box-sizing:border-box;border:'+bw+'px solid #333;color:#000;padding:2px;text-align:'+(c.headerAlign||c.align||"center")+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   }).join("")+'</tr></thead>';
 
   const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri],height:Math.max(Number(rows[ri]?.height)||0,...cells.map(c=>Number(c.height)||0))})).filter(({cells,row})=>{

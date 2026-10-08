@@ -37,10 +37,11 @@ export function normalizeTableColumns(el){
     {title:"价格",field:"价格",width:15,align:"right"}
   ];
   cols=cols.map((c,i)=>{
-    if(typeof c==="string")return{id:id("col"),title:c,field:c,template:"{{"+c+"}}",width:null,align:i===0?"left":"center"};
+    if(typeof c==="string")return{id:id("col"),title:c,field:c,template:"{{"+c+"}}",width:null,align:i===0?"left":"center",headerAlign:i===0?"left":"center"};
     const field=c.field||c.title||"";
     const template=c.template!==undefined?String(c.template):(field?"{{"+field+"}}":"");
-    return{id:c.id||id("col"),title:c.title||field||("列"+(i+1)),field,template,width:c.width??null,align:c.align||"center"};
+    const align=c.align||"center";
+    return{id:c.id||id("col"),title:c.title||field||("列"+(i+1)),field,template,width:c.width??null,align,headerAlign:c.headerAlign||align};
   });
   const valid=cols.every(c=>Number.isFinite(Number(c.width))&&Number(c.width)>0);
   if(!valid){const w=100/cols.length;cols.forEach(c=>c.width=w)}
@@ -308,7 +309,7 @@ export function insertColumn(el,index){
   const neighbor=cols[Math.min(index,cols.length-1)]||cols[cols.length-1];
   let width=20;
   if(neighbor){width=Math.max(8,Number(neighbor.width)/2);neighbor.width=Math.max(8,Number(neighbor.width)-width)}
-  const col={id:id("col"),title:"新列",field:"",template:"",width,align:"center"};
+  const col={id:id("col"),title:"新列",field:"",template:"",width,align:"center",headerAlign:"center"};
   const before=cols.map(c=>c.id);
   cols.splice(Math.max(0,Math.min(index,cols.length)),0,col);
   // Expand merges only when insertion occurs inside them.

@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-37";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-37";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-37";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-37";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-37";import {printTemplateRecords} from "./print.js?v=20261008-37";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-37";import {hasAccountSession} from "./account.js?v=20261008-37";import {
+import {mountBuildVersion} from "./version.js?v=20261008-38";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-38";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-38";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-38";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-38";import {printTemplateRecords} from "./print.js?v=20261008-38";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-38";import {hasAccountSession} from "./account.js?v=20261008-38";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-37";
+} from "./table-model.js?v=20261008-38";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -1058,35 +1058,40 @@ function renderTableColumnEditor(e){
       field.value=col.field||"";
       fieldWrap.append(fieldLabel,field);
 
-      const templateWrap=document.createElement("label");templateWrap.className="col-control";
-      const templateLabel=document.createElement("span");templateLabel.textContent="内容";
-      const template=document.createElement("textarea");template.className="col-template";template.rows=2;
-      template.value=col.template!==undefined?col.template:(col.field?"{{"+col.field+"}}":"");
-      template.placeholder="例如：{{商品名称}} 或 商品：{{商品名称}}";
-      template.spellcheck=false;
-      templateWrap.append(templateLabel,template);
+      const alignWrap=document.createElement("div");alignWrap.className="col-control";
+      const alignLabel=document.createElement("span");alignLabel.textContent="表头对齐";
+      const alignGroup=document.createElement("div");alignGroup.className="col-header-align";
+      [["left","左"],["center","中"],["right","右"]].forEach(([value,label])=>{
+        const btn=document.createElement("button");btn.type="button";btn.textContent=label;btn.dataset.value=value;
+        btn.classList.toggle("active",(col.headerAlign||col.align||"center")===value);
+        btn.onclick=()=>{
+          col.headerAlign=value;
+          alignGroup.querySelectorAll("button").forEach(x=>x.classList.toggle("active",x===btn));
+          e.columns=cols;refreshElementNode(e);autoSave();pushHistory()
+        };
+        alignGroup.appendChild(btn)
+      });
+      alignWrap.append(alignLabel,alignGroup);
 
-      body.append(titleWrap,fieldWrap,templateWrap);
+      body.append(titleWrap,fieldWrap,alignWrap);
       card.appendChild(body);
 
       const commit=()=>{
         col.title=title.value.trim()||field.value||("列"+(index+1));
         col.field=field.value||"";
-        col.template=template.value;
+        if(!col.template||/^\{\{[^{}]+\}\}$/.test(String(col.template)))col.template=col.field?"{{"+col.field+"}}":"";
         main.textContent=col.title||col.field||("列"+(index+1));
         sub.textContent=col.field?("字段："+col.field):"未绑定字段";
         e.columns=cols;refreshElementNode(e);updateTableFitState(e);autoSave()
       };
       const checkpoint=()=>{commit();pushHistory()};
       title.addEventListener("input",commit);title.addEventListener("change",checkpoint);
-      template.addEventListener("input",commit);template.addEventListener("change",checkpoint);
       field.addEventListener("change",()=>{
         const oldField=col.field||"";
         const oldDefaultTitle=!col.title||col.title===oldField;
-        const oldDefaultTemplate=col.template===undefined||col.template===""||col.template==="{{"+oldField+"}}";
         col.field=field.value||"";
         if(oldDefaultTitle){title.value=col.field||("列"+(index+1));col.title=title.value}
-        if(oldDefaultTemplate){template.value=col.field?"{{"+col.field+"}}":"";col.template=template.value}
+        col.template=col.field?"{{"+col.field+"}}":"";
         commit();pushHistory()
       });
     }

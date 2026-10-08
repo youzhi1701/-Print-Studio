@@ -709,3 +709,30 @@
   font-size:8px!important;cursor:pointer!important
 }
 #tableCellInspector{margin-top:5px!important}
+
+/* v20261008-38 · table column header-only editor */
+.table-column-row .table-column-body{gap:6px!important}
+.col-header-align{
+  display:grid!important;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:3px!important;
+  padding:2px!important;
+  border:1px solid rgba(84,104,145,.12)!important;
+  border-radius:7px!important;
+  background:rgba(120,140,180,.05)!important
+}
+.col-header-align button{
+  height:27px!important;
+  border:0!important;
+  border-radius:5px!important;
+  background:transparent!important;
+  color:var(--muted)!important;
+  font-size:8px!important;
+  cursor:pointer!important
+}
+.col-header-align button.active{
+  background:rgba(255,255,255,.92)!important;
+  color:#2563eb!important;
+  font-weight:700!important;
+  box-shadow:0 1px 4px rgba(44,60,95,.08)!important
+}
