@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-48";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-48";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-48";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-48";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-48";import {printTemplateRecords} from "./print.js?v=20261008-48";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-48";import {hasAccountSession} from "./account.js?v=20261008-48";import {
+import {mountBuildVersion} from "./version.js?v=20261008-49";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-49";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-49";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-49";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-49";import {printTemplateRecords} from "./print.js?v=20261008-49";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-49";import {hasAccountSession} from "./account.js?v=20261008-49";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
-  buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-48";
+  buildTableLayout,buildTableGrid,normalizeMergeContiguity
+} from "./table-model.js?v=20261008-49";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let suppressTableCellClickUntil=0;let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -362,7 +362,7 @@ function defaults(type,field=""){
   if(type==="text"){b.text="双击或在右侧修改文字";b.w=58;b.h=4.8;b.wrap=true;b.maxLines=0;b.overflowMode="grow";b.autoHeight=true;b.emptyBehavior="blank"}
   if(type==="field"){b.field=field;b.label="";b.text=field?(field+"：{{"+field+"}}"):"字段：{{字段}}";b.align="center";b.w=50;b.h=4.8;b.wrap=true;b.maxLines=0;b.overflowMode="grow";b.autoHeight=true;b.emptyBehavior="hide"}
   if(type==="image"){b.w=30;b.h=25;b.field=field;b.imageFit="contain";b.radius=0;b.aspectLock=true;b.alignX="center";b.alignY="center";b.padding=0;b.emptyBehavior="hide"}
-  if(type==="table"){const p=current()?.page||{width:215,safeArea:4};const safe=Math.max(0,Number(p.safeArea)||0);b.w=Math.max(20,p.width-safe*2);b.h=14;b.columns=normalizeColumns(smartTableColumnsForPage(p.width));b.showHeader=true;b.zebra=false;b.rowHeight=p.width<=85?6:7.5;b.headerHeight=b.rowHeight;b.autoRowHeight=true;b.maxRows=5;b.borderWidth=.5;b.fontSize=p.width<=85?8:9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=true;b.emptyBehavior="hide";b.smartLayout=true;b.smartColumns=true;b.merges=[];b.rowDefs=[{id:uid("row"),type:"data",height:b.rowHeight}];b.cellMap={};b.tableModelVersion=3}
+  if(type==="table"){const p=current()?.page||{width:215,safeArea:4};const safe=Math.max(0,Number(p.safeArea)||0);b.w=Math.max(20,p.width-safe*2);b.h=14;b.columns=normalizeColumns(smartTableColumnsForPage(p.width));b.showHeader=true;b.zebra=false;b.rowHeight=p.width<=85?6:7.5;b.headerHeight=b.rowHeight;b.autoRowHeight=true;b.maxRows=5;b.borderWidth=.5;b.fontSize=p.width<=85?8:9;b.dataField="";b.tableImageFit="contain";b.wrap=true;b.hideEmptyColumns=true;b.emptyBehavior="hide";b.smartLayout=true;b.smartColumns=true;b.merges=[];b.rowDefs=[{id:uid("row"),type:"data",height:b.rowHeight,heightMode:"auto"}];b.cellMap={};b.tableModelVersion=4}
   if(type==="barcode"){b.w=62;b.h=20;b.field=field||"订单编号";b.showText=true;b.barcodeFormat="CODE128";b.barcodeFontSize=8}
   if(type==="qrcode"){b.w=25;b.h=25;b.field=field||"订单编号";b.qrLevel="M";b.qrMargin=0}
   if(type==="line"){b.w=70;b.h=.5;b.borderWidth=.5;b.borderStyle="solid"}
@@ -405,6 +405,10 @@ function syncAutoTextHeight(e){
 function addElement(type,x=25,y=25,field=""){const t=current();const e=defaults(type,field);if(["text","field"].includes(type))syncAutoTextHeight(e);if(type==="table"){const safe=Math.max(0,Number(t.page?.safeArea)||0);e.y=Math.max(safe,Math.min(y,(t.page?.height||140)-safe));fitTableToPage(e,{resetColumns:true,compact:true})}else{e.x=Math.max(0,Math.min(x,(t.page?.width||215)-e.w));e.y=Math.max(0,Math.min(y,(t.page?.height||140)-e.h))}t.elements.push(e);selectElements(e.id);renderElements();renderLayers();syncProps();commitEdit();toast(type==="table"?"已添加自动适配表格":"已添加组件")}
 function elementVisualHeight(e){
   if(e?.type==="table"){
+    try{
+      const grid=buildTableGrid(e,state.record?.data||{},e.hideEmptyColumns===true);
+      return Math.max(1,Number(grid.totalHeight)||Number(e.h)||1)
+    }catch{}
     try{return Math.max(.5,Number(buildTableLayout(e,state.record?.data||{},false).totalHeight)||Number(e.h)||.5)}catch{}
   }
   return Math.max(.5,Number(e?.h)||.5)
@@ -784,7 +788,7 @@ function startTableRowResize(ev,e,row,node,handle){
   const actual=tr?tr.getBoundingClientRect().height/(MM*factor):Number(def.height)||Number(e.rowHeight)||8;
   const start=Math.max(4,actual);handle?.classList.add("active");
   const move=m=>{
-    e.autoRowHeight=false;def.height=Math.max(4,start+(m.clientY-sy)/factor/MM);row.height=def.height;
+    def.heightMode="fixed";def.height=Math.max(4,start+(m.clientY-sy)/factor/MM);row.heightMode="fixed";row.height=def.height;
     if(tr){tr.style.height=def.height+"mm";tr.querySelectorAll("td").forEach(td=>td.style.height=def.height+"mm")}
     const table=node.querySelector("table"),headerMm=e.showHeader===false?0:Number(e.headerHeight||e.rowHeight||8);
     if(table){
@@ -1115,11 +1119,7 @@ function selectedOne(){if(selected.size!==1)return null;return current().element
 function renderTableColumnEditor(e){
   const list=$("tableColumnList");if(!list)return;
   list.innerHTML="";
-  let cols=normalizeColumns(e.columns);
-  if(e.smartColumns!==false){
-    applySmartColumnWidths(e);
-    cols=normalizeColumns(e.columns)
-  }
+  const cols=normalizeColumns(e.columns);
   let visibleIds=new Set(cols.map(c=>c.id));
   if(e.hideEmptyColumns!==false){
     try{
@@ -1190,7 +1190,6 @@ function renderTableColumnEditor(e){
         if(!col.template||/^\{\{[^{}]+\}\}$/.test(String(col.template)))col.template=col.field?"{{"+col.field+"}}":"";
         main.textContent=col.title||col.field||("列"+(index+1));
         e.columns=cols;
-        if(e.smartColumns!==false)applySmartColumnWidths(e);
         let hiddenNow=false;
         if(e.hideEmptyColumns!==false){
           try{

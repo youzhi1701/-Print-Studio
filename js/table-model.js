@@ -1,5 +1,5 @@
 // Shared table model used by editor, preview and print.
-// v3 replaces index-only rows/merges with stable row/column ids.
+// v4 keeps one canonical table grid for editor, preview and print.
 
 function id(prefix="id"){return prefix+"_"+Date.now().toString(36)+"_"+Math.random().toString(36).slice(2,8)}
 export function hasValue(v){return !(v===undefined||v===null||v==="")}
@@ -67,13 +67,15 @@ export function ensureTableModel(el,data={}){
     el.rowDefs=Array.from({length:count},(_,i)=>({
       id:id("row"),
       type:i<Math.max(1,src.length)?"data":"manual",
-      height:Number(el.rowHeights?.[i])||inferredHeight
+      height:Number(el.rowHeights?.[i])||inferredHeight,
+      heightMode:el.autoRowHeight===false?"fixed":"auto"
     }));
   }else{
     el.rowDefs=el.rowDefs.map((r,i)=>({
       id:r?.id||id("row"),
-      type:r?.type==="manual"?"manual":"data",
-      height:Number(r?.height)||Number(el.rowHeight)||8
+      type:["manual","summary"].includes(r?.type)?r.type:"data",
+      height:Number(r?.height)||Number(el.rowHeight)||8,
+      heightMode:r?.heightMode==="fixed"?"fixed":"auto"
     }));
   }
 
@@ -104,7 +106,7 @@ export function ensureTableModel(el,data={}){
     }).filter(m=>m.rowIds.length&&m.colIds.length&&(m.rowIds.length*m.colIds.length>1));
   }
 
-  el.tableModelVersion=3;
+  el.tableModelVersion=4;
   el.designRowCount=el.rowDefs.length; // compatibility only
   return el;
 }
@@ -125,17 +127,17 @@ export function materializeTableRows(el,data={}){
   const out=[];
   let si=0;
   for(const def of defs){
-    if(def.type==="manual"){
-      out.push({id:def.id,type:"manual",height:def.height,data:{},sourceIndex:null});
+    if(def.type==="manual"||def.type==="summary"){
+      out.push({id:def.id,type:def.type,height:def.height,heightMode:def.heightMode||"auto",data:{},sourceIndex:null});
     }else if(si<source.length){
-      out.push({id:def.id,type:"data",height:def.height,data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si});
+      out.push({id:def.id,type:"data",height:def.height,heightMode:def.heightMode||"auto",data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si});
       si++;
     }
   }
   // If data grows beyond saved data slots, append stable ephemeral rows after the last data slot.
   while(el.dataField&&si<source.length){
     const base=dataDefs[dataDefs.length-1]?.id||"data";
-    out.push({id:base+"__auto_"+si,type:"data",height:Number(el.rowHeight)||8,data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si,ephemeral:true});
+    out.push({id:base+"__auto_"+si,type:"data",height:Number(el.rowHeight)||8,heightMode:el.autoRowHeight===false?"fixed":"auto",data:source[si]||{},sourceIndex:sourceEntries[si]?.index??si,ephemeral:true});
     si++;
   }
   if(!out.length&&el.emptyBehavior!=="hide"){
@@ -255,7 +257,7 @@ export function unmergeVisualRange(el,visualRows,cols,range){
 function rowDefIndex(el,rowId){return (el.rowDefs||[]).findIndex(r=>r.id===rowId)}
 export function insertManualRow(el,visualRows,index){
   ensureTableModel(el,{});
-  const newRow={id:id("row"),type:"manual",height:Number(el.rowHeight)||8};
+  const newRow={id:id("row"),type:"manual",height:Number(el.rowHeight)||8,heightMode:el.autoRowHeight===false?"fixed":"auto"};
   let defIndex=el.rowDefs.length;
   if(index<visualRows.length){
     const target=visualRows[index];
@@ -298,7 +300,7 @@ export function deleteVisualRows(el,visualRows,rowIndexes){
   }
 
   if(!el.rowDefs.length){
-    el.rowDefs=[{id:id("row"),type:"manual",height:Number(el.rowHeight)||8}];
+    el.rowDefs=[{id:id("row"),type:"manual",height:Number(el.rowHeight)||8,heightMode:el.autoRowHeight===false?"fixed":"auto"}];
   }
   el.designRowCount=el.rowDefs.length;
   return true;
@@ -371,7 +373,7 @@ export function visibleColumns(el,visualRows,rootData={},hideEmpty=false){
 
 function estimatedWrappedRowHeight(el,row,cells){
   const base=rowHeight(row,el);
-  if(el?.autoRowHeight===false||el?.wrap===false)return base;
+  if(row?.heightMode==="fixed"||el?.autoRowHeight===false||el?.wrap===false)return base;
   const fontPx=Math.max(6,Number(el?.fontSize)||9);
   const pxPerMm=96/25.4;
   const lineMm=(fontPx*1.35)/pxPerMm;
@@ -427,6 +429,42 @@ export function buildTableLayout(el,rootData={},hideEmpty=false){
   const headerHeight=el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8);
   const totalHeight=headerHeight+rowHeights.reduce((sum,h)=>sum+(Number(h)||0),0);
   return{rows,cols,allCols,cellRows,rowHeights,hasAny,headerHeight,totalHeight};
+}
+
+
+export function buildTableGrid(el,rootData={},hideEmpty=false){
+  const base=buildTableLayout(el,rootData,hideEmpty);
+  const {rows,cols,allCols,cellRows}=base;
+
+  const visibleRows=cellRows.map((cells,sourceRowIndex)=>({
+    sourceRowIndex,
+    row:rows[sourceRowIndex],
+    cells,
+    height:Math.max(Number(rows[sourceRowIndex]?.height)||0,...cells.map(c=>Number(c.height)||0))
+  })).filter(({cells,row})=>{
+    const hasRenderedValue=cells.some(cell=>hasValue(cell.value));
+    const mergeKeepsRow=(el.merges||[]).some(m=>m.rowIds?.includes(row?.id)&&(m.rowIds?.length||0)>1);
+    const persistent=row?.type==="manual"||row?.type==="summary";
+    return persistent||el.emptyBehavior!=="hide"||hasRenderedValue||mergeKeepsRow;
+  });
+
+  const visibleRowIds=new Set(visibleRows.map(x=>x.row?.id).filter(Boolean));
+  const visibleColIds=new Set(cols.map(c=>c.id));
+  const gridRows=visibleRows.map((entry,visualRowIndex)=>({
+    ...entry,
+    visualRowIndex,
+    cells:entry.cells.map(cell=>{
+      const merge=cell.merge;
+      const rowspan=cell.master?Math.max(1,(merge?.rowIds||[]).filter(id=>visibleRowIds.has(id)).length):1;
+      const colspan=cell.master?Math.max(1,(merge?.colIds||[]).filter(id=>visibleColIds.has(id)).length):1;
+      return {...cell,rowspan,colspan};
+    })
+  }));
+
+  const headerHeight=el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8);
+  const totalHeight=headerHeight+gridRows.reduce((sum,x)=>sum+(Number(x.height)||Number(el.rowHeight)||8),0);
+  const hasAny=gridRows.some(r=>r.cells.some(cell=>hasValue(cell.value)));
+  return{...base,allCols,cols,gridRows,visibleRows:gridRows,headerHeight,totalHeight,hasAny};
 }
 
 export function rowHeight(row,el){return Number(row?.height)||Number(el?.rowHeight)||8}

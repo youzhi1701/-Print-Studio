@@ -1,6 +1,6 @@
 import {
-  buildTableLayout,hasValue
-} from "./table-model.js?v=20261008-48";
+  buildTableGrid,hasValue
+} from "./table-model.js?v=20261008-49";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function resolveTemplate(template,data={}){
@@ -40,54 +40,34 @@ function cellHtml(v,imageFit="contain"){
 export function renderTableMarkup(el,rootData={},options={}){
   const editable=options.editable===true;
   const selectedKeys=new Set((options.selectedCells||[]).map(s=>String(s.row)+":"+String(s.col)));
-  const layout=buildTableLayout(el,rootData,el.hideEmptyColumns===true);
-  const {rows,cols,allCols,cellRows,hasAny}=layout;
-  const bw=el.borderWidth??.5;
-  if(!hasAny&&el.emptyBehavior==="hide")return{html:"",layout,renderedHeight:0};
+  const layout=buildTableGrid(el,rootData,el.hideEmptyColumns===true);
+  const {cols,allCols,gridRows}=layout;
+  const bw=Math.max(0,Number(el.borderWidth??.5));
+  if(!gridRows.length&&el.emptyBehavior==="hide")return{html:"",layout,renderedHeight:0,allCols,visibleRows:[]};
 
+  const renderedHeight=layout.totalHeight;
+  const border=bw+"px solid #333";
   const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
-  const edgeColor="#333";
+
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map((c,ci)=>{
     const cls=editable?' class="table-head-cell" data-col="'+(c.index??ci)+'"':"";
-    const edge='border-top:'+bw+'px solid '+edgeColor+';border-left:'+bw+'px solid '+edgeColor+';'+(ci===cols.length-1?'border-right:'+bw+'px solid '+edgeColor+';':'');
-    return '<th'+cls+' style="box-sizing:border-box;'+edge+'border-bottom:0;color:#000;padding:2px;text-align:'+(c.headerAlign||c.align||"center")+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
+    return '<th'+cls+' style="box-sizing:border-box;border:'+border+';color:#000;padding:2px;text-align:'+(c.headerAlign||c.align||"center")+';height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   }).join("")+'</tr></thead>';
 
-  const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri],height:Math.max(Number(rows[ri]?.height)||0,...cells.map(c=>Number(c.height)||0))})).filter(({cells,row})=>{
-    const hasRenderedValue=cells.some(cell=>hasValue(cell.value));
-    const spansMultiple=(el.merges||[]).some(m=>m.rowIds?.includes(row.id)&&(m.rowIds?.length||0)>1);
-    const manualRow=row?.type==="manual";
-    // 用户主动“加行”创建的是 manual row。即使内容为空，也必须在编辑器/预览/打印中保留，
-    // 否则行已写入模型却被 emptyBehavior=hide 过滤，看起来就像“加行失效”。
-    return manualRow||el.emptyBehavior!=="hide"||hasRenderedValue||spansMultiple;
-  });
-
-  const renderedHeight=(el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8))+visibleRows.reduce((sum,x)=>sum+Number(x.height||el.rowHeight||8),0);
-  const visibleColPos=new Map(cols.map((c,i)=>[c.id,i]));
-  const body=visibleRows.map(({cells,ri,row,height},visibleRowIndex)=>{
+  const body=gridRows.map(({cells,sourceRowIndex,row,height},visualRowIndex)=>{
     const html=cells.map(cell=>{
       const pad=isImageValue(cell.value)?0:cell.cfg.padding;
-      const rowspan=cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"";
-      const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
-      const selected=editable&&selectedKeys.has(String(ri)+":"+String(cell.colIndex));
-      const cls=editable?(' class="table-edit-cell'+(selected?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'"'):"";
-      const startPos=visibleColPos.get(cell.col.id)??0;
-      const endPos=Math.min(cols.length-1,startPos+Math.max(1,cell.colspan)-1);
-      const endRow=Math.min(visibleRows.length-1,visibleRowIndex+Math.max(1,cell.rowspan)-1);
-      const topNeeded=el.showHeader===false||visibleRowIndex>=0;
-      const edge=
-        (topNeeded?'border-top:'+bw+'px solid '+edgeColor+';':'')+
-        'border-left:'+bw+'px solid '+edgeColor+';'+
-        (endPos===cols.length-1?'border-right:'+bw+'px solid '+edgeColor+';':'')+
-        (endRow===visibleRows.length-1?'border-bottom:'+bw+'px solid '+edgeColor+';':'');
-      return '<td'+cls+' '+rowspan+colspan+'style="position:relative;box-sizing:border-box;'+edge+'color:#000;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
+      const rowspan=cell.rowspan>1?' rowspan="'+cell.rowspan+'"':"";
+      const colspan=cell.colspan>1?' colspan="'+cell.colspan+'"':"";
+      const selected=editable&&selectedKeys.has(String(sourceRowIndex)+":"+String(cell.colIndex));
+      const cls=editable?(' class="table-edit-cell'+(selected?' cell-selected':'')+'" data-row="'+sourceRowIndex+'" data-col="'+cell.colIndex+'"'):"";
+      return '<td'+cls+rowspan+colspan+' style="position:relative;box-sizing:border-box;border:'+border+';color:#000;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
-    return '<tr style="height:'+height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
+    return '<tr data-table-row="'+visualRowIndex+'" style="height:'+height+'mm;'+(el.zebra&&sourceRowIndex%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const headerOnlyBottom=(el.showHeader!==false&&visibleRows.length===0)?'border-bottom:'+bw+'px solid '+edgeColor+';':'';
-  const html='<table style="width:100%;height:'+renderedHeight+'mm;border:0;'+headerOnlyBottom+'border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
-  return{html,layout,renderedHeight,allCols,visibleRows}
+  const html='<table class="superprint-table-grid" style="width:100%;height:'+renderedHeight+'mm;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000;background:#fff">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
+  return{html,layout,renderedHeight,allCols,visibleRows:gridRows}
 }
 
 function renderTable(el,rootData,common){

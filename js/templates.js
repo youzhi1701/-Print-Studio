@@ -1,5 +1,5 @@
 import {STORAGE_KEYS,uid,safeJson,storageGet,storageSet,storageScopedKey} from "./state.js?v=20261006-21";
-import {ensureTableModel} from "./table-model.js?v=20261006-21";
+import {ensureTableModel} from "./table-model.js?v=20261008-49";
 
 const BUILTIN_CREATED_AT=1760000000000;
 const page=(width,height,margin=4)=>({width,height,orientation:width>=height?"landscape":"portrait",margin,safeArea:Math.min(4,margin)});
@@ -175,7 +175,7 @@ export function normalizeTemplateObject(t){
         const cols=Array.isArray(el.columns)?el.columns.map((col,i)=>typeof col==="string"?{id:uid("col"),title:col,field:col,width:null,align:i===0?"left":"center"}:{id:col.id||uid("col"),...col}):[];
         return{
           showHeader:true,zebra:false,rowHeight:8,headerHeight:8,autoRowHeight:true,maxRows:5,designRowCount:1,borderWidth:.5,dataField:"",
-          tableImageFit:"contain",wrap:true,hideEmptyColumns:true,emptyBehavior:"hide",smartLayout:false,smartColumns:false,merges:[],rowHeights:{},cells:{},tableEditorVersion:3,
+          tableImageFit:"contain",wrap:true,hideEmptyColumns:true,emptyBehavior:"hide",smartLayout:false,smartColumns:false,merges:[],rowHeights:{},cells:{},tableEditorVersion:4,
           ...el,columns:cols,
           ...(legacy?{tableImageFit:"cover",hideEmptyColumns:true,emptyBehavior:"hide"}:{})
         }

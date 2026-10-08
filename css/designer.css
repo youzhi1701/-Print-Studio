@@ -870,3 +870,35 @@
   box-shadow:inset 0 0 0 1px rgba(37,99,235,.18)!important;
   background:rgba(37,99,235,.04)!important;
 }
+
+/* v20261008-49 · canonical one-table grid */
+.table-el>table.superprint-table-grid{
+  width:100%!important;
+  height:100%!important;
+  border:0!important;
+  border-collapse:collapse!important;
+  border-spacing:0!important;
+  table-layout:fixed!important;
+  background:#fff!important;
+}
+.table-el>table.superprint-table-grid th,
+.table-el>table.superprint-table-grid td{
+  box-sizing:border-box!important;
+  border-style:solid!important;
+  border-color:#333!important;
+}
+/* selection/resize UI is visual-only and never becomes a table border */
+.table-el.selected{
+  outline:1px dashed rgba(37,99,235,.42)!important;
+  outline-offset:3px!important;
+}
+.table-edit-cell.cell-selected{
+  outline:0!important;
+  box-shadow:inset 0 0 0 1px rgba(37,99,235,.16)!important;
+  background:rgba(37,99,235,.035)!important;
+}
+.table-col-resizer,
+.table-row-resizer{
+  border:0!important;
+  background:transparent!important;
+}
