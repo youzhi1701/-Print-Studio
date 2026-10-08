@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印 · 模板设计器</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261008-36">
-  <link rel="stylesheet" href="./css/designer.css?v=20261008-36">
-  <link rel="stylesheet" href="./css/print.css?v=20261008-36" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261008-37">
+  <link rel="stylesheet" href="./css/designer.css?v=20261008-37">
+  <link rel="stylesheet" href="./css/print.css?v=20261008-37" media="print">
 </head>
 <body class="aurora-app designer-body">
   <div class="aurora-layer" aria-hidden="true"></div>
   <header class="designer-top glass">
-    <div class="designer-brand" title="build 20261008-36"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261008-36</span></small></div></div>
+    <div class="designer-brand" title="build 20261008-37"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261008-37</span></small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
       <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
@@ -122,7 +122,7 @@
           </div>
           <div id="tableProps" class="prop-group hidden">
             <label class="stack">数据源<select id="tableDataField"><option value="">当前记录（单行）</option></select></label>
-            <div class="stack"><span>列配置</span><div class="table-help">每列分开编辑：表头 / 字段 / 内容。内容支持 {{字段名}} 和固定文字自由混排。</div><div id="tableColumnList" class="table-column-list"></div></div>
+            <div class="stack"><span>列配置</span><div class="table-help">点击某一列展开编辑，拖动左侧手柄调整顺序。</div><div id="tableColumnList" class="table-column-list"></div></div>
             <div id="tableFitState" class="table-fit-state">自动适配页面</div>
             <div class="table-column-actions"><button id="smartFitTable" type="button" class="primary-soft">自动适配页面</button><button id="addTableColumn" type="button">+ 添加列</button></div>
             <div class="two"><label>表头<select id="tableHeader"><option value="true">显示</option><option value="false">隐藏</option></select></label><label>行高<select id="tableRowMode"><option value="auto">自动</option><option value="fixed">固定</option></select></label></div>
@@ -138,8 +138,8 @@
               <button id="normalizeTableWidths" type="button">均分列宽</button>
             </div>
             <div class="table-editor-hint">
-              <b>表格编辑</b>
-              <span id="tableSelectionHint">表头可直接改 · 内容支持 {{字段名}} 与固定文字混排 · 列宽直接拖分隔线</span>
+              <div class="table-editor-hint-head"><b>表格编辑</b><button id="toggleCellInspector" type="button" class="mini-action hidden">高级单元格</button></div>
+              <span id="tableSelectionHint">列宽/行高直接拖画布分隔线 · 单击单元格后可进入高级编辑</span>
             </div>
             <div id="tableCellInspector" class="table-cell-inspector hidden">
               <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>选中单元格</div>
@@ -178,7 +178,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261008-36"></script>
+  <script type="module" src="./js/designer.js?v=20261008-37"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>
