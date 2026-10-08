@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-45";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-45";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-45";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-45";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-45";import {printTemplateRecords} from "./print.js?v=20261008-45";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-45";import {hasAccountSession} from "./account.js?v=20261008-45";import {
+import {mountBuildVersion} from "./version.js?v=20261008-46";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-46";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-46";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-46";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-46";import {printTemplateRecords} from "./print.js?v=20261008-46";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-46";import {hasAccountSession} from "./account.js?v=20261008-46";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-45";
+} from "./table-model.js?v=20261008-46";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let suppressTableCellClickUntil=0;let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -565,6 +565,81 @@ function endTableCellDrag(){
   tableSelecting=false;const e=selectedOne();if(e?.type==="table")refreshElementNode(e);renderLayers();syncProps();
 }
 window.addEventListener("pointerup",endTableCellDrag);
+function selectTableCell(e,row,col){
+  const previous=new Set(selected);
+  selected=new Set([e.id]);
+  tableSelectionAnchor={row,col};
+  setCellRectSelection({row,col},{row,col},e);
+  refreshElementNode(e);renderLayers();syncProps()
+}
+function selectTableColumn(e,col,rows){
+  const previous=new Set(selected);
+  selected=new Set([e.id]);
+  tableSelectionAnchor={row:0,col};
+  selectedCells=[];
+  for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
+  refreshElementNode(e);renderLayers();syncProps()
+}
+function startTableSurfaceGesture(ev,e,node,{row=null,col=null,header=false,rows=[]}={}){
+  if(preview||e.locked||ev.button!==0)return;
+  if(ev.target.closest(".table-col-resizer,.table-row-resizer,.resize-handle,.table-context-tools"))return;
+
+  if(ev.shiftKey){
+    if(header){
+      ev.preventDefault();ev.stopPropagation();
+      selectTableColumn(e,col,rows);
+    }else{
+      beginTableCellDrag(ev,e,row,col)
+    }
+    return
+  }
+
+  ev.preventDefault();ev.stopPropagation();
+
+  if(!selected.has(e.id)||selected.size!==1){
+    const previous=new Set(selected);
+    selected=new Set([e.id]);
+    clearTableSelection();
+    refreshSelectionVisuals(previous)
+  }
+
+  const sx=ev.clientX,sy=ev.clientY,factor=zoom/100;
+  const ox=e.x,oy=e.y;
+  let dragging=false,moved=false;
+  const threshold=5;
+
+  const move=m=>{
+    const rawDx=m.clientX-sx,rawDy=m.clientY-sy;
+    if(!dragging&&Math.hypot(rawDx,rawDy)<threshold)return;
+    if(!dragging){
+      dragging=true;
+      clearTableSelection();
+      node.classList.add("dragging-table")
+    }
+    let dx=rawDx/factor/MM,dy=rawDy/factor/MM;
+    if(snap){dx=Math.round(dx*2)/2;dy=Math.round(dy*2)/2}
+    ({dx,dy}=smartSnapDelta([{x:e,id:e.id,ox,oy}],dx,dy));
+    const page=current().page||{width:215,height:140};
+    const vh=elementVisualHeight(e);
+    dx=Math.max(-ox,Math.min(dx,page.width-(ox+e.w)));
+    dy=Math.max(-oy,Math.min(dy,page.height-(oy+vh)));
+    e.x=ox+dx;e.y=oy+dy;
+    moved=moved||Math.abs(dx)>.001||Math.abs(dy)>.001;
+    updateElementNodeGeometry(e);syncGeometryProps(e)
+  };
+  const up=()=>{
+    removeEventListener("pointermove",move);removeEventListener("pointerup",up);
+    node.classList.remove("dragging-table");clearAlignmentGuides();
+    if(dragging&&moved){
+      suppressTableCellClickUntil=Date.now()+250;
+      syncProps();commitEdit();
+      return
+    }
+    if(header)selectTableColumn(e,col,rows);
+    else selectTableCell(e,row,col)
+  };
+  addEventListener("pointermove",move);addEventListener("pointerup",up)
+}
 function content(n,e){
   const data=state.record?.data||{};
   if(e.type!=="table"){
@@ -594,37 +669,14 @@ function content(n,e){
     }
     n.querySelectorAll("td.table-edit-cell").forEach(cell=>{
       const row=Number(cell.dataset.row),col=Number(cell.dataset.col);
-      cell.addEventListener("pointerdown",ev=>{
-        if(ev.shiftKey){beginTableCellDrag(ev,e,row,col);return}
-        // 普通按住表格正文直接拖动整个表格；不拦截事件，让外层 startMove 接管。
-      });
+      cell.addEventListener("pointerdown",ev=>startTableSurfaceGesture(ev,e,n,{row,col,header:false,rows}));
       cell.addEventListener("pointerenter",()=>extendTableCellDrag(e,row,col));
-      cell.addEventListener("click",ev=>{
-        ev.stopPropagation();
-        if(Date.now()<suppressTableCellClickUntil)return;
-        const previous=new Set(selected);
-        selected=new Set([e.id]);
-        tableSelectionAnchor={row,col};
-        setCellRectSelection({row,col},{row,col},e);
-        paintTableSelection(e);
-        renderLayers();syncProps();
-      });
+      cell.addEventListener("click",ev=>ev.stopPropagation());
     });
     n.querySelectorAll("th.table-head-cell").forEach(cell=>{
-      cell.addEventListener("pointerdown",ev=>{
-        if(ev.shiftKey){
-          ev.stopPropagation();ev.preventDefault();
-          const col=Number(cell.dataset.col);
-          const previous=new Set(selected);
-          selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
-          for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
-          refreshElementNode(e);refreshSelectionVisuals(previous);
-        }
-        // 普通按住表头同样可拖动整个表格。
-      });
-      cell.addEventListener("click",ev=>{
-        if(Date.now()<suppressTableCellClickUntil){ev.stopPropagation();return}
-      });
+      const col=Number(cell.dataset.col);
+      cell.addEventListener("pointerdown",ev=>startTableSurfaceGesture(ev,e,n,{col,header:true,rows}));
+      cell.addEventListener("click",ev=>ev.stopPropagation());
     });
     if(selected.has(e.id)&&!preview&&!e.locked){
       addTableColumnResizers(n,e,cols);
@@ -804,7 +856,12 @@ function selectionHasMerge(e){
   return tableSelectionModelCells(e).some(x=>tmMergeForCell(e,x.row.id,x.col.id))
 }
 function commitTableEdit(message){
-  const e=selectedOne();if(e?.type==="table")refreshElementNode(e);renderTableColumnEditor(e);syncProps();commitEdit();if(message)toast(message)
+  const e=selectedOne();
+  if(e?.type==="table"){
+    refreshElementNode(e);
+    renderTableColumnEditor(e);
+  }
+  syncProps();commitEdit();if(message)toast(message)
 }
 function mergeSelectedCells(){
   const e=selectedOne(),b=tableSelectionBounds();
@@ -1001,7 +1058,7 @@ function updateElementNodeGeometry(e){
 }
 function addHandles(n,e){const dirs=e.type==="table"?["e","w"]:["nw","n","ne","e","se","s","sw","w"];for(const d of dirs){const h=document.createElement("span");h.className="resize-handle "+d;h.dataset.dir=d;h.addEventListener("pointerdown",ev=>startResize(ev,e,d));n.appendChild(h)}}
 function startMove(ev,e){
-  if(preview||e.locked||ev.target.closest('[contenteditable="true"],.resize-handle,.table-col-resizer,.table-row-resizer,.table-context-tools'))return;
+  if(preview||e.locked||ev.target.closest('[contenteditable="true"],.resize-handle,.table-col-resizer,.table-row-resizer,.table-context-tools,.table-edit-cell,.table-head-cell'))return;
   ev.preventDefault();ev.stopPropagation();
   if(!selected.has(e.id)){const previous=new Set(selected);clearTableSelection();selected=ev.shiftKey?new Set([...selected,e.id]):new Set([e.id]);refreshSelectionVisuals(previous)}
   const sx=ev.clientX,sy=ev.clientY,start=[...selected].map(id=>{const x=current().elements.find(v=>v.id===id);return{x,id,ox:x.x,oy:x.y}}).filter(a=>a.x),factor=zoom/100;
