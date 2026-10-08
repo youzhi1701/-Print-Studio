@@ -290,8 +290,13 @@ function recordName(rec){
 
 function updateRecordMeta(){
   const rec=activeRecord();
-  $("recordTitle").textContent=rec?recordName(rec):"未选择记录";
-  $("recordSub").textContent=rec?(state.selectedRecords.length>1?("第 "+(currentIndex+1)+" / "+state.selectedRecords.length+" 条"):"点击切换"):"点击选择";
+  const tableName=String(state.tableName||"").trim();
+  $("recordTitle").textContent=tableName||"未识别表格";
+  $("recordSub").textContent=rec
+    ?(state.selectedRecords.length>1
+      ?(recordName(rec)+" · 第 "+(currentIndex+1)+" / "+state.selectedRecords.length+" 条")
+      :(recordName(rec)+" · 点击切换"))
+    :"未选择记录 · 点击选择";
   $("selectionText").textContent=state.selectedRecords.length>1?("已选择 "+state.selectedRecords.length+" 条记录"):(rec?"已选择 1 条记录":"未选择记录");
   $("previewCounter").textContent=!rec?"0 / 0":(state.selectedRecords.length>1?((currentIndex+1)+" / "+state.selectedRecords.length):"1 / 1");
   const multi=state.selectedRecords.length>1;
@@ -406,7 +411,7 @@ function resetPreview(){
 }
 
 function syncBridge(){
-  writeBridge({fields:state.fields,record:activeRecord(),selection:state.selection,selectedRecords:state.selectedRecords,template:activeTemplate(),activeTemplateId:state.activeTemplateId,currentIndex});
+  writeBridge({fields:state.fields,record:activeRecord(),selection:state.selection,selectedRecords:state.selectedRecords,tableName:state.tableName,template:activeTemplate(),activeTemplateId:state.activeTemplateId,currentIndex});
 }
 
 async function refresh(){
@@ -435,7 +440,7 @@ async function refresh(){
       updateAccountUi();
     }catch(err){console.warn("飞书身份自动识别失败",err);updateAccountUi()}
     const ctx=await readContext(c.bitable);
-    state.selection=ctx.selection;state.table=ctx.table;state.fields=ctx.fields;
+    state.selection=ctx.selection;state.table=ctx.table;state.tableName=ctx.tableName||"";state.fields=ctx.fields;
     await syncCloudTemplates(false);
     state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
     state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);

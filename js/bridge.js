@@ -1,4 +1,4 @@
-import {STORAGE_KEYS,storageGet,storageSet} from "./state.js?v=20261006-21";
+import {STORAGE_KEYS,storageGet,storageSet} from "./state.js?v=20261008-50";
 
 let lastPayload=null;
 let listenerInstalled=false;
@@ -38,6 +38,7 @@ function normalizePayload(payload){
     record:list[currentIndex]||record,
     template:p.template&&typeof p.template==="object"?p.template:null,
     activeTemplateId:p.activeTemplateId||p.template?.id||null,
+    tableName:String(p.tableName||""),
     currentIndex,
     selection,
     bridgeUpdatedAt:Number(p.bridgeUpdatedAt)||0
