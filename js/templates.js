@@ -308,18 +308,22 @@ export function autoBindTemplateFields(template,fields=[]){
       const matched=matchFieldName(current||el.label?.replace(/[：:]/g,"")||"",fields);
       if(matched){
         if(el.type==="field"){
-          const combined=String(el.label||"")+String(el.text||"");
-          const defaults=new Set([
+          const combined=(String(el.label||"")+String(el.text||"")).trim();
+          const compact=s=>String(s||"").replace(/\s+/g,"").replace(/：/g,":");
+          const defaults=[
             "",
             "{{字段}}",
             "字段：{{字段}}",
             current?"{{"+current+"}}":"",
             current?(current+"：{{"+current+"}}"):"",
-            current?(current+":{{"+current+"}}"):""
-          ]);
+            current?(current+":{{"+current+"}}"):"",
+            current?(current+"： {{"+current+"}}"):"",
+            current?(current+": {{"+current+"}}"):""
+          ].filter(Boolean);
           el.label="";
-          if(defaults.has(combined))el.text=matched+"：{{"+matched+"}}";
-          else if(el.text===undefined||el.text===null||el.text==="")el.text=matched+"：{{"+matched+"}}";
+          if(defaults.some(v=>compact(v)===compact(combined))||el.text===undefined||el.text===null||el.text===""){
+            el.text=matched+"：{{"+matched+"}}"
+          }
           if(!el.align)el.align="center";
         }
         el.field=matched;changed=true

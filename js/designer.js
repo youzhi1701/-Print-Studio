@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-41";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-41";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-41";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-41";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-41";import {printTemplateRecords} from "./print.js?v=20261008-41";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-41";import {hasAccountSession} from "./account.js?v=20261008-41";import {
+import {mountBuildVersion} from "./version.js?v=20261008-42";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-42";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-42";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-42";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-42";import {printTemplateRecords} from "./print.js?v=20261008-42";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-42";import {hasAccountSession} from "./account.js?v=20261008-42";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-41";
+} from "./table-model.js?v=20261008-42";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -1303,20 +1303,25 @@ function updateProps(ev){
     if(e.type==="text")e.text=$("propText").value;
     if(e.type==="field"){
       const oldField=e.field||"",nextField=$("propField").value||"";
-      const currentCombined=String(e.label||"")+String(e.text||"");
-      const oldDefaults=new Set([
+      const combined=(String(e.label||"")+String(e.text||"")).trim();
+      const compact=s=>String(s||"").replace(/\s+/g,"").replace(/：/g,":");
+      const defaultCandidates=[
         "",
         "{{字段}}",
         "字段：{{字段}}",
         oldField?"{{"+oldField+"}}":"",
         oldField?(oldField+"：{{"+oldField+"}}"):"",
-        oldField?(oldField+":{{"+oldField+"}}"):""
-      ]);
+        oldField?(oldField+":{{"+oldField+"}}"):"",
+        oldField?(oldField+"： {{"+oldField+"}}"):"",
+        oldField?(oldField+": {{"+oldField+"}}"):""
+      ].filter(Boolean);
+      const isDefaultDisplay=defaultCandidates.some(v=>compact(v)===compact(combined));
       e.field=nextField;
-      if(targetId==="propField"&&oldDefaults.has(currentCombined)){
+      if(targetId==="propField"&&isDefaultDisplay){
         e.label="";
         e.text=nextField?(nextField+"：{{"+nextField+"}}"):"";
-        $("fieldTemplate").value=e.text
+        $("fieldTemplate").value=e.text;
+        if(!e.align)e.align="center";
       }else if(targetId==="fieldTemplate"){
         e.label="";
         e.text=$("fieldTemplate").value
