@@ -769,3 +769,22 @@
   font-weight:600!important
 }
 .table-column-row.empty-hidden .col-summary-main b{color:rgba(23,34,60,.72)!important}
+
+/* v20261008-47 · unified table grid edges */
+.table-el>table{
+  border:0!important;
+  border-collapse:separate!important;
+  border-spacing:0!important;
+}
+.table-el th,.table-el td{
+  border-color:#333!important;
+}
+.table-edit-cell.cell-selected{
+  outline:0!important;
+  box-shadow:inset 0 0 0 2px rgba(37,99,235,.24)!important;
+  background:rgba(37,99,235,.055)!important;
+}
+.table-el.selected{
+  outline:1.5px solid rgba(37,99,235,.72)!important;
+  outline-offset:1px!important;
+}

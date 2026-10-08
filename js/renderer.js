@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261008-46";
+} from "./table-model.js?v=20261008-47";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function resolveTemplate(template,data={}){
@@ -46,9 +46,11 @@ export function renderTableMarkup(el,rootData={},options={}){
   if(!hasAny&&el.emptyBehavior==="hide")return{html:"",layout,renderedHeight:0};
 
   const colgroup='<colgroup>'+cols.map(c=>'<col style="width:'+c.width+'%">').join("")+'</colgroup>';
+  const edgeColor="#333";
   const head=el.showHeader===false?"":'<thead><tr>'+cols.map((c,ci)=>{
     const cls=editable?' class="table-head-cell" data-col="'+(c.index??ci)+'"':"";
-    return '<th'+cls+' style="box-sizing:border-box;border:'+bw+'px solid #333;color:#000;padding:2px;text-align:'+(c.headerAlign||c.align||"center")+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
+    const edge='border-top:'+bw+'px solid '+edgeColor+';border-left:'+bw+'px solid '+edgeColor+';'+(ci===cols.length-1?'border-right:'+bw+'px solid '+edgeColor+';':'');
+    return '<th'+cls+' style="box-sizing:border-box;'+edge+'border-bottom:0;color:#000;padding:2px;text-align:'+(c.headerAlign||c.align||"center")+';width:'+c.width+'%;height:'+(el.headerHeight||el.rowHeight||8)+'mm;white-space:'+(el.wrap===false?'nowrap':'normal')+';overflow-wrap:anywhere">'+esc(c.title)+'</th>'
   }).join("")+'</tr></thead>';
 
   const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri],height:Math.max(Number(rows[ri]?.height)||0,...cells.map(c=>Number(c.height)||0))})).filter(({cells,row})=>{
@@ -61,19 +63,30 @@ export function renderTableMarkup(el,rootData={},options={}){
   });
 
   const renderedHeight=(el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8))+visibleRows.reduce((sum,x)=>sum+Number(x.height||el.rowHeight||8),0);
-  const body=visibleRows.map(({cells,ri,row,height})=>{
+  const visibleColPos=new Map(cols.map((c,i)=>[c.id,i]));
+  const body=visibleRows.map(({cells,ri,row,height},visibleRowIndex)=>{
     const html=cells.map(cell=>{
       const pad=isImageValue(cell.value)?0:cell.cfg.padding;
       const rowspan=cell.rowspan>1?'rowspan="'+cell.rowspan+'" ':"";
       const colspan=cell.colspan>1?'colspan="'+cell.colspan+'" ':"";
       const selected=editable&&selectedKeys.has(String(ri)+":"+String(cell.colIndex));
       const cls=editable?(' class="table-edit-cell'+(selected?' cell-selected':'')+'" data-row="'+ri+'" data-col="'+cell.colIndex+'"'):"";
-      return '<td'+cls+' '+rowspan+colspan+'style="position:relative;box-sizing:border-box;border:'+bw+'px solid #444;color:#000;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
+      const startPos=visibleColPos.get(cell.col.id)??0;
+      const endPos=Math.min(cols.length-1,startPos+Math.max(1,cell.colspan)-1);
+      const endRow=Math.min(visibleRows.length-1,visibleRowIndex+Math.max(1,cell.rowspan)-1);
+      const topNeeded=el.showHeader===false||visibleRowIndex>=0;
+      const edge=
+        (topNeeded?'border-top:'+bw+'px solid '+edgeColor+';':'')+
+        'border-left:'+bw+'px solid '+edgeColor+';'+
+        (endPos===cols.length-1?'border-right:'+bw+'px solid '+edgeColor+';':'')+
+        (endRow===visibleRows.length-1?'border-bottom:'+bw+'px solid '+edgeColor+';':'');
+      return '<td'+cls+' '+rowspan+colspan+'style="position:relative;box-sizing:border-box;'+edge+'color:#000;padding:'+pad+'mm;text-align:'+cell.cfg.align+';height:'+cell.height+'mm;white-space:'+(cell.cfg.wrap?'pre-wrap':'nowrap')+';overflow-wrap:anywhere;word-break:'+(cell.cfg.wrap?'break-word':'normal')+';vertical-align:'+cell.cfg.valign+'">'+cellHtml(cell.value,cell.cfg.imageFit)+'</td>';
     }).join("");
     return '<tr style="height:'+height+'mm;'+(el.zebra&&ri%2?'background:rgba(120,140,180,.06);':'')+'">'+html+'</tr>';
   }).join("");
 
-  const html='<table style="width:100%;height:'+renderedHeight+'mm;border:'+bw+'px solid #333;border-collapse:collapse;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
+  const headerOnlyBottom=(el.showHeader!==false&&visibleRows.length===0)?'border-bottom:'+bw+'px solid '+edgeColor+';':'';
+  const html='<table style="width:100%;height:'+renderedHeight+'mm;border:0;'+headerOnlyBottom+'border-collapse:separate;border-spacing:0;table-layout:fixed;font-size:'+(el.fontSize||9)+'px;box-sizing:border-box;color:#000">'+colgroup+head+'<tbody>'+body+'</tbody></table>';
   return{html,layout,renderedHeight,allCols,visibleRows}
 }
 
