@@ -1,6 +1,6 @@
 import {
   buildTableLayout,hasValue
-} from "./table-model.js?v=20261008-44";
+} from "./table-model.js?v=20261008-45";
 
 function esc(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 function resolveTemplate(template,data={}){
@@ -54,7 +54,10 @@ export function renderTableMarkup(el,rootData={},options={}){
   const visibleRows=cellRows.map((cells,ri)=>({cells,ri,row:rows[ri],height:Math.max(Number(rows[ri]?.height)||0,...cells.map(c=>Number(c.height)||0))})).filter(({cells,row})=>{
     const hasRenderedValue=cells.some(cell=>hasValue(cell.value));
     const spansMultiple=(el.merges||[]).some(m=>m.rowIds?.includes(row.id)&&(m.rowIds?.length||0)>1);
-    return el.emptyBehavior!=="hide"||hasRenderedValue||spansMultiple;
+    const manualRow=row?.type==="manual";
+    // 用户主动“加行”创建的是 manual row。即使内容为空，也必须在编辑器/预览/打印中保留，
+    // 否则行已写入模型却被 emptyBehavior=hide 过滤，看起来就像“加行失效”。
+    return manualRow||el.emptyBehavior!=="hide"||hasRenderedValue||spansMultiple;
   });
 
   const renderedHeight=(el.showHeader===false?0:Number(el.headerHeight||el.rowHeight||8))+visibleRows.reduce((sum,x)=>sum+Number(x.height||el.rowHeight||8),0);
