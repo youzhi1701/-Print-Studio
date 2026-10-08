@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-38";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-38";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-38";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-38";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-38";import {printTemplateRecords} from "./print.js?v=20261008-38";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-38";import {hasAccountSession} from "./account.js?v=20261008-38";import {
+import {mountBuildVersion} from "./version.js?v=20261008-39";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-39";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-39";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-39";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-39";import {printTemplateRecords} from "./print.js?v=20261008-39";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-39";import {hasAccountSession} from "./account.js?v=20261008-39";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-38";
+} from "./table-model.js?v=20261008-39";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -1445,7 +1445,22 @@ $("rightToggle").onclick=()=>{
 $("layerSearch").oninput=renderLayers;
 $("contextMenu").onclick=e=>{const c=e.target.dataset.cmd;if(c==="duplicate")duplicate();if(c==="front")moveLayer(true);if(c==="back")moveLayer(false);if(c==="lock")toggleKey("locked");if(c==="delete")del();$("contextMenu").classList.add("hidden")};document.addEventListener("click",()=>$("contextMenu").classList.add("hidden"));document.addEventListener("keydown",e=>{const editing=["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)||!!document.activeElement?.isContentEditable;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="p"){e.preventDefault();testPrint();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();saveCurrentTemplateToCloud();return}if(editing)return;if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){e.preventDefault();restore(hIndex-1);return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="y"){e.preventDefault();restore(hIndex+1);return}if(e.key==="Escape"&&selectedCells.length){e.preventDefault();const t=selectedOne();clearTableSelection();if(t?.type==="table")refreshElementNode(t);syncProps();return}if(e.key==="Escape"&&selected.size){e.preventDefault();const previous=new Set(selected);selected.clear();refreshSelectionVisuals(previous);return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="m"&&selectedCells.length){e.preventDefault();const t=selectedOne();selectionHasMerge(t)?unmergeSelectedCells():mergeSelectedCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="a"){e.preventDefault();const previous=new Set(selected);clearTableSelection();selected=new Set(current().elements.filter(x=>!x.hidden).map(x=>x.id));refreshSelectionVisuals(previous);return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="c"&&selectedCells.length){e.preventDefault();copySelectedTableCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="v"&&selectedCells.length){e.preventDefault();pasteSelectedTableCells();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="c"&&selected.size){e.preventDefault();copySelectedElements();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="v"&&elementClipboard.length){e.preventDefault();pasteSelectedElements();return}if((e.key==="Delete"||e.key==="Backspace")&&selectedCells.length){e.preventDefault();clearSelectedTableCells();return}if((e.key==="Delete"||e.key==="Backspace")&&selected.size){e.preventDefault();del();return}if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="d"){e.preventDefault();duplicate();return}const step=e.altKey?.1:(e.shiftKey?5:.5);if(["ArrowLeft","ArrowRight","ArrowUp","ArrowDown"].includes(e.key)&&selected.size){e.preventDefault();nudgeSelection(e.key==="ArrowLeft"?-step:e.key==="ArrowRight"?step:0,e.key==="ArrowUp"?-step:e.key==="ArrowDown"?step:0)}})}
 window.addEventListener("storage",e=>{if(e.key===STORAGE_KEYS.bridge){const r=syncBridgeData(false);if(!r.updated)return;if(r.templateChanged)renderAll();else{renderElements();syncProps()}}});
-onBridgeMessage(payload=>{const r=syncBridgeData(false,payload);if(!r.updated)return;if(r.templateChanged)renderAll();else{renderElements();syncProps()}});
+function isPropertyEditorActive(){
+  const active=document.activeElement;
+  return !!active&&!!active.closest?.("#props")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName)
+}
+onBridgeMessage(payload=>{
+  const editing=isPropertyEditorActive();
+  const r=syncBridgeData(false,payload);
+  if(!r.updated)return;
+  if(r.templateChanged){
+    if(editing){renderElements();renderLayers();return}
+    renderAll();
+    return
+  }
+  renderElements();
+  if(!editing)syncProps()
+});
 window.addEventListener("resize",()=>{clearTimeout(window.__spResize);window.__spResize=setTimeout(()=>{initResponsivePanels();if(zoomMode==="fit")fitCanvas()},100)});
 document.addEventListener("fullscreenchange",()=>setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},120));
 window.addEventListener("beforeunload",()=>{flushNudge();if(saveTimer){clearTimeout(saveTimer);autoSave(true)}});
