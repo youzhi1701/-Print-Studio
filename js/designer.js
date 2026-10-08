@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-39";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-39";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-39";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-39";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-39";import {printTemplateRecords} from "./print.js?v=20261008-39";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-39";import {hasAccountSession} from "./account.js?v=20261008-39";import {
+import {mountBuildVersion} from "./version.js?v=20261008-40";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-40";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-40";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-40";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-40";import {printTemplateRecords} from "./print.js?v=20261008-40";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-40";import {hasAccountSession} from "./account.js?v=20261008-40";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-39";
+} from "./table-model.js?v=20261008-40";
 mountBuildVersion();
 const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
@@ -1193,10 +1193,69 @@ function applyTableCellInspector(e){
     tmSetCellOverride(e,row.id,col.id,cfg);
   }
 }
+function selectedElements(){return current()?.elements?.filter(e=>selected.has(e.id))||[]}
+function commonSelectionValue(els,key){
+  if(!els.length)return null;
+  const first=els[0]?.[key];
+  return els.every(e=>String(e?.[key]??"")===String(first??""))?first:null
+}
+function batchTextElements(){return selectedElements().filter(e=>["text","field","table"].includes(e.type))}
+function batchAlignElements(){return selectedElements().filter(e=>["text","field"].includes(e.type))}
+function syncMultiSelectionProps(els=selectedElements()){
+  const panel=$("multiSelectionProps");if(!panel)return;
+  $("multiSelectionCount").textContent=els.length+" 个";
+  const textEls=els.filter(e=>["text","field","table"].includes(e.type));
+  const alignEls=els.filter(e=>["text","field"].includes(e.type));
+  const fontSize=commonSelectionValue(textEls,"fontSize");
+  const fontWeight=commonSelectionValue(textEls,"fontWeight");
+  $("multiFontSize").value=fontSize===null?"":(fontSize??"");
+  $("multiFontSize").placeholder=fontSize===null?"混合":"";
+  $("multiFontWeight").value=fontWeight===null?"":String(fontWeight||"400");
+  const align=commonSelectionValue(alignEls,"align");
+  document.querySelectorAll("[data-multi-align]").forEach(b=>b.classList.toggle("active",align!==null&&b.dataset.multiAlign===(align||"left")));
+  const allBold=textEls.length>0&&textEls.every(e=>Number(e.fontWeight||400)>=700);
+  $("multiBoldBtn").classList.toggle("active",allBold);
+  $("multiBoldBtn").textContent=allBold?"B 取消加粗":"B 加粗";
+  $("multiSelectionNote").textContent=textEls.length
+    ?("已选择 "+els.length+" 个元素 · "+textEls.length+" 个可批量调整文字")
+    :("已选择 "+els.length+" 个元素 · 当前选择无文字属性");
+}
+function applyBatchTextStyle(key,value,{commit=true}={}){
+  const els=key==="align"?batchAlignElements():batchTextElements();
+  if(!els.length){toast("当前选择没有可调整的文字元素");return}
+  for(const e of els){
+    if(key==="fontSize")e.fontSize=Math.max(6,Number(value)||6);
+    else if(key==="fontWeight")e.fontWeight=String(value||"400");
+    else if(key==="align")e.align=value||"left";
+    if(["text","field"].includes(e.type)&&e.autoHeight!==false&&["fontSize","fontWeight"].includes(key)){e.autoHeight=true;syncAutoTextHeight(e)}
+    refreshElementNode(e)
+  }
+  syncMultiSelectionProps();
+  if(commit)commitEdit();else autoSave()
+}
+function applyBatchDimension(key){
+  const els=selectedElements();if(els.length<2)return;
+  const anchor=els[0];
+  if(key==="w"){
+    const w=Math.max(.5,Number(anchor.w)||.5);
+    els.slice(1).forEach(e=>{e.w=w;clampElementToPage(e);refreshElementNode(e)})
+  }else{
+    const h=Math.max(.5,elementVisualHeight(anchor));
+    els.slice(1).forEach(e=>{
+      if(e.type==="table")return;
+      e.autoHeight=false;e.h=h;clampElementToPage(e);refreshElementNode(e)
+    })
+  }
+  syncMultiSelectionProps();commitEdit()
+}
 function syncProps(){
-  const e=selectedOne();
-  $("noSelection").classList.toggle("hidden",!!e);$("props").classList.toggle("hidden",!e);
-  $("multiTools")?.classList.toggle("hidden",selected.size<2);
+  const e=selectedOne(),els=selectedElements(),multi=els.length>1;
+  $("noSelection").classList.toggle("hidden",els.length>0);
+  $("props").classList.toggle("hidden",!e);
+  $("multiSelectionProps")?.classList.toggle("hidden",!multi);
+  $("multiTools")?.classList.toggle("hidden",!multi);
+  $("selectionState").textContent=els.length?("已选择 "+els.length+" 个元素"):((current()?.elements?.length||0)+" 个元素");
+  if(multi){syncMultiSelectionProps(els);return}
   if(!e)return;
   for(const [id,k] of [["propX","x"],["propY","y"],["propW","w"]])$(id).value=Math.round(e[k]*10)/10;$("propH").value=Math.round(elementVisualHeight(e)*10)/10;
   $("propH").disabled=e.type==="table";$("propH").title=e.type==="table"?"表格高度由表头和各行高度自动计算":"";
@@ -1432,6 +1491,21 @@ $("leftToggle").onclick=()=>{
   setTimeout(()=>{if(zoomMode==="fit")fitCanvas()},80);
 };
 $("toggleCellInspector").onclick=()=>{const e=selectedOne();if(!e||e.type!=="table"||!selectedCells.length)return;tableAdvancedOpen=!tableAdvancedOpen;syncTableCellInspector(e)};
+$("multiFontSize").addEventListener("input",e=>{if(e.target.value!=="")applyBatchTextStyle("fontSize",e.target.value,{commit:false})});
+$("multiFontSize").addEventListener("change",e=>{if(e.target.value!=="")applyBatchTextStyle("fontSize",e.target.value)});
+$("multiFontWeight").addEventListener("change",e=>{if(e.target.value)applyBatchTextStyle("fontWeight",e.target.value)});
+document.querySelectorAll("[data-multi-align]").forEach(b=>b.onclick=()=>applyBatchTextStyle("align",b.dataset.multiAlign));
+$("multiBoldBtn").onclick=()=>{
+  const els=batchTextElements();if(!els.length){toast("当前选择没有可加粗的文字元素");return}
+  const bold=els.every(e=>Number(e.fontWeight||400)>=700);
+  applyBatchTextStyle("fontWeight",bold?"400":"700")
+};
+$("multiSameWidthBtn").onclick=()=>applyBatchDimension("w");
+$("multiSameHeightBtn").onclick=()=>applyBatchDimension("h");
+$("multiDuplicateBtn").onclick=duplicate;
+$("multiDeleteBtn").onclick=del;
+$("multiLockBtn").onclick=()=>toggleKey("locked");
+$("multiHideBtn").onclick=()=>toggleKey("hidden");
 $("addToMineBtn").onclick=addCurrentToMyLibrary;
 $("saveTemplateBtn").onclick=()=>saveCurrentTemplateToCloud();
 $("saveAsTemplateBtn").onclick=saveAsTemplate;
@@ -1447,7 +1521,7 @@ $("contextMenu").onclick=e=>{const c=e.target.dataset.cmd;if(c==="duplicate")dup
 window.addEventListener("storage",e=>{if(e.key===STORAGE_KEYS.bridge){const r=syncBridgeData(false);if(!r.updated)return;if(r.templateChanged)renderAll();else{renderElements();syncProps()}}});
 function isPropertyEditorActive(){
   const active=document.activeElement;
-  return !!active&&!!active.closest?.("#props")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName)
+  return !!active&&!!active.closest?.("#propsTab")&&["INPUT","TEXTAREA","SELECT"].includes(active.tagName)
 }
 onBridgeMessage(payload=>{
   const editing=isPropertyEditorActive();

@@ -4,14 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>超级打印 · 模板设计器</title>
-  <link rel="stylesheet" href="./css/theme.css?v=20261008-39">
-  <link rel="stylesheet" href="./css/designer.css?v=20261008-39">
-  <link rel="stylesheet" href="./css/print.css?v=20261008-39" media="print">
+  <link rel="stylesheet" href="./css/theme.css?v=20261008-40">
+  <link rel="stylesheet" href="./css/designer.css?v=20261008-40">
+  <link rel="stylesheet" href="./css/print.css?v=20261008-40" media="print">
 </head>
 <body class="aurora-app designer-body">
   <div class="aurora-layer" aria-hidden="true"></div>
   <header class="designer-top glass">
-    <div class="designer-brand" title="build 20261008-39"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261008-39</span></small></div></div>
+    <div class="designer-brand" title="build 20261008-40"><span class="brand-mark"><i></i><i></i><i></i></span><div><b>超级打印</b><small>模板设计器 <span id="buildVersionBadge" class="build-version-badge build-version-inline">v20261008-40</span></small></div></div>
     <input id="templateName" class="template-name" value="未命名模板">
     <div class="top-tools">
       <button id="leftToggle" class="panel-toggle" title="收起/展开组件栏">☰</button><button id="rightToggle" class="panel-toggle" title="收起/展开属性栏">◫</button>
@@ -89,6 +89,20 @@
       <div class="right-tabs"><button class="rtab active" data-rtab="props">属性</button><button class="rtab" data-rtab="layers">图层</button></div>
       <section id="propsTab" class="right-body">
         <div id="noSelection" class="no-selection">选择画布元素后可精确调整</div>
+        <div id="multiSelectionProps" class="multi-selection-props hidden">
+          <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>批量调整 <span id="multiSelectionCount" class="type-badge"></span></div>
+          <div class="multi-selection-note" id="multiSelectionNote">仅对支持该属性的元素生效</div>
+          <div class="prop-mini-title">文字</div>
+          <div class="two">
+            <label>字号<input id="multiFontSize" type="number" min="6" step="1" placeholder="混合"></label>
+            <label>字重<select id="multiFontWeight"><option value="">混合</option><option value="400">常规</option><option value="500">中等</option><option value="600">半粗</option><option value="700">粗体</option><option value="800">特粗</option></select></label>
+          </div>
+          <label class="stack">文字对齐<div class="segmented" id="multiAlignGroup"><button type="button" data-multi-align="left">左</button><button type="button" data-multi-align="center">中</button><button type="button" data-multi-align="right">右</button></div></label>
+          <div class="multi-batch-actions"><button id="multiBoldBtn" type="button">B 加粗</button><button id="multiSameWidthBtn" type="button">统一宽度</button><button id="multiSameHeightBtn" type="button">统一高度</button></div>
+          <div class="section-sep"></div>
+          <div class="prop-mini-title">元素</div>
+          <div class="action-grid"><button id="multiDuplicateBtn" type="button">复制</button><button id="multiLockBtn" type="button">锁定</button><button id="multiHideBtn" type="button">隐藏</button><button id="multiDeleteBtn" type="button" class="danger">删除</button></div>
+        </div>
         <div id="props" class="hidden">
           <div class="section-title"><span class="mini-bars"><i></i><i></i><i></i></span>位置与尺寸</div>
           <div class="four-grid"><label>X<input id="propX" type="number" step=".1"></label><label>Y<input id="propY" type="number" step=".1"></label><label>W<input id="propW" type="number" step=".1"></label><label>H<input id="propH" type="number" step=".1"></label></div>
@@ -178,7 +192,7 @@
 
   <div id="toast" class="toast" role="status"></div>
   <div id="contextMenu" class="context-menu hidden"><button data-cmd="duplicate">复制</button><button data-cmd="front">置于顶层</button><button data-cmd="back">置于底层</button><button data-cmd="lock">锁定/解锁</button><hr><button data-cmd="delete" class="danger">删除</button></div>
-  <script type="module" src="./js/designer.js?v=20261008-39"></script>
+  <script type="module" src="./js/designer.js?v=20261008-40"></script>
 <!-- redeploy-trigger: 2026-10-04T16:00+08:00 -->
 <!-- redeploy-trigger: 2026-10-05T12:00+08:00 -->
 </body>
