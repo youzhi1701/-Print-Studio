@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261008-51";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS,getStorageScope,setStorageScope,storageScopedKey} from "./state.js?v=20261008-51";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261008-51";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-51";
-import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261008-51";
-import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-51";
-import {printTemplateRecords} from "./print.js?v=20261008-51";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-51";
-import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261008-51";
+import {mountBuildVersion} from "./version.js?v=20261008-52";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS,getStorageScope,setStorageScope,storageScopedKey} from "./state.js?v=20261008-52";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261008-52";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-52";
+import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261008-52";
+import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-52";
+import {printTemplateRecords} from "./print.js?v=20261008-52";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-52";
+import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261008-52";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
