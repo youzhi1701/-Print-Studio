@@ -1,14 +1,14 @@
-import {mountBuildVersion} from "./version.js?v=20261008-43";
-import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-43";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-43";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-43";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-43";import {printTemplateRecords} from "./print.js?v=20261008-43";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-43";import {hasAccountSession} from "./account.js?v=20261008-43";import {
+import {mountBuildVersion} from "./version.js?v=20261008-44";
+import {state,uid,STORAGE_KEYS} from "./state.js?v=20261008-44";import {loadTemplates,saveTemplates,createTemplate,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-44";import {readBridge,requestBridgeFromOpener,onBridgeMessage,bridgeTargetOrigin,requestImageRefresh} from "./bridge.js?v=20261008-44";import {renderTemplateToHtml,renderElementToHtml,renderTableMarkup,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-44";import {printTemplateRecords} from "./print.js?v=20261008-44";import {upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-44";import {hasAccountSession} from "./account.js?v=20261008-44";import {
   ensureTableModel,materializeTableRows,normalizeTableColumns as tmNormalizeColumns,
   mergeForCell as tmMergeForCell,isCoveredCell as tmIsCoveredCell,
   mergeVisualRange,unmergeVisualRange,insertManualRow,deleteVisualRows,
   insertColumn as tmInsertColumn,deleteColumns as tmDeleteColumns,
   getCellOverride as tmGetCellOverride,setCellOverride as tmSetCellOverride,cellValue as tmCellValue,rowHeight as tmRowHeight,
   buildTableLayout,normalizeMergeContiguity
-} from "./table-model.js?v=20261008-43";
+} from "./table-model.js?v=20261008-44";
 mountBuildVersion();
-const MM=96/25.4,$=id=>document.getElementById(id);let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
+const MM=96/25.4,$=id=>document.getElementById(id);let suppressTableCellClickUntil=0;let selected=new Set(),selectedCells=[],tableSelectionAnchor=null,tableSelecting=false,tableClipboard=null,elementClipboard=[],zoom=75,zoomMode="fit",grid=true,snap=true,preview=false,history=[],hIndex=-1,dragType=null,toastTimer,saveTimer=null,nudgeTimer=null,lastBridgeIdentity="",lastEditStamp=0,expandedTableColumnId=null,tableAdvancedOpen=false;
 function toast(m){const n=$("toast");n.textContent=m;n.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>n.classList.remove("show"),1500)}
 function current(){return state.templates.find(t=>t.id===state.activeTemplateId)}
 function clearTableSelection(){selectedCells=[];tableSelectionAnchor=null;tableSelecting=false;tableAdvancedOpen=false}
@@ -594,18 +594,36 @@ function content(n,e){
     }
     n.querySelectorAll("td.table-edit-cell").forEach(cell=>{
       const row=Number(cell.dataset.row),col=Number(cell.dataset.col);
-      cell.addEventListener("pointerdown",ev=>beginTableCellDrag(ev,e,row,col));
+      cell.addEventListener("pointerdown",ev=>{
+        if(ev.shiftKey){beginTableCellDrag(ev,e,row,col);return}
+        // 普通按住表格正文直接拖动整个表格；不拦截事件，让外层 startMove 接管。
+      });
       cell.addEventListener("pointerenter",()=>extendTableCellDrag(e,row,col));
-      cell.addEventListener("click",ev=>ev.stopPropagation());
+      cell.addEventListener("click",ev=>{
+        ev.stopPropagation();
+        if(Date.now()<suppressTableCellClickUntil)return;
+        const previous=new Set(selected);
+        selected=new Set([e.id]);
+        tableSelectionAnchor={row,col};
+        setCellRectSelection({row,col},{row,col},e);
+        paintTableSelection(e);
+        renderLayers();syncProps();
+      });
     });
     n.querySelectorAll("th.table-head-cell").forEach(cell=>{
       cell.addEventListener("pointerdown",ev=>{
-        ev.stopPropagation();ev.preventDefault();
-        const col=Number(cell.dataset.col);
-        const previous=new Set(selected);
-        selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
-        for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
-        refreshElementNode(e);refreshSelectionVisuals(previous);
+        if(ev.shiftKey){
+          ev.stopPropagation();ev.preventDefault();
+          const col=Number(cell.dataset.col);
+          const previous=new Set(selected);
+          selected=new Set([e.id]);tableSelectionAnchor={row:0,col};selectedCells=[];
+          for(let r=0;r<rows.length;r++)selectedCells.push({row:r,col});
+          refreshElementNode(e);refreshSelectionVisuals(previous);
+        }
+        // 普通按住表头同样可拖动整个表格。
+      });
+      cell.addEventListener("click",ev=>{
+        if(Date.now()<suppressTableCellClickUntil){ev.stopPropagation();return}
       });
     });
     if(selected.has(e.id)&&!preview&&!e.locked){
@@ -983,7 +1001,7 @@ function updateElementNodeGeometry(e){
 }
 function addHandles(n,e){const dirs=e.type==="table"?["e","w"]:["nw","n","ne","e","se","s","sw","w"];for(const d of dirs){const h=document.createElement("span");h.className="resize-handle "+d;h.dataset.dir=d;h.addEventListener("pointerdown",ev=>startResize(ev,e,d));n.appendChild(h)}}
 function startMove(ev,e){
-  if(preview||e.locked||ev.target.closest('[contenteditable="true"],.resize-handle,.table-col-resizer,.table-row-resizer,.table-edit-cell,.table-context-tools'))return;
+  if(preview||e.locked||ev.target.closest('[contenteditable="true"],.resize-handle,.table-col-resizer,.table-row-resizer,.table-context-tools'))return;
   ev.preventDefault();ev.stopPropagation();
   if(!selected.has(e.id)){const previous=new Set(selected);clearTableSelection();selected=ev.shiftKey?new Set([...selected,e.id]):new Set([e.id]);refreshSelectionVisuals(previous)}
   const sx=ev.clientX,sy=ev.clientY,start=[...selected].map(id=>{const x=current().elements.find(v=>v.id===id);return{x,id,ox:x.x,oy:x.y}}).filter(a=>a.x),factor=zoom/100;
@@ -1004,7 +1022,7 @@ function startMove(ev,e){
   const up=()=>{
     removeEventListener("pointermove",move);removeEventListener("pointerup",up);clearAlignmentGuides();syncProps();
     const changed=moved&&start.some(a=>Math.abs(a.x.x-a.ox)>.001||Math.abs(a.x.y-a.oy)>.001);
-    if(changed)commitEdit()
+    if(changed){if(e.type==="table")suppressTableCellClickUntil=Date.now()+250;commitEdit()}
   };
   addEventListener("pointermove",move);addEventListener("pointerup",up)
 }
