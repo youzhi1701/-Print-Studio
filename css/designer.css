@@ -758,3 +758,14 @@
 .table-column-row.empty-hidden{opacity:.76}
 .col-summary-main .col-status-hidden{color:#b45309!important;font-weight:600!important}
 .table-column-row.empty-hidden .col-summary-main b{color:var(--muted)!important}
+
+/* v20261008-43 · table visibility/status */
+.table-column-row.empty-hidden{
+  border-color:rgba(245,158,11,.22)!important;
+  background:rgba(245,158,11,.035)!important
+}
+.col-summary-main .col-status-hidden{
+  color:#a16207!important;
+  font-weight:600!important
+}
+.table-column-row.empty-hidden .col-summary-main b{color:rgba(23,34,60,.72)!important}

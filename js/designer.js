@@ -295,7 +295,11 @@ function tableColumnWeight(col){
 function applySmartColumnWidths(e){
   const cols=tmNormalizeColumns(e);if(!cols.length)return;
   const tableMm=Math.max(40,Number(e.w)||100);
-  const fixedMm={image:18,qty:12,price:18};
+  const fixedMm={
+    image:Math.min(24,Math.max(16,tableMm*.10)),
+    qty:Math.min(15,Math.max(11,tableMm*.06)),
+    price:Math.min(22,Math.max(17,tableMm*.085))
+  };
   const fixed=cols.map(c=>fixedMm[tableColumnKind(c)]||0);
   let fixedTotal=fixed.reduce((a,b)=>a+b,0);
   const maxFixed=tableMm*.48;
@@ -1036,7 +1040,11 @@ function selectedOne(){if(selected.size!==1)return null;return current().element
 function renderTableColumnEditor(e){
   const list=$("tableColumnList");if(!list)return;
   list.innerHTML="";
-  const cols=normalizeColumns(e.columns);
+  let cols=normalizeColumns(e.columns);
+  if(e.smartColumns!==false){
+    applySmartColumnWidths(e);
+    cols=normalizeColumns(e.columns)
+  }
   let visibleIds=new Set(cols.map(c=>c.id));
   if(e.hideEmptyColumns!==false){
     try{
@@ -1106,12 +1114,18 @@ function renderTableColumnEditor(e){
         col.field=field.value||"";
         if(!col.template||/^\{\{[^{}]+\}\}$/.test(String(col.template)))col.template=col.field?"{{"+col.field+"}}":"";
         main.textContent=col.title||col.field||("列"+(index+1));
-        const hiddenNow=e.hideEmptyColumns!==false&&!visibleIds.has(col.id);
+        e.columns=cols;
+        if(e.smartColumns!==false)applySmartColumnWidths(e);
+        let hiddenNow=false;
+        if(e.hideEmptyColumns!==false){
+          try{
+            const fresh=buildTableLayout(e,state.record?.data||{},true);
+            hiddenNow=!new Set((fresh.cols||[]).map(c=>c.id)).has(col.id)
+          }catch{}
+        }
         sub.textContent=hiddenNow?"当前为空 · 已隐藏":(col.field?("字段："+col.field):"未绑定字段");
         sub.classList.toggle("col-status-hidden",hiddenNow);
         card.classList.toggle("empty-hidden",hiddenNow);
-        e.columns=cols;
-        if(e.smartColumns!==false)applySmartColumnWidths(e);
         refreshElementNode(e);updateTableFitState(e);autoSave()
       };
       const checkpoint=()=>{commit();pushHistory()};

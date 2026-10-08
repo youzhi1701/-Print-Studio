@@ -379,7 +379,11 @@ function estimatedWrappedRowHeight(el,row,cells){
   for(const cell of cells){
     const valueText=String(cell.value??"");
     const imageLike=cell.cfg?.type==="image"||/图片|图像|image/i.test(String(cell.col?.field||cell.col?.title||""))||valueText.startsWith("data:image/")||valueText.startsWith("blob:");
-    if(!hasValue(cell.value)||imageLike)continue;
+    if(!hasValue(cell.value))continue;
+    if(imageLike){
+      needed=Math.max(needed,Math.max(base,14));
+      continue
+    }
     const widthPct=Math.max(1,Number(cell.col?.width)||100/Math.max(1,cells.length));
     const cellMm=Math.max(4,(Number(el?.w)||100)*widthPct/100);
     const pad=Math.max(0,Number(cell.cfg?.padding??2));
