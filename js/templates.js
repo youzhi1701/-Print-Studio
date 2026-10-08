@@ -306,7 +306,24 @@ export function autoBindTemplateFields(template,fields=[]){
       const current=el.field;
       if(current&&fields.some(f=>f.name===current))continue;
       const matched=matchFieldName(current||el.label?.replace(/[：:]/g,"")||"",fields);
-      if(matched){el.field=matched;if(el.type==="field")el.text="{{"+matched+"}}";changed=true}
+      if(matched){
+        if(el.type==="field"){
+          const combined=String(el.label||"")+String(el.text||"");
+          const defaults=new Set([
+            "",
+            "{{字段}}",
+            "字段：{{字段}}",
+            current?"{{"+current+"}}":"",
+            current?(current+"：{{"+current+"}}"):"",
+            current?(current+":{{"+current+"}}"):""
+          ]);
+          el.label="";
+          if(defaults.has(combined))el.text=matched+"：{{"+matched+"}}";
+          else if(el.text===undefined||el.text===null||el.text==="")el.text=matched+"：{{"+matched+"}}";
+          if(!el.align)el.align="center";
+        }
+        el.field=matched;changed=true
+      }
     }
     if(el.type==="table"&&Array.isArray(el.columns)){
       el.columns=el.columns.map(col=>{
