@@ -1,12 +1,12 @@
-import {mountBuildVersion} from "./version.js?v=20261006-21";
-import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS,getStorageScope,setStorageScope,storageScopedKey} from "./state.js?v=20261006-21";
-import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261006-21";
-import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261006-21";
-import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261006-21";
-import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261006-21";
-import {printTemplateRecords} from "./print.js?v=20261006-21";
-import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261006-21";
-import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261006-21";
+import {mountBuildVersion} from "./version.js?v=20261008-51";
+import {state,storageAvailable,storageMode,storageGet,storageSet,safeJson,STORAGE_KEYS,getStorageScope,setStorageScope,storageScopedKey} from "./state.js?v=20261008-51";
+import {connectFeishu,readContext,readSelectedRecords,chooseRecords,resolveAttachmentUrls,resolveAttachmentUrlsForRecords,readFeishuIdentity} from "./feishu.js?v=20261008-51";
+import {loadTemplates,saveTemplates,exportTemplate,importTemplateObject,autoBindTemplateFields,isBuiltinTemplate} from "./templates.js?v=20261008-51";
+import {writeBridge,openDesigner,openPreviewWindow,bridgeTargetOrigin} from "./bridge.js?v=20261008-51";
+import {renderTemplateToHtml,hydrateCodes,applyTemplateCalibration} from "./renderer.js?v=20261008-51";
+import {printTemplateRecords} from "./print.js?v=20261008-51";
+import {syncTemplatesWithCloud,upsertCloudTemplate,deleteCloudTemplate} from "./private-cloud.js?v=20261008-51";
+import {restoreAccount,loginWithFeishuIdentity,loginWithPhone,clearAccountSession,getAccountProfile,hasAccountSession,getAccountHealth} from "./account.js?v=20261008-51";
 
 mountBuildVersion();
 const $=id=>document.getElementById(id);
@@ -33,6 +33,77 @@ function showCompat(message,extra=""){
 function hideCompat(){$("compatPanel")?.classList.add("hidden")}
 
 function activeTemplate(){return state.templates.find(t=>t.id===state.activeTemplateId)||state.templates[0]}
+function normalizeTemplateMatchText(value){
+  return String(value||"").toLowerCase()
+    .replace(/[×xX*]/g,"x")
+    .replace(/\d+(?:\.\d+)?\s*x\s*\d+(?:\.\d+)?/g,"")
+    .replace(/(?:mm|毫米|自定义|模板|打印|标签|单据)/g,"")
+    .replace(/[\s·_\-—–:：/\\()（）\[\]【】]+/g,"")
+}
+function currentTableTemplateKey(){
+  const tableId=String(state.selection?.tableId||state.table?.id||"").trim();
+  if(tableId)return "id:"+tableId;
+  const name=normalizeTemplateMatchText(state.tableName);
+  return name?"name:"+name:""
+}
+function readTableTemplateMap(){
+  const settings=safeJson(storageGet(storageScopedKey(STORAGE_KEYS.settings)),{})||{};
+  return settings.tableTemplateMap&&typeof settings.tableTemplateMap==="object"?settings.tableTemplateMap:{}
+}
+function rememberTemplateForCurrentTable(templateId){
+  const key=currentTableTemplateKey();
+  if(!key||!templateId)return;
+  const settings=safeJson(storageGet(storageScopedKey(STORAGE_KEYS.settings)),{})||{};
+  const tableTemplateMap={...(settings.tableTemplateMap||{}),[key]:templateId};
+  storageSet(storageScopedKey(STORAGE_KEYS.settings),JSON.stringify({...settings,activeTemplateId:templateId,tableTemplateMap}))
+}
+function templateMatchScore(tableName,tpl){
+  const source=normalizeTemplateMatchText(tableName);
+  const target=normalizeTemplateMatchText(tpl?.name);
+  if(!source||!target)return 0;
+  let score=0;
+  if(source===target)score=100;
+  else if(target.startsWith(source)||source.startsWith(target))score=92;
+  else if(target.includes(source)||source.includes(target))score=82;
+
+  const tags=(tpl?.tags||[]).map(normalizeTemplateMatchText).filter(Boolean);
+  if(tags.some(t=>t===source))score=Math.max(score,90);
+  else if(tags.some(t=>source.includes(t)||t.includes(source)))score=Math.max(score,72);
+
+  const keywords=["物流面单","发货单","配货","小票","地址","价格","商品","二维码","条码","箱唛","珠宝","贵金属"];
+  for(const k of keywords){
+    if(source.includes(k)&&target.includes(k))score+=10;
+  }
+  if(!isBuiltinTemplate(tpl))score+=2;
+  return score
+}
+function bestTemplateForCurrentTable(){
+  const tableName=String(state.tableName||"").trim();
+  if(!tableName)return null;
+  let best=null,bestScore=0;
+  for(const tpl of state.templates){
+    const score=templateMatchScore(tableName,tpl);
+    if(score>bestScore){best=tpl;bestScore=score}
+  }
+  return bestScore>=60?best:null
+}
+function applyTemplateRouting(){
+  const key=currentTableTemplateKey();
+  const map=readTableTemplateMap();
+  const remembered=key&&map[key]?state.templates.find(t=>t.id===map[key]):null;
+  if(remembered){
+    state.activeTemplateId=remembered.id;
+    persistActiveTemplate();
+    fillTemplates();
+    return{template:remembered,source:"remembered"}
+  }
+  const matched=bestTemplateForCurrentTable();
+  if(!matched)return null;
+  state.activeTemplateId=matched.id;
+  persistActiveTemplate();
+  fillTemplates();
+  return{template:matched,source:"auto"}
+}
 function escHtml(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}
 const TEMPLATE_SAMPLE_IMAGE="data:image/svg+xml,"+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="180" height="140"><rect width="180" height="140" fill="#eef1f5"/><rect x="18" y="18" width="144" height="104" rx="10" fill="#d8dee8"/><path d="M42 96l28-28 18 18 20-25 30 35z" fill="#aab5c5"/><circle cx="64" cy="51" r="12" fill="#b8c3d2"/></svg>');
 const TEMPLATE_SAMPLE_DATA={
@@ -251,6 +322,7 @@ async function syncCloudTemplates(force=false){
     saveTemplates(state.templates);
     for(const id of result.clearedDeletedIds||[])clearTemplateDeleted(id);
     state.activeTemplateId=state.templates.some(t=>t.id===previous)?previous:(state.templates[0]?.id||null);
+    if(state.tableName)applyTemplateRouting();
     persistActiveTemplate();fillTemplates();
     lastCloudSyncAt=Date.now();
     updateCloudState("云端已同步","ok");
@@ -442,6 +514,8 @@ async function refresh(){
     const ctx=await readContext(c.bitable);
     state.selection=ctx.selection;state.table=ctx.table;state.tableName=ctx.tableName||"";state.fields=ctx.fields;
     await syncCloudTemplates(false);
+    const routedTemplate=applyTemplateRouting();
+    if(routedTemplate?.source==="auto")toast("已按表格名称匹配模板："+routedTemplate.template.name);
     state.record=ctx.record?await resolveAttachmentUrls(ctx.table,ctx.record,ctx.fields):null;
     state.selectedRecords=await readSelectedRecords(c.bitable,ctx.table,ctx.fields);
     state.selectedRecords=await resolveAttachmentUrlsForRecords(ctx.table,state.selectedRecords,ctx.fields);
@@ -524,7 +598,7 @@ async function init(){
 
   $("templateLibraryList")?.addEventListener("click",async e=>{
     const item=e.target.closest("[data-template-id]");if(!item)return;
-    state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();autoBind();syncBridge();await renderPreview(true);
+    state.activeTemplateId=item.dataset.templateId;persistActiveTemplate();rememberTemplateForCurrentTable(state.activeTemplateId);autoBind();syncBridge();await renderPreview(true);
     closeTemplateLibrary();fillTemplates();
   });
   if($("templateLibrarySearch"))$("templateLibrarySearch").oninput=e=>{templateLibraryQuery=e.target.value||"";clearTimeout(templateSearchTimer);templateSearchTimer=setTimeout(renderTemplateLibrary,120)};
@@ -570,7 +644,7 @@ async function init(){
       copy.name=(tpl.name||"模板")+" · 自定义";
       copy.category="自定义";copy.status="draft";copy.builtIn=false;copy.updatedAt=Date.now();
       state.templates.push(copy);state.activeTemplateId=copy.id;
-      persistActiveTemplate();saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(copy);
+      persistActiveTemplate();rememberTemplateForCurrentTable(copy.id);saveTemplates(state.templates);fillTemplates();queueCloudTemplateSave(copy);
       tpl=copy;toast("已创建可编辑副本");
     }
     syncBridge();
@@ -613,7 +687,7 @@ async function init(){
       const parsed=JSON.parse(await file.text());
       const tpl=importTemplateObject(parsed,state.templates);
       state.templates.push(tpl);state.activeTemplateId=tpl.id;
-      templateThumbCache.clear();persistActiveTemplate();saveTemplates(state.templates);queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);fillTemplates();if(!$("templateLibraryModal").classList.contains("hidden"))renderTemplateLibrary();
+      templateThumbCache.clear();persistActiveTemplate();rememberTemplateForCurrentTable(tpl.id);saveTemplates(state.templates);queueCloudTemplateSave(tpl);autoBind();syncBridge();await renderPreview(true);fillTemplates();if(!$("templateLibraryModal").classList.contains("hidden"))renderTemplateLibrary();
       toast("模板已导入并加入云端同步");
     }catch(err){console.error(err);toast(err?.message||"模板导入失败")}
   };
